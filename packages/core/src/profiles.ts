@@ -9,14 +9,24 @@ import { PLANS, type Plan } from './entitlements.js';
 
 export type ProfileKind = 'tone' | 'sweep' | 'pulse' | 'sample';
 
-export const PROFILE_KINDS = ['tone', 'sweep', 'pulse', 'sample'] as const satisfies readonly ProfileKind[];
+export const PROFILE_KINDS = [
+  'tone',
+  'sweep',
+  'pulse',
+  'sample',
+] as const satisfies readonly ProfileKind[];
 
 /** Deterrence energy lives between 1 kHz and 25 kHz; anything else is a bug. */
 const freqHz = z.number().min(1000).max(25000);
 const gain = z.number().min(0).max(1);
 const randomizePct = z.number().min(0).max(100);
 /** Postgres `uuid` semantics: any hex UUID shape, no RFC version/variant policing. */
-const uuid = z.string().regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/, 'Invalid UUID');
+const uuid = z
+  .string()
+  .regex(
+    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
+    'Invalid UUID',
+  );
 
 export const SAMPLE_ASSETS = [
   'distress_pigeon',
@@ -103,7 +113,8 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   {
     id: 'sys_pulse_16k',
     name: 'Pulse 16 kHz',
-    description: 'Gated 16 kHz tone, 200 ms on / 800 ms off. Quieter to guests than the 18 kHz tone.',
+    description:
+      'Gated 16 kHz tone, 200 ms on / 800 ms off. Quieter to guests than the 18 kHz tone.',
     kind: 'pulse',
     params: { freqHz: 16000, onMs: 200, offMs: 800, randomizePct: 0, gain: 0.8 },
     minPlan: 'free',
@@ -139,7 +150,8 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   {
     id: 'sys_distress_pigeon',
     name: 'Pigeon distress call',
-    description: 'Recorded pigeon distress call on a 20 s cycle. Audible to people — best away from seating.',
+    description:
+      'Recorded pigeon distress call on a 20 s cycle. Audible to people — best away from seating.',
     kind: 'sample',
     params: { asset: 'distress_pigeon', gapMs: 20000, randomizePct: 30, gain: 0.9 },
     minPlan: 'pro',
@@ -166,7 +178,8 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   {
     id: 'sys_max_22k',
     name: 'Max 22 kHz',
-    description: 'Steady 22 kHz tone. Requires PigeonX hardware — phone and Bluetooth speakers cannot reproduce it.',
+    description:
+      'Steady 22 kHz tone. Requires PigeonX hardware — phone and Bluetooth speakers cannot reproduce it.',
     kind: 'tone',
     params: { freqHz: 22000, gain: 0.9 },
     minPlan: 'pro',

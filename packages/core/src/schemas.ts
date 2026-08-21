@@ -27,9 +27,7 @@ export const OutputKindSchema = z.enum(OUTPUT_KINDS);
 export const DeviceStatusSchema = z.enum(['online', 'offline', 'unknown']);
 
 /** `HH:MM` or `HH:MM:SS`, matching Postgres `time`. */
-export const TimeOfDay = z
-  .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, 'Expected HH:MM');
+export const TimeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, 'Expected HH:MM');
 
 /** 0 = Sunday … 6 = Saturday, matching Postgres `extract(dow)`. */
 export const Weekday = z.number().int().min(0).max(6);

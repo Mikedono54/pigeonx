@@ -7,10 +7,17 @@
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "db:push": "node scripts/db-push.mjs",
+    "db:seed": "node scripts/db-push.mjs --include-seed",
+    "db:types": "npx -y supabase@latest gen types typescript --linked > packages/core/src/db.types.ts",
+    "seed:gen": "vite-node scripts/gen-seed.mts > supabase/seed.sql",
+    "rls:check": "node scripts/rls-check.mjs"
   },
   "devDependencies": {
+    "@supabase/supabase-js": "^2.112.3",
     "prettier": "^3.6.2",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vite-node": "^3.2.4"
   }
 }

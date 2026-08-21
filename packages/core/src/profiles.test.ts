@@ -51,7 +51,9 @@ describe('SYSTEM_PROFILES', () => {
   });
 
   it('has a deterministic uuid for every profile, and no extras', () => {
-    expect(Object.keys(SYSTEM_PROFILE_UUIDS).sort()).toEqual(SYSTEM_PROFILES.map((p) => p.id).sort());
+    expect(Object.keys(SYSTEM_PROFILE_UUIDS).sort()).toEqual(
+      SYSTEM_PROFILES.map((p) => p.id).sort(),
+    );
     const uuids = Object.values(SYSTEM_PROFILE_UUIDS);
     expect(new Set(uuids).size).toBe(9);
     for (const u of uuids) {

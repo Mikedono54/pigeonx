@@ -6,9 +6,10 @@ const borderRadius = Object.fromEntries(
   Object.entries(radius).map(([k, v]) => [k, px(v)]),
 ) as Record<keyof typeof radius, string>;
 
-const spacing = Object.fromEntries(
-  Object.entries(space).map(([k, v]) => [k, px(v)]),
-) as Record<string, string>;
+const spacing = Object.fromEntries(Object.entries(space).map(([k, v]) => [k, px(v)])) as Record<
+  string,
+  string
+>;
 
 const fontSize = Object.fromEntries(
   Object.entries(font.size).map(([k, v]) => [k, px(v)]),
