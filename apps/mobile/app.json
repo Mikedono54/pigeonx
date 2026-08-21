@@ -1,0 +1,89 @@
+{
+  "expo": {
+    "name": "PigeonX",
+    "slug": "pigeonx",
+    "scheme": "pigeonx",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B1220",
+    "primaryColor": "#22D3EE",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "org.pigeonx.app",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "audio"
+        ],
+        "NSBluetoothAlwaysUsageDescription": "PigeonX uses Bluetooth to find and set up PigeonX emitters near you.",
+        "NSBluetoothPeripheralUsageDescription": "PigeonX uses Bluetooth to find and set up PigeonX emitters near you.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "org.pigeonx.app",
+      "predictiveBackGestureEnabled": false,
+      "adaptiveIcon": {
+        "backgroundColor": "#0B1220",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.WAKE_LOCK"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font",
+      "@react-native-community/datetimepicker",
+      [
+        "react-native-audio-api",
+        {
+          "iosBackgroundMode": true,
+          "androidForegroundService": true,
+          "androidPermissions": [
+            "android.permission.FOREGROUND_SERVICE",
+            "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+          ],
+          "androidFSTypes": [
+            "mediaPlayback"
+          ]
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180,
+          "backgroundColor": "#0B1220",
+          "resizeMode": "contain"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#22D3EE",
+          "defaultChannel": "pigeonx-runs"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}
