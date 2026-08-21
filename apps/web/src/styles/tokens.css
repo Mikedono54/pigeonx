@@ -1,0 +1,64 @@
+@import 'tailwindcss';
+
+/* ------------------------------------------------------------------ *
+ * PigeonX design tokens — dark theme only
+ * ------------------------------------------------------------------ */
+:root {
+  color-scheme: dark;
+
+  --px-bg: #0b1220;
+  --px-surface: #111a2e;
+  --px-card: #151f36;
+  --px-elevated: #1b2742;
+  --px-border: #243049;
+
+  --px-fg: #f1f5f9;
+  --px-fg-muted: #8b97ad;
+  --px-fg-subtle: #5b6881;
+
+  --px-teal: #2dd4bf;
+  --px-blue: #3b82f6;
+  --px-accent: #22d3ee;
+  --px-on-accent: #06121f;
+  --px-success: #34d399;
+  --px-warning: #fbbf24;
+  --px-danger: #f87171;
+
+  --px-gradient: linear-gradient(135deg, #2dd4bf 0%, #3b82f6 100%);
+
+  --px-radius-sm: 8px;
+  --px-radius-md: 12px;
+  --px-radius-lg: 16px;
+  --px-radius-xl: 24px;
+}
+
+@theme {
+  --color-bg: #0b1220;
+  --color-surface: #111a2e;
+  --color-card: #151f36;
+  --color-elevated: #1b2742;
+  --color-border-line: #243049;
+
+  --color-fg: #f1f5f9;
+  --color-fg-muted: #8b97ad;
+  --color-fg-subtle: #5b6881;
+
+  --color-teal: #2dd4bf;
+  --color-blue: #3b82f6;
+  --color-accent: #22d3ee;
+  --color-on-accent: #06121f;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+
+  --font-display: 'Outfit', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0B1220" />
+    <meta name="color-scheme" content="dark" />
+
+    <title>PigeonX — Smarter, humane bird deterrence</title>
+    <meta
+      name="description"
+      content="PigeonX turns a smartphone into the control center for a smarter bird-deterrence system for restaurants, hotels, rooftops and patios. Frequency profiles, Bluetooth output, schedules, zones and a commercial dashboard."
+    />
+    <link rel="canonical" href="https://pigeonx.org/" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="PigeonX" />
+    <meta property="og:title" content="PigeonX — Smarter, humane bird deterrence" />
+    <meta
+      property="og:description"
+      content="A smartphone control center for humane, sound-based bird deterrence at restaurants, hotels, rooftops and patios."
+    />
+    <meta property="og:url" content="https://pigeonx.org/" />
+    <meta property="og:image" content="https://pigeonx.org/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="PigeonX — smarter, humane bird deterrence for the places people gather." />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="PigeonX — Smarter, humane bird deterrence" />
+    <meta
+      name="twitter:description"
+      content="A smartphone control center for humane, sound-based bird deterrence at restaurants, hotels, rooftops and patios."
+    />
+    <meta name="twitter:image" content="https://pigeonx.org/og-image.png" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap"
+      rel="stylesheet"
+    />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "PigeonX",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "iOS, Android, Web",
+        "url": "https://pigeonx.org/",
+        "description": "PigeonX is a humane, sound-based bird-deterrence platform: a mobile control app, connected emitters, and a commercial dashboard for restaurants, hotels, rooftops and patios.",
+        "offers": [
+          { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" },
+          { "@type": "Offer", "name": "Pro", "price": "4.99", "priceCurrency": "USD" },
+          { "@type": "Offer", "name": "Business", "price": "29.00", "priceCurrency": "USD" }
+        ]
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Static form definitions so the Netlify build bot can detect them in an SPA. -->
+    <form name="pilot" netlify netlify-honeypot="bot-field" hidden>
+      <input type="hidden" name="form-name" value="pilot" />
+      <input type="text" name="bot-field" />
+      <input type="text" name="name" />
+      <input type="text" name="business" />
+      <input type="email" name="email" />
+      <input type="text" name="city" />
+      <input type="text" name="property-type" />
+      <textarea name="message"></textarea>
+    </form>
+    <form name="waitlist" netlify netlify-honeypot="bot-field" hidden>
+      <input type="hidden" name="form-name" value="waitlist" />
+      <input type="text" name="bot-field" />
+      <input type="email" name="email" />
+    </form>
+  </body>
+</html>
