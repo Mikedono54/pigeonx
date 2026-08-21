@@ -17,6 +17,7 @@
       "bundleIdentifier": "org.pigeonx.app",
       "infoPlist": {
         "UIBackgroundModes": [
+          "audio",
           "audio"
         ],
         "NSBluetoothAlwaysUsageDescription": "PigeonX uses Bluetooth to find and set up PigeonX emitters near you.",
@@ -34,6 +35,12 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "permissions": [
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.WAKE_LOCK",
         "android.permission.BLUETOOTH_CONNECT",
         "android.permission.BLUETOOTH_SCAN",
         "android.permission.FOREGROUND_SERVICE",
@@ -91,6 +98,12 @@
         "projectId": "8acab2d4-b596-4d4e-8840-95cb78667ea0"
       }
     },
-    "owner": "snapmind"
+    "owner": "snapmind",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/8acab2d4-b596-4d4e-8840-95cb78667ea0"
+    }
   }
 }
