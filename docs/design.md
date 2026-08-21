@@ -20,23 +20,23 @@ export default { presets: [tailwindPreset], content: [...] };
 
 ### Color
 
-| Purpose | Token | Hex | Tailwind |
-|---|---|---|---|
-| App background | `background` | `#0B1220` | `bg-bg` |
-| Panel | `surface` | `#111A2E` | `bg-surface` |
-| Card | `card` | `#151F36` | `bg-card` |
-| Elevated | `elevated` | `#1B2742` | `bg-elevated` |
-| Border | `border` | `#243049` | `border-border` |
-| Text | `fg` | `#F1F5F9` | `text-fg` |
-| Secondary text | `fgMuted` | `#8B97AD` | `text-fg-muted` |
-| Tertiary / disabled | `fgSubtle` | `#5B6881` | `text-fg-subtle` |
-| Brand teal | `accentTeal` | `#2DD4BF` | `text-teal` |
-| Brand blue | `accentBlue` | `#3B82F6` | `text-blue` |
-| CTA fill | `accent` | `#22D3EE` | `bg-accent` |
-| On CTA | `onAccent` | `#06121F` | `text-on-accent` |
-| Success | `success` | `#34D399` | `text-success` |
-| Warning | `warning` | `#FBBF24` | `text-warning` |
-| Danger | `danger` | `#F87171` | `text-danger` |
+| Purpose             | Token        | Hex       | Tailwind         |
+| ------------------- | ------------ | --------- | ---------------- |
+| App background      | `background` | `#0B1220` | `bg-bg`          |
+| Panel               | `surface`    | `#111A2E` | `bg-surface`     |
+| Card                | `card`       | `#151F36` | `bg-card`        |
+| Elevated            | `elevated`   | `#1B2742` | `bg-elevated`    |
+| Border              | `border`     | `#243049` | `border-border`  |
+| Text                | `fg`         | `#F1F5F9` | `text-fg`        |
+| Secondary text      | `fgMuted`    | `#8B97AD` | `text-fg-muted`  |
+| Tertiary / disabled | `fgSubtle`   | `#5B6881` | `text-fg-subtle` |
+| Brand teal          | `accentTeal` | `#2DD4BF` | `text-teal`      |
+| Brand blue          | `accentBlue` | `#3B82F6` | `text-blue`      |
+| CTA fill            | `accent`     | `#22D3EE` | `bg-accent`      |
+| On CTA              | `onAccent`   | `#06121F` | `text-on-accent` |
+| Success             | `success`    | `#34D399` | `text-success`   |
+| Warning             | `warning`    | `#FBBF24` | `text-warning`   |
+| Danger              | `danger`     | `#F87171` | `text-danger`    |
 
 Gradient `linear-gradient(135deg,#2DD4BF 0%,#3B82F6 100%)` (`bg-gradient-brand`)
 is for the mark, hero washes and one primary CTA per screen. Never behind text.

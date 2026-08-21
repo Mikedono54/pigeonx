@@ -21,23 +21,23 @@
 
 ### Color Palette
 
-| Role | Token | Hex | Tailwind |
-|------|-------|-----|----------|
-| App background | `color.background` | `#0B1220` | `bg-bg` |
-| Panel surface | `color.surface` | `#111A2E` | `bg-surface` |
-| Card | `color.card` | `#151F36` | `bg-card` |
-| Elevated (sheet, popover, active row) | `color.elevated` | `#1B2742` | `bg-elevated` |
-| Border / hairline | `color.border` | `#243049` | `border-border` |
-| Foreground | `color.fg` | `#F1F5F9` | `text-fg` |
-| Foreground muted | `color.fgMuted` | `#8B97AD` | `text-fg-muted` |
-| Foreground subtle | `color.fgSubtle` | `#5B6881` | `text-fg-subtle` |
-| Brand teal (gradient start) | `color.accentTeal` | `#2DD4BF` | `text-teal` |
-| Brand blue (gradient end) | `color.accentBlue` | `#3B82F6` | `text-blue` |
-| Accent / CTA fill | `color.accent` | `#22D3EE` | `bg-accent` |
-| On accent | `color.onAccent` | `#06121F` | `text-on-accent` |
-| Success | `color.success` | `#34D399` | `text-success` |
-| Warning | `color.warning` | `#FBBF24` | `text-warning` |
-| Danger | `color.danger` | `#F87171` | `text-danger` |
+| Role                                  | Token              | Hex       | Tailwind         |
+| ------------------------------------- | ------------------ | --------- | ---------------- |
+| App background                        | `color.background` | `#0B1220` | `bg-bg`          |
+| Panel surface                         | `color.surface`    | `#111A2E` | `bg-surface`     |
+| Card                                  | `color.card`       | `#151F36` | `bg-card`        |
+| Elevated (sheet, popover, active row) | `color.elevated`   | `#1B2742` | `bg-elevated`    |
+| Border / hairline                     | `color.border`     | `#243049` | `border-border`  |
+| Foreground                            | `color.fg`         | `#F1F5F9` | `text-fg`        |
+| Foreground muted                      | `color.fgMuted`    | `#8B97AD` | `text-fg-muted`  |
+| Foreground subtle                     | `color.fgSubtle`   | `#5B6881` | `text-fg-subtle` |
+| Brand teal (gradient start)           | `color.accentTeal` | `#2DD4BF` | `text-teal`      |
+| Brand blue (gradient end)             | `color.accentBlue` | `#3B82F6` | `text-blue`      |
+| Accent / CTA fill                     | `color.accent`     | `#22D3EE` | `bg-accent`      |
+| On accent                             | `color.onAccent`   | `#06121F` | `text-on-accent` |
+| Success                               | `color.success`    | `#34D399` | `text-success`   |
+| Warning                               | `color.warning`    | `#FBBF24` | `text-warning`   |
+| Danger                                | `color.danger`     | `#F87171` | `text-danger`    |
 
 **Brand gradient:** `linear-gradient(135deg,#2DD4BF 0%,#3B82F6 100%)` — Tailwind `bg-gradient-brand`.
 Reserved for the mark, hero washes and one primary CTA per screen. Never behind body text.
@@ -55,16 +55,16 @@ colors are for status only — success green never doubles as a CTA.
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap');
 ```
 
-| Step | Size | Typical use |
-|------|------|-------------|
-| `xs` | 12px | Badge text, table meta |
-| `sm` | 14px | Secondary text, labels |
+| Step   | Size | Typical use                                   |
+| ------ | ---- | --------------------------------------------- |
+| `xs`   | 12px | Badge text, table meta                        |
+| `sm`   | 14px | Secondary text, labels                        |
 | `base` | 16px | Body, inputs (never smaller on mobile inputs) |
-| `lg` | 18px | Card titles |
-| `xl` | 22px | Section headings |
-| `2xl` | 28px | Screen titles |
-| `3xl` | 36px | Marketing sub-heads |
-| `4xl` | 48px | Marketing hero |
+| `lg`   | 18px | Card titles                                   |
+| `xl`   | 22px | Section headings                              |
+| `2xl`  | 28px | Screen titles                                 |
+| `3xl`  | 36px | Marketing sub-heads                           |
+| `4xl`  | 48px | Marketing hero                                |
 
 Frequencies read as `18.0 kHz` in mono, never as raw `18000`.
 
@@ -72,37 +72,37 @@ Frequencies read as `18.0 kHz` in mono, never as raw `18000`.
 
 4-based scale — `space[n] = n x 4px`.
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `space.1` | `4px` | Tight gaps |
-| `space.2` | `8px` | Icon gaps, inline spacing |
-| `space.3` | `12px` | Control padding |
-| `space.4` | `16px` | Standard padding |
-| `space.6` | `24px` | Card padding, section padding |
-| `space.8` | `32px` | Large gaps |
-| `space.12` | `48px` | Section margins |
-| `space.16` | `64px` | Hero padding |
+| Token      | Value  | Usage                         |
+| ---------- | ------ | ----------------------------- |
+| `space.1`  | `4px`  | Tight gaps                    |
+| `space.2`  | `8px`  | Icon gaps, inline spacing     |
+| `space.3`  | `12px` | Control padding               |
+| `space.4`  | `16px` | Standard padding              |
+| `space.6`  | `24px` | Card padding, section padding |
+| `space.8`  | `32px` | Large gaps                    |
+| `space.12` | `48px` | Section margins               |
+| `space.16` | `64px` | Hero padding                  |
 
 ### Radii
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `radius.sm` | `8px` | Inputs, chips, small buttons |
-| `radius.md` | `12px` | Buttons, list rows |
-| `radius.lg` | `16px` | Cards, panels |
-| `radius.xl` | `24px` | Sheets, modals, hero panels |
+| Token         | Value   | Usage                            |
+| ------------- | ------- | -------------------------------- |
+| `radius.sm`   | `8px`   | Inputs, chips, small buttons     |
+| `radius.md`   | `12px`  | Buttons, list rows               |
+| `radius.lg`   | `16px`  | Cards, panels                    |
+| `radius.xl`   | `24px`  | Sheets, modals, hero panels      |
 | `radius.pill` | `999px` | Status pills, segmented controls |
 
 ### Shadow Depths
 
 On a navy base, elevation reads through surface color first and shadow second.
 
-| Level | Value | Usage |
-|-------|-------|-------|
-| `--shadow-sm` | `0 1px 2px rgba(2,8,20,0.40)` | Subtle lift |
-| `--shadow-md` | `0 4px 12px rgba(2,8,20,0.45)` | Cards, buttons |
+| Level         | Value                           | Usage               |
+| ------------- | ------------------------------- | ------------------- |
+| `--shadow-sm` | `0 1px 2px rgba(2,8,20,0.40)`   | Subtle lift         |
+| `--shadow-md` | `0 4px 12px rgba(2,8,20,0.45)`  | Cards, buttons      |
 | `--shadow-lg` | `0 12px 28px rgba(2,8,20,0.50)` | Popovers, dropdowns |
-| `--shadow-xl` | `0 24px 48px rgba(2,8,20,0.55)` | Modals, sheets |
+| `--shadow-xl` | `0 24px 48px rgba(2,8,20,0.55)` | Modals, sheets      |
 
 ---
 
@@ -115,37 +115,51 @@ Minimum touch target 44x44px — every button, on web too.
 ```css
 .btn-primary {
   min-height: 44px;
-  background: #22D3EE;
-  color: #06121F;
+  background: #22d3ee;
+  color: #06121f;
   padding: 12px 24px;
   border-radius: 12px;
   font-family: Inter, system-ui, sans-serif;
   font-weight: 600;
   cursor: pointer;
-  transition: filter 200ms ease, transform 200ms ease;
+  transition:
+    filter 200ms ease,
+    transform 200ms ease;
 }
-.btn-primary:hover { filter: brightness(1.08); }
-.btn-primary:active { transform: scale(0.98); }
-.btn-primary:focus-visible { outline: 2px solid #22D3EE; outline-offset: 2px; }
-.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary:hover {
+  filter: brightness(1.08);
+}
+.btn-primary:active {
+  transform: scale(0.98);
+}
+.btn-primary:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+}
+.btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 .btn-secondary {
   min-height: 44px;
   background: transparent;
-  color: #F1F5F9;
+  color: #f1f5f9;
   border: 1px solid #243049;
   padding: 12px 24px;
   border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
 }
-.btn-secondary:hover { background: #1B2742; }
+.btn-secondary:hover {
+  background: #1b2742;
+}
 
 /* The one gradient CTA per screen — Start, Upgrade, Join the pilot. */
 .btn-brand {
   min-height: 44px;
-  background: linear-gradient(135deg, #2DD4BF 0%, #3B82F6 100%);
-  color: #06121F;
+  background: linear-gradient(135deg, #2dd4bf 0%, #3b82f6 100%);
+  color: #06121f;
   border-radius: 12px;
   font-weight: 700;
 }
@@ -158,14 +172,22 @@ icon, and opens the paywall sheet on press.
 
 ```css
 .card {
-  background: #151F36;
+  background: #151f36;
   border: 1px solid #243049;
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 4px 12px rgba(2, 8, 20, 0.45);
 }
-.card--interactive { cursor: pointer; transition: background 200ms ease, border-color 200ms ease; }
-.card--interactive:hover { background: #1B2742; border-color: #2DD4BF33; }
+.card--interactive {
+  cursor: pointer;
+  transition:
+    background 200ms ease,
+    border-color 200ms ease;
+}
+.card--interactive:hover {
+  background: #1b2742;
+  border-color: #2dd4bf33;
+}
 ```
 
 Cards do not translate on hover — zone cards carry live status, and a moving
@@ -184,11 +206,26 @@ target under the cursor reads as noise.
   font-size: 12px;
   font-weight: 600;
 }
-.pill--idle      { background: #1B2742; color: #8B97AD; }
-.pill--running   { background: #34D39926; color: #34D399; }
-.pill--scheduled { background: #3B82F626; color: #3B82F6; }
-.pill--offline   { background: #F8717126; color: #F87171; }
-.pill--audible   { background: #FBBF2426; color: #FBBF24; }  /* guests may hear this */
+.pill--idle {
+  background: #1b2742;
+  color: #8b97ad;
+}
+.pill--running {
+  background: #34d39926;
+  color: #34d399;
+}
+.pill--scheduled {
+  background: #3b82f626;
+  color: #3b82f6;
+}
+.pill--offline {
+  background: #f8717126;
+  color: #f87171;
+}
+.pill--audible {
+  background: #fbbf2426;
+  color: #fbbf24;
+} /* guests may hear this */
 ```
 
 A running pill pairs a 6px dot with the elapsed time in mono: `Running 12:40`.
@@ -201,9 +238,11 @@ State is never carried by color alone — the label always says it too.
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
-  color: #F1F5F9;
+  color: #f1f5f9;
 }
-.readout__unit { color: #8B97AD; }
+.readout__unit {
+  color: #8b97ad;
+}
 ```
 
 Every frequency, timer, session count and percentage uses this. Tabular figures
@@ -214,29 +253,38 @@ so live-updating digits do not jitter.
 ```css
 .input {
   min-height: 44px;
-  background: #111A2E;
-  color: #F1F5F9;
+  background: #111a2e;
+  color: #f1f5f9;
   border: 1px solid #243049;
   border-radius: 8px;
   padding: 12px 16px;
   font-size: 16px;
-  transition: border-color 200ms ease, box-shadow 200ms ease;
+  transition:
+    border-color 200ms ease,
+    box-shadow 200ms ease;
 }
-.input::placeholder { color: #5B6881; }
+.input::placeholder {
+  color: #5b6881;
+}
 .input:focus {
-  border-color: #22D3EE;
+  border-color: #22d3ee;
   outline: none;
   box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.22);
 }
-.input--invalid { border-color: #F87171; }
+.input--invalid {
+  border-color: #f87171;
+}
 ```
 
 ### Sheets & modals
 
 ```css
-.modal-overlay { background: rgba(2, 8, 20, 0.66); backdrop-filter: blur(8px); }
+.modal-overlay {
+  background: rgba(2, 8, 20, 0.66);
+  backdrop-filter: blur(8px);
+}
 .modal {
-  background: #1B2742;
+  background: #1b2742;
   border: 1px solid #243049;
   border-radius: 24px;
   padding: 32px;
@@ -280,8 +328,7 @@ Never render a range the hardware cannot produce. The honest answer is the featu
   point, not a disclaimer — say plainly what a phone speaker can and cannot do.
 - **CTA Placement:** app badges in the hero, "Join the pilot" on the hardware
   section, "Talk to us" on pricing. One gradient CTA per viewport.
-- **Section Order:** 1. Hero, 2. Problem, 3. How it works, 4. Platform pillars,
-  5. Pricing, 6. Hardware, 7. Pilots & proof, 8. FAQ, 9. Contact.
+- **Section Order:** 1. Hero, 2. Problem, 3. How it works, 4. Platform pillars, 5. Pricing, 6. Hardware, 7. Pilots & proof, 8. FAQ, 9. Contact.
 
 ---
 
@@ -290,7 +337,14 @@ Never render a range the hardware cannot produce. The honest answer is the featu
 **Stagger List** (Standard) — Trigger: load or scroll | Duration: 300-450ms | Easing: `back.out(1.4)`
 
 ```js
-gsap.from('.grid-item', { opacity: 0, scale: 0.92, y: 16, duration: 0.4, stagger: { each: 0.06, from: 'start', grid: 'auto' }, ease: 'back.out(1.4)' });
+gsap.from('.grid-item', {
+  opacity: 0,
+  scale: 0.92,
+  y: 16,
+  duration: 0.4,
+  stagger: { each: 0.06, from: 'start', grid: 'auto' },
+  ease: 'back.out(1.4)',
+});
 ```
 
 **Framework notes:** grid: 'auto' lets GSAP infer rows/columns from a CSS grid layout for a natural wave stagger
