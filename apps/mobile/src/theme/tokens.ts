@@ -1,45 +1,41 @@
 /**
  * PigeonX design tokens.
  *
+ * Flat, light, high contrast. The app gets used on patios and rooftops in
+ * daylight, so every surface is white or near-white, every edge is a hairline
+ * border, and nothing is defined by a shadow or a glow.
+ *
  * NOTE: this file is a temporary duplicate. Once `@pigeonx/core` ships its
- * `tokens.ts`, this module becomes `export * from '@pigeonx/core'` — so the
+ * `tokens.ts`, this module becomes `export * from '@pigeonx/core'`, so the
  * exported shape ({ color, font, radius, space }) must not drift.
  */
 
 export const color = {
-  background: '#0B1220',
-  surface: '#111A2E',
-  card: '#151F36',
-  elevated: '#1B2742',
-  border: '#243049',
+  background: '#FFFFFF',
+  surface: '#F5F5F3',
+  card: '#FFFFFF',
+  elevated: '#EDEDEA',
+  border: '#E3E3DF',
 
-  fg: '#F1F5F9',
-  fgMuted: '#8B97AD',
-  fgSubtle: '#5B6881',
+  /** primary text and the darkest surface the app ever paints */
+  ink: '#0A0A0A',
+  fg: '#1F1F1F',
+  fgMuted: '#5F5F5F',
+  fgSubtle: '#8A8A8A',
 
-  teal: '#2DD4BF',
-  blue: '#3B82F6',
+  /** the one accent. Running state, primary buttons, active meters. */
+  accent: '#2B5CFF',
+  onAccent: '#FFFFFF',
 
-  accent: '#22D3EE',
-  onAccent: '#06121F',
-
-  success: '#34D399',
-  warning: '#FBBF24',
-  danger: '#F87171',
-} as const;
-
-/** Brand gradient: 135deg #2DD4BF → #3B82F6 */
-export const gradient = {
-  brand: ['#2DD4BF', '#3B82F6'] as [string, string],
-  /** expo-linear-gradient start/end that reproduces a 135deg CSS gradient */
-  brandStart: { x: 0, y: 0 },
-  brandEnd: { x: 1, y: 1 },
+  success: '#0F8A4B',
+  warning: '#B26A00',
+  danger: '#C62828',
 } as const;
 
 export const font = {
   heading: {
-    semibold: 'Outfit_600SemiBold',
-    bold: 'Outfit_700Bold',
+    semibold: 'InterTight_600SemiBold',
+    bold: 'InterTight_700Bold',
   },
   body: {
     regular: 'Inter_400Regular',
@@ -51,12 +47,13 @@ export const font = {
   },
 } as const;
 
+/** Square corners everywhere. The keys stay so callers keep compiling. */
 export const radius = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  pill: 999,
+  sm: 0,
+  md: 0,
+  lg: 0,
+  xl: 0,
+  pill: 0,
 } as const;
 
 export const space = {
@@ -68,6 +65,9 @@ export const space = {
   '2xl': 48,
   '3xl': 64,
 } as const;
+
+/** Hairline that separates one surface from the next. */
+export const hairline = 1;
 
 export const tokens = { color, font, radius, space } as const;
 

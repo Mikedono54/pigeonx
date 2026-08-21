@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Lock } from 'lucide-react-native';
-import { color, font, radius, space } from '../theme/tokens';
+import { color, font, space } from '../theme/tokens';
 import { Touchable } from './Touchable';
 
 export interface ChipProps {
@@ -20,7 +20,6 @@ export function Chip({
   locked = false,
   onPress,
   accessibilityLabel,
-  mono = false,
   compact = false,
 }: ChipProps) {
   return (
@@ -36,20 +35,14 @@ export function Chip({
       <View
         style={[
           styles.chip,
-          compact && styles.compact,
-          selected && styles.selected,
+          compact ? styles.compact : null,
+          selected ? styles.selected : null,
         ]}
       >
         {locked ? (
-          <Lock size={11} color={color.warning} strokeWidth={2.5} />
+          <Lock size={11} color={selected ? color.onAccent : color.warning} strokeWidth={1.75} />
         ) : null}
-        <Text
-          style={[
-            styles.label,
-            mono && { fontFamily: font.mono.medium },
-            selected && styles.labelSelected,
-          ]}
-        >
+        <Text style={[styles.label, selected ? styles.labelSelected : null]}>
           {label}
         </Text>
       </View>
@@ -63,23 +56,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: space.md - 2,
-    height: 36,
-    borderRadius: radius.pill,
+    paddingHorizontal: space.sm + 4,
+    height: 34,
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: color.border,
-    backgroundColor: color.surface,
+    backgroundColor: color.background,
   },
-  compact: { paddingHorizontal: 12, height: 32 },
-  selected: {
-    borderColor: color.teal,
-    backgroundColor: 'rgba(45,212,191,0.12)',
-  },
+  compact: { paddingHorizontal: 10, height: 30 },
+  selected: { borderColor: color.accent, backgroundColor: color.accent },
   label: {
-    fontFamily: font.body.semibold,
-    fontSize: 13,
+    fontFamily: font.mono.medium,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
     color: color.fgMuted,
-    letterSpacing: 0.2,
   },
-  labelSelected: { color: color.fg },
+  labelSelected: { color: color.onAccent },
 });

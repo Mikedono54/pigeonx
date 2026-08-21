@@ -2,49 +2,47 @@ import { useCallback, useMemo, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Check, Sparkles, X } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 
-import {
-  Button,
-  Card,
-  Segmented,
-  Touchable,
-  useToast,
-} from '../src/components';
+import { Button, Segmented, Touchable, useToast } from '../src/components';
 import {
   FEATURE_LABEL,
   PRICES,
   requiredPlan,
   type Feature,
 } from '../src/core/entitlements';
-import { createSandboxPurchases, type ProductId } from '../src/services/purchases';
+import {
+  createSandboxPurchases,
+  type ProductId,
+} from '../src/services/purchases';
 import { useAccount } from '../src/state/useAccount';
-import { color, font, gradient, radius, space } from '../src/theme/tokens';
+import { color, font, space } from '../src/theme/tokens';
 import { type } from '../src/theme/typography';
 
 type Tab = 'pro' | 'business' | 'enterprise';
 
-const PRO_PERKS = [
-  'Every system profile, including distress and predator calls',
-  'Build your own profiles — frequency, timing, randomisation',
-  'Unlimited saved profiles and unlimited run time',
-  'Schedule reminders with one-tap start',
+const PRO_LINES = [
+  'Every system profile',
+  'Distress and predator calls',
+  'Build your own profiles',
+  'Any number of saved profiles',
+  'No run time limit',
+  'Reminder times with one-tap start',
   'Remembered Bluetooth speakers',
-  'Full session history, not just the last 7 days',
+  'Full run history',
 ];
 
-const BUSINESS_PERKS = [
+const BUSINESS_LINES = [
   'Locations, zones and devices',
-  'Schedules that a device runs unattended',
-  'Up to 5 team members with roles',
+  'Devices that run a window on their own',
+  'Five team members with roles',
   'Web dashboard with live zone status',
 ];
 
-const ENTERPRISE_PERKS = [
-  'Multi-location overview across the whole portfolio',
+const ENTERPRISE_LINES = [
+  'Every location in one view',
   'Analytics and CSV export',
-  'Unlimited team members',
+  'Any number of team members',
   'Priority support and pilot reporting',
 ];
 
@@ -85,42 +83,30 @@ export default function Paywall() {
   return (
     <View style={[styles.root, { paddingTop: insets.top + space.sm }]}>
       <View style={styles.head}>
-        <View style={{ flex: 1 }} />
+        <Text style={styles.kicker}>Plans</Text>
         <Touchable
           onPress={() => router.back()}
           accessibilityLabel="Close"
           style={styles.close}
         >
-          <X size={20} color={color.fgMuted} strokeWidth={2.2} />
+          <X size={20} color={color.ink} strokeWidth={1.75} />
         </Touchable>
       </View>
 
       <ScrollView
         contentContainerStyle={[
           styles.body,
-          { paddingBottom: insets.bottom + space.xl },
+          { paddingBottom: insets.bottom + space.lg },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <LinearGradient
-          colors={gradient.brand}
-          start={gradient.brandStart}
-          end={gradient.brandEnd}
-          style={styles.badge}
-        >
-          <Sparkles size={22} color={color.onAccent} strokeWidth={2.3} />
-        </LinearGradient>
-
-        <Text style={type.display}>
-          {feature ? FEATURE_LABEL[feature] : 'Unlock the whole system'}
-        </Text>
-        <Text style={styles.lede}>
-          {feature
-            ? `${FEATURE_LABEL[feature]} is part of ${planName(
-                requiredPlan(feature)
-              )}. Everything you have set up stays exactly where it is.`
-            : 'Profiles, schedules, zones and history all connect. Pick the tier that matches how much you are covering.'}
-        </Text>
+        {feature ? (
+          <Text style={type.title}>
+            {FEATURE_LABEL[feature]} needs {planName(requiredPlan(feature))}
+          </Text>
+        ) : (
+          <Text style={type.title}>Pick a plan</Text>
+        )}
 
         <Segmented
           value={tab}
@@ -140,7 +126,6 @@ export default function Paywall() {
                 title="Yearly"
                 price={PRICES.pro.yearly.label}
                 period="per year"
-                note="Two months free"
                 selected={term === 'yearly'}
                 onPress={() => setTerm('yearly')}
               />
@@ -153,15 +138,10 @@ export default function Paywall() {
               />
             </View>
 
-            <Perks items={PRO_PERKS} />
+            <Lines items={PRO_LINES} />
 
             <Button
-              label={`Start Pro · ${
-                term === 'yearly'
-                  ? PRICES.pro.yearly.label
-                  : PRICES.pro.monthly.label
-              }`}
-              variant="gradient"
+              label="Upgrade to Pro"
               size="lg"
               loading={busy}
               onPress={() =>
@@ -169,49 +149,44 @@ export default function Paywall() {
               }
             />
             <Text style={styles.fine}>
-              Sandbox mode — no payment is taken and no store SDK is running.
-              Purchases go live when the RevenueCat keys land.
+              Sandbox mode. No payment is taken and no store SDK is running.
             </Text>
           </>
         ) : null}
 
         {tab === 'business' ? (
           <>
-            <Card style={styles.bigPrice}>
+            <View style={styles.bigPrice}>
               <Text style={styles.bigPriceValue}>
                 {PRICES.business.monthly.label}
               </Text>
               <Text style={styles.bigPricePeriod}>
                 per {PRICES.business.monthly.period}
               </Text>
-            </Card>
-            <Perks items={BUSINESS_PERKS} />
+            </View>
+            <Lines items={BUSINESS_LINES} />
             <Button
-              label="Set up on the web"
-              variant="gradient"
+              label="Set up Business on the web"
               size="lg"
               onPress={() => void Linking.openURL('https://pigeonx.org/app')}
               accessibilityHint="Opens the PigeonX dashboard in your browser"
             />
             <Text style={styles.fine}>
-              Business is billed per location through the web dashboard, so
-              multiple people can manage the same property.
+              Business bills per location on the web, so several people can run
+              the same property.
             </Text>
           </>
         ) : null}
 
         {tab === 'enterprise' ? (
           <>
-            <Card style={styles.bigPrice}>
-              <Text style={styles.bigPriceValue}>Let&apos;s talk</Text>
-              <Text style={styles.bigPricePeriod}>
-                Priced on portfolio size
-              </Text>
-            </Card>
-            <Perks items={ENTERPRISE_PERKS} />
+            <View style={styles.bigPrice}>
+              <Text style={styles.bigPriceValue}>By portfolio</Text>
+              <Text style={styles.bigPricePeriod}>priced per site count</Text>
+            </View>
+            <Lines items={ENTERPRISE_LINES} />
             <Button
-              label="Contact sales"
-              variant="gradient"
+              label="Talk to us"
               size="lg"
               onPress={() =>
                 void Linking.openURL(
@@ -240,14 +215,12 @@ function PriceCard({
   title,
   price,
   period,
-  note,
   selected,
   onPress,
 }: {
   title: string;
   price: string;
   period: string;
-  note?: string;
   selected: boolean;
   onPress: () => void;
 }) {
@@ -257,28 +230,30 @@ function PriceCard({
       haptic="selection"
       accessibilityLabel={`${title}, ${price} ${period}`}
       accessibilityState={{ selected }}
-      style={{ flex: 1 }}
+      style={styles.pricePress}
     >
-      <View style={[styles.priceCard, selected && styles.priceCardSelected]}>
-        <Text style={styles.priceTitle}>{title}</Text>
-        <Text style={styles.priceValue}>{price}</Text>
-        <Text style={styles.pricePeriod}>{period}</Text>
-        {note ? <Text style={styles.priceNote}>{note}</Text> : null}
+      <View style={[styles.priceCard, selected ? styles.priceSelected : null]}>
+        <Text style={[styles.priceTitle, selected ? styles.inverted : null]}>
+          {title}
+        </Text>
+        <Text style={[styles.priceValue, selected ? styles.inverted : null]}>
+          {price}
+        </Text>
+        <Text style={[styles.pricePeriod, selected ? styles.inverted : null]}>
+          {period}
+        </Text>
       </View>
     </Touchable>
   );
 }
 
-function Perks({ items }: { items: string[] }) {
+function Lines({ items }: { items: string[] }) {
   return (
-    <View style={styles.perks}>
+    <View style={styles.lines}>
       {items.map((t) => (
-        <View key={t} style={styles.perk}>
-          <View style={styles.check}>
-            <Check size={12} color={color.teal} strokeWidth={3} />
-          </View>
-          <Text style={styles.perkText}>{t}</Text>
-        </View>
+        <Text key={t} style={styles.line}>
+          {t}
+        </Text>
       ))}
     </View>
   );
@@ -292,108 +267,90 @@ function tabForPlan(plan: string): Tab {
 
 function planName(plan: string): string {
   return plan === 'business'
-    ? 'PigeonX Business'
+    ? 'Business'
     : plan === 'enterprise'
-      ? 'PigeonX Enterprise'
-      : 'PigeonX Pro';
+      ? 'Enterprise'
+      : 'Pro';
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.background },
-  head: { flexDirection: 'row', paddingHorizontal: space.md },
-  close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  body: { paddingHorizontal: space.lg, gap: space.md },
-  badge: {
-    width: 50,
-    height: 50,
-    borderRadius: radius.md,
+  head: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: space.md,
   },
-  lede: {
-    fontFamily: font.body.regular,
-    fontSize: 15,
-    lineHeight: 23,
-    color: color.fgMuted,
-    marginBottom: space.xs,
+  kicker: {
+    fontFamily: font.mono.medium,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: color.fgSubtle,
   },
-  priceRow: { flexDirection: 'row', gap: space.sm },
+  close: { width: 44, height: 44, alignItems: 'flex-end', justifyContent: 'center' },
+  body: { paddingHorizontal: space.md, gap: space.md },
+  priceRow: { flexDirection: 'row' },
+  pricePress: { flex: 1, minHeight: 0, marginLeft: -1 },
   priceCard: {
-    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: color.border,
-    backgroundColor: color.card,
+    backgroundColor: color.background,
     padding: space.md,
     gap: 2,
-    minHeight: 118,
+    minHeight: 104,
   },
-  priceCardSelected: {
-    borderColor: color.teal,
-    backgroundColor: color.elevated,
-    shadowColor: color.teal,
-    shadowOpacity: 0.22,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 6,
-  },
+  priceSelected: { borderColor: color.ink, backgroundColor: color.ink },
   priceTitle: {
-    fontFamily: font.body.medium,
-    fontSize: 12,
-    letterSpacing: 0.6,
+    fontFamily: font.mono.medium,
+    fontSize: 10,
+    letterSpacing: 1,
     textTransform: 'uppercase',
     color: color.fgSubtle,
   },
   priceValue: {
     fontFamily: font.heading.bold,
-    fontSize: 24,
-    color: color.fg,
-    letterSpacing: -0.4,
+    fontSize: 26,
+    letterSpacing: -0.8,
+    color: color.ink,
   },
   pricePeriod: {
     fontFamily: font.body.regular,
     fontSize: 12,
     color: color.fgMuted,
   },
-  priceNote: {
-    marginTop: 4,
-    fontFamily: font.body.semibold,
-    fontSize: 11,
-    color: color.teal,
+  inverted: { color: color.onAccent },
+  bigPrice: {
+    borderWidth: 1,
+    borderColor: color.border,
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: space.lg,
   },
-  bigPrice: { alignItems: 'center', gap: 2, paddingVertical: space.lg },
   bigPriceValue: {
     fontFamily: font.heading.bold,
-    fontSize: 34,
-    color: color.fg,
-    letterSpacing: -0.6,
+    fontSize: 32,
+    letterSpacing: -1,
+    color: color.ink,
   },
   bigPricePeriod: {
-    fontFamily: font.body.regular,
-    fontSize: 13,
+    fontFamily: font.mono.medium,
+    fontSize: 10,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
     color: color.fgMuted,
   },
-  perks: { gap: space.sm + 2, marginVertical: space.sm },
-  perk: { flexDirection: 'row', gap: space.sm, alignItems: 'flex-start' },
-  check: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: 'rgba(45,212,191,0.14)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 1,
-  },
-  perkText: {
-    flex: 1,
+  lines: { gap: 8, marginVertical: space.xs },
+  line: {
     fontFamily: font.body.regular,
     fontSize: 14,
-    lineHeight: 21,
+    lineHeight: 20,
     color: color.fg,
   },
   fine: {
     fontFamily: font.body.regular,
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 17,
     color: color.fgSubtle,
     textAlign: 'center',
   },

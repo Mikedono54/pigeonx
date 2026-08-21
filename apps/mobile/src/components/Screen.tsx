@@ -15,12 +15,14 @@ export interface ScreenProps {
   title?: string;
   subtitle?: string;
   children: React.ReactNode;
-  /** disables the ScrollView for screens that manage their own list */
+  /** ScrollView for sub-screens. Tab screens pass false and fit one screen. */
   scroll?: boolean;
-  /** extra bottom padding so content clears the tab bar and any docked CTA */
+  /** extra bottom padding so content clears the tab bar and any docked action */
   bottomInset?: number;
   contentStyle?: StyleProp<ViewStyle>;
   header?: React.ReactNode;
+  /** right-hand slot in the title row, usually a status tag */
+  headerRight?: React.ReactNode;
 }
 
 export function Screen({
@@ -31,6 +33,7 @@ export function Screen({
   bottomInset = 0,
   contentStyle,
   header,
+  headerRight,
 }: ScreenProps) {
   const insets = useSafeAreaInsets();
 
@@ -38,20 +41,21 @@ export function Screen({
     title || header ? (
       <View style={styles.head}>
         {title ? (
-          <>
-            <Text style={type.title}>{title}</Text>
-            {subtitle ? (
-              <Text style={[type.body, styles.subtitle]}>{subtitle}</Text>
-            ) : null}
-          </>
+          <View style={styles.titleRow}>
+            <Text style={[type.title, styles.title]} numberOfLines={1}>
+              {title}
+            </Text>
+            {headerRight}
+          </View>
         ) : null}
+        {subtitle ? <Text style={type.body}>{subtitle}</Text> : null}
         {header}
       </View>
     ) : null;
 
   const padding = {
     paddingTop: insets.top + space.sm,
-    paddingBottom: insets.bottom + space.xl + bottomInset,
+    paddingBottom: insets.bottom + space.md + bottomInset,
     paddingHorizontal: space.md,
   };
 
@@ -79,6 +83,12 @@ export function Screen({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.background },
-  head: { marginBottom: space.lg, gap: 4 },
-  subtitle: { fontSize: 14, lineHeight: 20 },
+  head: { marginBottom: space.md, gap: 6 },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space.sm,
+  },
+  title: { flexShrink: 1 },
 });

@@ -10,6 +10,7 @@ type Variant =
   | 'bodyStrong'
   | 'label'
   | 'caption'
+  | 'index'
   | 'mono'
   | 'monoLarge';
 
@@ -17,67 +18,76 @@ export const type: Record<Variant, TextStyle> = {
   display: {
     fontFamily: font.heading.bold,
     fontSize: 34,
-    lineHeight: 40,
-    letterSpacing: -0.6,
-    color: color.fg,
+    lineHeight: 38,
+    letterSpacing: -1,
+    color: color.ink,
   },
   title: {
     fontFamily: font.heading.bold,
-    fontSize: 26,
-    lineHeight: 32,
-    letterSpacing: -0.4,
-    color: color.fg,
+    fontSize: 27,
+    lineHeight: 31,
+    letterSpacing: -0.8,
+    color: color.ink,
   },
   heading: {
     fontFamily: font.heading.semibold,
     fontSize: 19,
-    lineHeight: 25,
-    letterSpacing: -0.2,
-    color: color.fg,
+    lineHeight: 24,
+    letterSpacing: -0.5,
+    color: color.ink,
   },
   subheading: {
     fontFamily: font.heading.semibold,
     fontSize: 16,
-    lineHeight: 22,
-    color: color.fg,
+    lineHeight: 21,
+    letterSpacing: -0.3,
+    color: color.ink,
   },
   body: {
     fontFamily: font.body.regular,
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 21,
     color: color.fgMuted,
   },
   bodyStrong: {
     fontFamily: font.body.semibold,
     fontSize: 15,
-    lineHeight: 22,
-    color: color.fg,
+    lineHeight: 21,
+    color: color.ink,
   },
   label: {
-    fontFamily: font.body.semibold,
+    fontFamily: font.body.medium,
     fontSize: 13,
     lineHeight: 18,
-    letterSpacing: 0.2,
     color: color.fg,
   },
   caption: {
-    fontFamily: font.body.medium,
+    fontFamily: font.body.regular,
     fontSize: 12,
     lineHeight: 16,
-    letterSpacing: 0.3,
+    color: color.fgSubtle,
+  },
+  /** Section index labels: "01 PROFILE". */
+  index: {
+    fontFamily: font.mono.medium,
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
     color: color.fgSubtle,
   },
   mono: {
     fontFamily: font.mono.medium,
-    fontSize: 14,
-    letterSpacing: 0.4,
-    color: color.fg,
+    fontSize: 12,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: color.ink,
   },
   monoLarge: {
     fontFamily: font.mono.medium,
     fontSize: 40,
-    letterSpacing: 1,
-    color: color.fg,
+    letterSpacing: -0.5,
+    color: color.ink,
   },
 };
 

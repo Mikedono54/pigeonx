@@ -11,7 +11,7 @@ import {
   type AudioProfile,
   type OutputKind,
 } from '../core/profiles';
-import { color, font, radius, space } from '../theme/tokens';
+import { color, font, space } from '../theme/tokens';
 
 const MAX_HZ = 25000;
 
@@ -22,8 +22,8 @@ export interface EffectiveRangeMeterProps {
 
 /**
  * The honesty widget. Shows where this profile's energy sits against what the
- * selected output can physically reproduce (spec §3) — the app never pretends
- * 25 kHz comes out of a phone.
+ * selected output can physically reproduce (spec section 3). The app never
+ * pretends 25 kHz comes out of a phone.
  */
 export function EffectiveRangeMeter({
   profile,
@@ -42,7 +42,11 @@ export function EffectiveRangeMeter({
         : color.danger;
 
   const Icon =
-    level === 'full' ? CircleCheck : level === 'partial' ? TriangleAlert : CircleSlash;
+    level === 'full'
+      ? CircleCheck
+      : level === 'partial'
+        ? TriangleAlert
+        : CircleSlash;
 
   const ceilingPct = Math.min(1, ceiling / MAX_HZ);
   const peakPct = Math.min(1, peak / MAX_HZ);
@@ -50,7 +54,7 @@ export function EffectiveRangeMeter({
   return (
     <View style={styles.wrap}>
       <View style={styles.head}>
-        <Icon size={16} color={tint} strokeWidth={2.2} />
+        <Icon size={14} color={tint} strokeWidth={1.75} />
         <Text style={[styles.title, { color: tint }]}>{copy.title}</Text>
         <Text style={styles.output}>{OUTPUT_LABEL[output]}</Text>
       </View>
@@ -86,17 +90,24 @@ export function EffectiveRangeMeter({
 
 const styles = StyleSheet.create({
   wrap: { gap: space.sm },
-  head: { flexDirection: 'row', alignItems: 'center', gap: space.xs + 2 },
-  title: { fontFamily: font.body.semibold, fontSize: 14 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  title: {
+    fontFamily: font.mono.medium,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
   output: {
     marginLeft: 'auto',
-    fontFamily: font.body.medium,
-    fontSize: 12,
+    fontFamily: font.mono.medium,
+    fontSize: 10,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
     color: color.fgSubtle,
   },
   track: {
-    height: 8,
-    borderRadius: radius.pill,
+    height: 10,
+    borderRadius: 0,
     backgroundColor: color.surface,
     borderWidth: 1,
     borderColor: color.border,
@@ -108,26 +119,32 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    borderRadius: radius.pill,
-    backgroundColor: 'rgba(45,212,191,0.30)',
+    borderRadius: 0,
+    backgroundColor: color.accent,
+    opacity: 0.25,
   },
   marker: {
     position: 'absolute',
-    width: 3,
-    height: 16,
-    borderRadius: 2,
-    marginLeft: -1.5,
+    width: 2,
+    height: 18,
+    borderRadius: 0,
+    marginLeft: -1,
   },
-  scale: { flexDirection: 'row', justifyContent: 'space-between', gap: space.sm },
+  scale: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: space.sm,
+  },
   scaleText: {
-    fontFamily: font.body.regular,
-    fontSize: 11,
+    fontFamily: font.mono.medium,
+    fontSize: 10,
+    letterSpacing: 0.5,
     color: color.fgSubtle,
   },
   detail: {
     fontFamily: font.body.regular,
     fontSize: 13,
-    lineHeight: 19,
+    lineHeight: 18,
     color: color.fgMuted,
   },
 });

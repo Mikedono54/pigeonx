@@ -1,7 +1,8 @@
 export { Banner } from './Banner';
-export { Button } from './Button';
+export { Button, buttonForeground } from './Button';
 export { Card } from './Card';
 export { Chip } from './Chip';
+export { Disclosure } from './Disclosure';
 export { EffectiveRangeMeter } from './EffectiveRangeMeter';
 export { EmptyState } from './EmptyState';
 export { LockBadge } from './LockBadge';

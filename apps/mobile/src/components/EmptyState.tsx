@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { color, radius, space } from '../theme/tokens';
+import { color, space } from '../theme/tokens';
 import { type } from '../theme/typography';
 import { Button } from './Button';
 
@@ -28,7 +28,7 @@ export function EmptyState({
         <Button
           label={actionLabel}
           onPress={onAction}
-          variant="outline"
+          variant="secondary"
           size="sm"
           full={false}
           style={styles.action}
@@ -41,14 +41,14 @@ export function EmptyState({
 const styles = StyleSheet.create({
   wrap: {
     alignItems: 'center',
-    paddingVertical: space.xl,
-    paddingHorizontal: space.lg,
+    paddingVertical: space.lg,
+    paddingHorizontal: space.md,
     gap: space.xs,
   },
   icon: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.lg,
+    width: 48,
+    height: 48,
+    borderRadius: 0,
     backgroundColor: color.surface,
     borderWidth: 1,
     borderColor: color.border,
@@ -58,5 +58,5 @@ const styles = StyleSheet.create({
   },
   title: { textAlign: 'center' },
   body: { textAlign: 'center', maxWidth: 300 },
-  action: { marginTop: space.md },
+  action: { marginTop: space.md, paddingHorizontal: space.lg },
 });

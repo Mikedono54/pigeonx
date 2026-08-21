@@ -16,6 +16,7 @@ import {
 import { PLACEHOLDER_NOTICE } from '../../src/audio/samples';
 import {
   KIND_LABEL,
+  SYSTEM_PROFILES,
   describeParams,
   guestsMayHear,
   type AudioProfile,
@@ -23,8 +24,8 @@ import {
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { useProfiles } from '../../src/state/useProfiles';
 import { useSession } from '../../src/state/useSession';
-import { SYSTEM_PROFILES } from '../../src/core/profiles';
 import { color, font, space } from '../../src/theme/tokens';
+import { type } from '../../src/theme/typography';
 
 export default function ProfilesScreen() {
   const ent = useEntitlement();
@@ -61,33 +62,33 @@ export default function ProfilesScreen() {
             accessibilityLabel="Go back"
             style={styles.back}
           >
-            <ChevronLeft size={22} color={color.fg} strokeWidth={2.2} />
+            <ChevronLeft size={22} color={color.ink} strokeWidth={1.75} />
           </Touchable>
-          <Text style={styles.headTitle}>Profiles</Text>
+          <Text style={type.title}>Profiles</Text>
         </View>
       }
-      bottomInset={80}
     >
       <SectionHeader
+        index="01"
         title="Yours"
         subtitle={
           savedLimit == null
             ? `${saved.length} saved`
-            : `Free saves ${savedLimit} custom profile`
+            : `Free saves ${savedLimit} of your own`
         }
       />
 
       {saved.length === 0 ? (
         <Card padded={false}>
           <EmptyState
-            title="No custom profiles yet"
-            body="Set the frequency, pulse timing and randomisation yourself, preview it for five seconds, then save."
+            title="None built yet"
+            body="Set the frequency, the pulse timing and the randomisation, hear five seconds of it, then save."
             actionLabel="Build one"
             onAction={openBuilder}
           />
         </Card>
       ) : (
-        <View style={{ gap: space.sm }}>
+        <View style={styles.list}>
           {saved.map((p) => (
             <ProfileRow
               key={p.id}
@@ -103,21 +104,22 @@ export default function ProfilesScreen() {
         </View>
       )}
 
-      <View style={{ marginTop: space.md }}>
+      <View style={styles.action}>
         <Button
           label="Build a profile"
-          variant="outline"
+          variant="secondary"
           onPress={openBuilder}
-          icon={<Plus size={17} color={color.fg} strokeWidth={2.4} />}
+          icon={<Plus size={16} color={color.ink} strokeWidth={1.75} />}
         />
       </View>
 
-      <View style={{ marginTop: space.xl }}>
+      <View style={styles.section}>
         <SectionHeader
-          title="System profiles"
-          subtitle="Tuned starting points. Duplicate one by building your own."
+          index="02"
+          title="Built in"
+          subtitle="Starting points. Copy one by building your own."
         />
-        <View style={{ gap: space.sm }}>
+        <View style={styles.list}>
           {SYSTEM_PROFILES.map((p) => (
             <ProfileRow
               key={p.id}
@@ -149,7 +151,7 @@ function ProfileRow({
   return (
     <Card active={active} onPress={onPress} accessibilityLabel={profile.name}>
       <View style={styles.row}>
-        <View style={{ flex: 1, gap: 4 }}>
+        <View style={styles.rowText}>
           <View style={styles.rowTop}>
             <Text style={styles.name} numberOfLines={1}>
               {profile.name}
@@ -159,19 +161,19 @@ function ProfileRow({
           <Text style={styles.desc} numberOfLines={2}>
             {profile.description}
           </Text>
-          <View style={styles.metaRow}>
-            <Text style={styles.meta}>{KIND_LABEL[profile.kind]}</Text>
-            <Text style={styles.metaDot}>·</Text>
-            <Text style={styles.metaMono}>{describeParams(profile)}</Text>
-          </View>
-          <View style={styles.pills}>
-            {guestsMayHear(profile) ? (
-              <StatusPill label="Guests may hear" tone="warning" dot={false} />
-            ) : null}
-            {profile.kind === 'sample' ? (
-              <StatusPill label={PLACEHOLDER_NOTICE} tone="idle" dot={false} />
-            ) : null}
-          </View>
+          <Text style={styles.meta} numberOfLines={1}>
+            {KIND_LABEL[profile.kind]} · {describeParams(profile)}
+          </Text>
+          {guestsMayHear(profile) || profile.kind === 'sample' ? (
+            <View style={styles.tags}>
+              {guestsMayHear(profile) ? (
+                <StatusPill label="Guests may hear" tone="warning" />
+              ) : null}
+              {profile.kind === 'sample' ? (
+                <StatusPill label={PLACEHOLDER_NOTICE} tone="idle" />
+              ) : null}
+            </View>
+          ) : null}
         </View>
         {onDelete ? (
           <Touchable
@@ -179,7 +181,7 @@ function ProfileRow({
             accessibilityLabel={`Delete ${profile.name}`}
             style={styles.delete}
           >
-            <Trash2 size={17} color={color.danger} strokeWidth={2.2} />
+            <Trash2 size={18} color={color.danger} strokeWidth={1.75} />
           </Touchable>
         ) : null}
       </View>
@@ -189,26 +191,41 @@ function ProfileRow({
 
 const styles = StyleSheet.create({
   headRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
-  back: { width: 44, height: 44, alignItems: 'flex-start', justifyContent: 'center' },
-  headTitle: {
-    fontFamily: font.heading.bold,
-    fontSize: 26,
-    color: color.fg,
-    letterSpacing: -0.4,
+  back: {
+    width: 44,
+    height: 44,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
   },
+  list: { gap: space.sm },
+  action: { marginTop: space.md },
+  section: { marginTop: space.xl },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm },
+  rowText: { flex: 1, gap: 4 },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  name: { fontFamily: font.heading.semibold, fontSize: 16, color: color.fg },
+  name: {
+    fontFamily: font.heading.semibold,
+    fontSize: 16,
+    letterSpacing: -0.3,
+    color: color.ink,
+  },
   desc: {
     fontFamily: font.body.regular,
     fontSize: 13,
-    lineHeight: 19,
+    lineHeight: 18,
     color: color.fgMuted,
   },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  meta: { fontFamily: font.body.medium, fontSize: 12, color: color.fgSubtle },
-  metaDot: { color: color.fgSubtle, fontSize: 12 },
-  metaMono: { fontFamily: font.mono.medium, fontSize: 12, color: color.teal },
-  pills: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginTop: 4 },
-  delete: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  meta: {
+    fontFamily: font.mono.medium,
+    fontSize: 10,
+    letterSpacing: 0.5,
+    color: color.fgSubtle,
+  },
+  tags: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginTop: 2 },
+  delete: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

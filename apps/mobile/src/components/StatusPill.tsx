@@ -1,65 +1,39 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { color, font, radius, space } from '../theme/tokens';
+import { color, font } from '../theme/tokens';
 
 export type StatusTone = 'idle' | 'running' | 'scheduled' | 'warning' | 'danger';
 
 const TONE: Record<StatusTone, { fg: string; bg: string; border: string }> = {
-  idle: {
-    fg: color.fgMuted,
-    bg: 'rgba(139,151,173,0.10)',
-    border: 'rgba(139,151,173,0.22)',
-  },
-  running: {
-    fg: color.teal,
-    bg: 'rgba(45,212,191,0.12)',
-    border: 'rgba(45,212,191,0.35)',
-  },
-  scheduled: {
-    fg: color.blue,
-    bg: 'rgba(59,130,246,0.12)',
-    border: 'rgba(59,130,246,0.35)',
-  },
-  warning: {
-    fg: color.warning,
-    bg: 'rgba(251,191,36,0.12)',
-    border: 'rgba(251,191,36,0.32)',
-  },
-  danger: {
-    fg: color.danger,
-    bg: 'rgba(248,113,113,0.12)',
-    border: 'rgba(248,113,113,0.32)',
-  },
+  idle: { fg: color.fgMuted, bg: color.surface, border: color.border },
+  running: { fg: color.onAccent, bg: color.accent, border: color.accent },
+  scheduled: { fg: color.ink, bg: color.background, border: color.ink },
+  warning: { fg: color.warning, bg: color.background, border: color.warning },
+  danger: { fg: color.danger, bg: color.background, border: color.danger },
 };
 
 export interface StatusPillProps {
   label: string;
   tone?: StatusTone;
-  /** renders a leading dot; on `running` it reads as a live indicator */
+  /** legacy leading marker, now a small square */
   dot?: boolean;
+  /** kept for callers; every tag renders in the mono face */
   mono?: boolean;
 }
 
-export function StatusPill({
-  label,
-  tone = 'idle',
-  dot = true,
-  mono = false,
-}: StatusPillProps) {
+/**
+ * A square status tag with a mono label: IDLE, RUNNING 12:40, SCHEDULED 6:00 PM.
+ */
+export function StatusPill({ label, tone = 'idle', dot = false }: StatusPillProps) {
   const t = TONE[tone];
   return (
     <View
       accessibilityRole="text"
       accessibilityLabel={label}
-      style={[styles.pill, { backgroundColor: t.bg, borderColor: t.border }]}
+      style={[styles.tag, { backgroundColor: t.bg, borderColor: t.border }]}
     >
       {dot ? <View style={[styles.dot, { backgroundColor: t.fg }]} /> : null}
-      <Text
-        style={[
-          styles.label,
-          { color: t.fg, fontFamily: mono ? font.mono.medium : font.body.semibold },
-        ]}
-      >
+      <Text style={[styles.label, { color: t.fg }]} numberOfLines={1}>
         {label}
       </Text>
     </View>
@@ -67,16 +41,21 @@ export function StatusPill({
 }
 
 const styles = StyleSheet.create({
-  pill: {
+  tag: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    borderRadius: radius.pill,
+    borderRadius: 0,
     borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    gap: space.xs + 2,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    gap: 5,
   },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  label: { fontSize: 12, letterSpacing: 0.3 },
+  dot: { width: 5, height: 5, borderRadius: 0 },
+  label: {
+    fontFamily: font.mono.medium,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
 });

@@ -1,8 +1,7 @@
 import React, { createContext, useCallback, useContext, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, font, radius, space } from '../theme/tokens';
+import { color, font, space } from '../theme/tokens';
 
 type ToastTone = 'default' | 'success' | 'danger';
 
@@ -44,19 +43,17 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         style={[styles.host, { bottom: insets.bottom + 96 }]}
       >
         {items.map((t) => (
-          <Animated.View
+          <View
             key={t.id}
-            entering={FadeInDown.duration(180)}
-            exiting={FadeOutDown.duration(160)}
             accessibilityLiveRegion="polite"
             style={[
               styles.toast,
-              t.tone === 'success' && { borderColor: 'rgba(52,211,153,0.4)' },
-              t.tone === 'danger' && { borderColor: 'rgba(248,113,113,0.4)' },
+              t.tone === 'success' ? { backgroundColor: color.success } : null,
+              t.tone === 'danger' ? { backgroundColor: color.danger } : null,
             ]}
           >
             <Text style={styles.text}>{t.text}</Text>
-          </Animated.View>
+          </View>
         ))}
       </View>
     </Ctx.Provider>
@@ -72,23 +69,17 @@ const styles = StyleSheet.create({
     gap: space.sm,
   },
   toast: {
-    backgroundColor: color.elevated,
-    borderWidth: 1,
-    borderColor: color.border,
-    borderRadius: radius.pill,
+    backgroundColor: color.ink,
+    borderRadius: 0,
     paddingHorizontal: space.md,
     paddingVertical: 10,
     maxWidth: '100%',
-    shadowColor: '#000',
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
   },
   text: {
-    color: color.fg,
+    color: color.onAccent,
     fontFamily: font.body.medium,
-    fontSize: 14,
+    fontSize: 13,
+    lineHeight: 18,
     textAlign: 'center',
   },
 });

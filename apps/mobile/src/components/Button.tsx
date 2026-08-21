@@ -1,12 +1,10 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { color, gradient, radius, space } from '../theme/tokens';
-import { font } from '../theme/tokens';
+import { color, font, space } from '../theme/tokens';
 import { Touchable } from './Touchable';
 
-export type ButtonVariant = 'primary' | 'gradient' | 'outline' | 'ghost' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 export interface ButtonProps {
@@ -25,9 +23,20 @@ export interface ButtonProps {
   testID?: string;
 }
 
-const HEIGHT: Record<ButtonSize, number> = { sm: 40, md: 48, lg: 58 };
-const FONT_SIZE: Record<ButtonSize, number> = { sm: 14, md: 15, lg: 17 };
+const HEIGHT: Record<ButtonSize, number> = { sm: 40, md: 48, lg: 56 };
+const FONT_SIZE: Record<ButtonSize, number> = { sm: 11, md: 13, lg: 14 };
 
+/** The label colour each variant paints its text and icons in. */
+export function buttonForeground(variant: ButtonVariant = 'primary'): string {
+  if (variant === 'primary') return color.onAccent;
+  if (variant === 'danger') return color.danger;
+  return color.ink;
+}
+
+/**
+ * Square, flat, one accent. Primary is a solid accent block, secondary is a
+ * hairline ink outline, ghost is text on its own.
+ */
 export function Button({
   label,
   onPress,
@@ -45,109 +54,75 @@ export function Button({
 }: ButtonProps) {
   const isBusy = loading || disabled;
   const height = HEIGHT[size];
-  const fg =
-    variant === 'gradient' || variant === 'primary'
-      ? color.onAccent
-      : variant === 'danger'
-        ? color.danger
-        : color.fg;
-
-  const inner = (
-    <View style={[styles.row, { height }]}>
-      {loading ? (
-        <ActivityIndicator color={fg} size="small" />
-      ) : (
-        <>
-          {icon}
-          <Text
-            numberOfLines={1}
-            style={[
-              styles.label,
-              { color: fg, fontSize: FONT_SIZE[size] },
-              icon ? { marginLeft: space.sm } : null,
-            ]}
-          >
-            {label}
-          </Text>
-          {trailingIcon ? (
-            <View style={{ marginLeft: space.sm }}>{trailingIcon}</View>
-          ) : null}
-        </>
-      )}
-    </View>
-  );
-
-  const shell: StyleProp<ViewStyle> = [
-    styles.shell,
-    { height, borderRadius: size === 'lg' ? radius.lg : radius.md },
-    full ? styles.full : null,
-    variant === 'primary' && { backgroundColor: color.accent },
-    variant === 'outline' && {
-      borderWidth: 1,
-      borderColor: color.border,
-      backgroundColor: color.card,
-    },
-    variant === 'ghost' && { backgroundColor: 'transparent' },
-    variant === 'danger' && {
-      borderWidth: 1,
-      borderColor: 'rgba(248,113,113,0.35)',
-      backgroundColor: 'rgba(248,113,113,0.08)',
-    },
-    style,
-  ];
+  const fg = buttonForeground(variant);
 
   return (
     <Touchable
       onPress={isBusy ? undefined : onPress}
       disabled={isBusy}
-      haptic={variant === 'gradient' ? 'medium' : 'light'}
+      haptic={variant === 'primary' ? 'medium' : 'light'}
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: isBusy, busy: loading }}
       testID={testID}
       style={full ? styles.full : undefined}
     >
-      {variant === 'gradient' ? (
-        <View style={[shell, styles.glow]}>
-          <LinearGradient
-            colors={gradient.brand}
-            start={gradient.brandStart}
-            end={gradient.brandEnd}
-            style={[
-              StyleSheet.absoluteFill,
-              { borderRadius: size === 'lg' ? radius.lg : radius.md },
-            ]}
-          />
-          {inner}
-        </View>
-      ) : (
-        <View style={shell}>{inner}</View>
-      )}
+      <View
+        style={[
+          styles.shell,
+          { height },
+          full ? styles.full : null,
+          variant === 'primary' ? { backgroundColor: color.accent } : null,
+          variant === 'secondary'
+            ? { borderWidth: 1, borderColor: color.ink }
+            : null,
+          variant === 'danger'
+            ? { borderWidth: 1, borderColor: color.danger }
+            : null,
+          style,
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator color={fg} size="small" />
+        ) : (
+          <View style={styles.row}>
+            {icon}
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.label,
+                { color: fg, fontSize: FONT_SIZE[size] },
+                icon ? { marginLeft: space.sm } : null,
+              ]}
+            >
+              {label}
+            </Text>
+            {trailingIcon ? (
+              <View style={{ marginLeft: space.sm }}>{trailingIcon}</View>
+            ) : null}
+          </View>
+        )}
+      </View>
     </Touchable>
   );
 }
 
 const styles = StyleSheet.create({
   shell: {
-    overflow: 'hidden',
+    borderRadius: 0,
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: space.lg,
+    paddingHorizontal: space.md,
   },
   full: { width: '100%' },
-  glow: {
-    shadowColor: color.teal,
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   label: {
-    fontFamily: font.body.semibold,
-    letterSpacing: 0.2,
+    fontFamily: font.mono.medium,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
 });

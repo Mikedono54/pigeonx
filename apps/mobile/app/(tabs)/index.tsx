@@ -1,37 +1,17 @@
 import { useCallback, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import {
-  ArrowUpRight,
-  CalendarClock,
-  Play,
-  Square,
-  Waves,
-} from 'lucide-react-native';
+import { ArrowUpRight, Play, Square } from 'lucide-react-native';
 
-import {
-  Banner,
-  Button,
-  Card,
-  Screen,
-  SectionHeader,
-  StatusPill,
-} from '../../src/components';
+import { Banner, Button, Card, Screen, StatusPill, Touchable } from '../../src/components';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { useElapsed } from '../../src/hooks/useElapsed';
-import {
-  EFFECTIVENESS_COPY,
-  OUTPUT_LABEL,
-  describeParams,
-  effectiveForOutput,
-} from '../../src/core/profiles';
-import { useAccount } from '../../src/state/useAccount';
+import { OUTPUT_LABEL, describeParams } from '../../src/core/profiles';
 import { useHistory } from '../../src/state/useHistory';
 import { useProfiles } from '../../src/state/useProfiles';
 import { useSchedules, formatMinutes } from '../../src/state/useSchedules';
 import { formatElapsed, useSession } from '../../src/state/useSession';
-import { color, font, gradient, radius, space } from '../../src/theme/tokens';
+import { color, font, space } from '../../src/theme/tokens';
 import { type } from '../../src/theme/typography';
 
 export default function HomeScreen() {
@@ -61,7 +41,7 @@ export default function HomeScreen() {
 
   const nextSchedule = useMemo(() => {
     const now = new Date();
-    let best: { label: string; at: Date } | null = null;
+    let best: Date | null = null;
     for (const s of schedules) {
       if (!s.enabled || s.days.length === 0) continue;
       for (let offset = 0; offset < 8; offset++) {
@@ -70,14 +50,16 @@ export default function HomeScreen() {
         if (!s.days.includes(d.getDay())) continue;
         d.setHours(Math.floor(s.startMinutes / 60), s.startMinutes % 60, 0, 0);
         if (d.getTime() <= now.getTime()) continue;
-        if (!best || d < best.at) best = { label: s.name, at: d };
+        if (!best || d < best) best = d;
         break;
       }
     }
     return best;
   }, [schedules]);
 
-  const reach = profile ? effectiveForOutput(profile, output) : 'full';
+  const nextLabel = nextSchedule
+    ? formatMinutes(nextSchedule.getHours() * 60 + nextSchedule.getMinutes())
+    : 'None';
 
   const onPrimary = useCallback(() => {
     if (running) {
@@ -88,28 +70,27 @@ export default function HomeScreen() {
     void start();
   }, [running, start, stop]);
 
-  const statusLabel = running
-    ? formatElapsed(elapsed)
+  const status = running
+    ? { label: `Running ${formatElapsed(elapsed)}`, tone: 'running' as const }
     : nextSchedule
-      ? `Scheduled ${formatMinutes(
-          nextSchedule.at.getHours() * 60 + nextSchedule.at.getMinutes()
-        )}`
-      : 'Idle';
+      ? { label: `Scheduled ${nextLabel}`, tone: 'scheduled' as const }
+      : { label: 'Idle', tone: 'idle' as const };
 
   return (
     <Screen
       title="My space"
       subtitle={
         running
-          ? 'Running now — audio keeps going with the screen off.'
-          : 'One tap starts your last profile.'
+          ? 'Audio keeps playing with the screen off.'
+          : 'Pick a profile. Start. Stop when service ends.'
       }
-      bottomInset={100}
+      headerRight={<StatusPill label={status.label} tone={status.tone} />}
+      scroll={false}
     >
       {error ? (
-        <View style={{ marginBottom: space.md }}>
+        <View style={styles.banner}>
           <Banner
-            title="Audio could not start"
+            title="Audio did not start"
             body={error}
             onRetry={() => void start()}
           />
@@ -117,140 +98,72 @@ export default function HomeScreen() {
       ) : null}
 
       {hitPlanCap && !running ? (
-        <View style={{ marginBottom: space.md }}>
+        <View style={styles.banner}>
           <Banner
             tone="info"
-            title="Run stopped at the Free 15-minute cap"
-            body="Pro removes the cap and lets sessions run as long as you need."
+            title="Run stopped at 15 minutes"
+            body="Free caps every run. Pro runs as long as you leave it on."
             retryLabel="See Pro"
             onRetry={() => router.push('/paywall')}
           />
         </View>
       ) : null}
 
-      <Card active={running} padded={false} style={styles.hero}>
-        <LinearGradient
-          colors={
-            running
-              ? ['rgba(45,212,191,0.20)', 'rgba(59,130,246,0.06)']
-              : ['rgba(27,39,66,0.9)', 'rgba(21,31,54,0.6)']
-          }
-          start={gradient.brandStart}
-          end={gradient.brandEnd}
-          style={styles.heroWash}
-        />
-        <View style={styles.heroBody}>
-          <View style={styles.heroTop}>
-            <View style={{ gap: 6, flex: 1 }}>
-              <Text style={styles.heroLabel}>Active profile</Text>
-              <Text style={type.heading} numberOfLines={1}>
-                {profile?.name ?? 'No profile selected'}
-              </Text>
-              <Text style={styles.heroMeta}>
-                {profile ? describeParams(profile) : '—'} ·{' '}
-                {OUTPUT_LABEL[output]}
-              </Text>
-            </View>
-            <StatusPill
-              label={statusLabel}
-              tone={running ? 'running' : nextSchedule ? 'scheduled' : 'idle'}
-              mono={running}
-            />
-          </View>
-
-          <View style={styles.reachRow}>
-            <Waves
-              size={15}
-              color={
-                reach === 'full'
-                  ? color.success
-                  : reach === 'partial'
-                    ? color.warning
-                    : color.danger
-              }
-              strokeWidth={2.2}
-            />
-            <Text style={styles.reachText}>
-              {EFFECTIVENESS_COPY[reach].title} on {OUTPUT_LABEL[output]}
-            </Text>
-          </View>
+      <Card
+        active={running}
+        onPress={() => router.navigate('/deterrent')}
+        accessibilityLabel={`Change profile. Now set to ${profile?.name ?? 'none'}`}
+        style={styles.profileCard}
+      >
+        <View style={styles.profileTop}>
+          <Text style={styles.kicker}>Profile</Text>
+          <ArrowUpRight size={16} color={color.fgSubtle} strokeWidth={1.75} />
         </View>
+        <Text style={type.heading} numberOfLines={1}>
+          {profile?.name ?? 'Nothing picked yet'}
+        </Text>
+        <Text style={styles.meta} numberOfLines={1}>
+          {profile ? describeParams(profile) : 'No profile'} ·{' '}
+          {OUTPUT_LABEL[output]}
+        </Text>
       </Card>
 
       <View style={styles.statRow}>
         <Stat label="Runs today" value={String(todayCount)} />
-        <Stat
-          label="Next reminder"
-          value={
-            nextSchedule
-              ? formatMinutes(
-                  nextSchedule.at.getHours() * 60 + nextSchedule.at.getMinutes()
-                )
-              : '—'
-          }
-        />
-        <Stat label="Plan" value={plan === 'free' ? 'Free' : plan.toUpperCase()} />
+        <Stat label="Next" value={nextLabel} />
       </View>
-
-      {!nextSchedule ? (
-        <Card
-          onPress={() => router.navigate('/schedules')}
-          style={styles.linkCard}
-          accessibilityLabel="Set up a schedule"
-        >
-          <CalendarClock size={18} color={color.blue} strokeWidth={2.1} />
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={styles.linkTitle}>Set up a schedule</Text>
-            <Text style={styles.linkBody}>
-              Dawn and dusk are when birds settle. A reminder puts the start one
-              tap away.
-            </Text>
-          </View>
-          <ArrowUpRight size={16} color={color.fgSubtle} strokeWidth={2.2} />
-        </Card>
-      ) : null}
 
       {plan === 'free' ? (
-        <View style={{ marginTop: space.lg }}>
-          <SectionHeader
-            title="Get the whole system"
-            subtitle="Pro unlocks every profile, the builder, and unlimited run time."
-          />
-          <Card onPress={() => router.push('/paywall')} accessibilityLabel="Upgrade to Pro">
-            <View style={styles.upsell}>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={styles.upsellTitle}>PigeonX Pro · $4.99/mo</Text>
-                <Text style={styles.linkBody}>
-                  Distress and predator calls, custom profiles, schedules and
-                  full history.
-                </Text>
-              </View>
-              <ArrowUpRight size={18} color={color.accent} strokeWidth={2.3} />
-            </View>
-          </Card>
-        </View>
+        <Touchable
+          onPress={() => router.push('/paywall')}
+          accessibilityLabel="Upgrade to Pro"
+          style={styles.upgrade}
+        >
+          <Text style={styles.upgradeText} numberOfLines={1}>
+            Free stops a run at 15 minutes.
+          </Text>
+          <Text style={styles.upgradeAction}>Upgrade</Text>
+        </Touchable>
       ) : null}
 
-      <View style={styles.dock}>
-        <Button
-          label={running ? 'Stop' : 'Start deterrent'}
-          variant={running ? 'danger' : 'gradient'}
-          size="lg"
-          onPress={onPrimary}
-          icon={
-            running ? (
-              <Square size={17} color={color.danger} strokeWidth={2.6} />
-            ) : (
-              <Play size={18} color={color.onAccent} strokeWidth={2.6} />
-            )
-          }
-          accessibilityHint={
-            running
-              ? 'Stops the current run'
-              : 'Starts your last profile on the Deterrent tab'
-          }
-        />
-      </View>
+      <View style={styles.spacer} />
+
+      <Button
+        label={running ? 'Stop' : 'Start'}
+        variant={running ? 'danger' : 'primary'}
+        size="lg"
+        onPress={onPrimary}
+        icon={
+          running ? (
+            <Square size={16} color={color.danger} strokeWidth={1.75} />
+          ) : (
+            <Play size={16} color={color.onAccent} strokeWidth={1.75} />
+          )
+        }
+        accessibilityHint={
+          running ? 'Stops the run' : 'Starts the profile shown above'
+        }
+      />
     </Screen>
   );
 }
@@ -258,73 +171,80 @@ export default function HomeScreen() {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.stat}>
-      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statValue} numberOfLines={1}>
+        {value}
+      </Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: { marginBottom: space.md },
-  heroWash: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  heroBody: { padding: space.md, gap: space.md },
-  heroTop: { flexDirection: 'row', gap: space.md, alignItems: 'flex-start' },
-  heroLabel: {
-    fontFamily: font.body.medium,
+  banner: { marginBottom: space.sm },
+  profileCard: { gap: 6 },
+  profileTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  kicker: {
+    fontFamily: font.mono.medium,
     fontSize: 11,
     letterSpacing: 1,
     textTransform: 'uppercase',
     color: color.fgSubtle,
   },
-  heroMeta: {
-    fontFamily: font.body.regular,
-    fontSize: 13,
+  meta: {
+    fontFamily: font.mono.medium,
+    fontSize: 11,
+    letterSpacing: 0.5,
     color: color.fgMuted,
   },
-  reachRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  reachText: {
-    fontFamily: font.body.medium,
-    fontSize: 13,
-    color: color.fgMuted,
-  },
-  statRow: { flexDirection: 'row', gap: space.sm, marginBottom: space.md },
+  statRow: { flexDirection: 'row', marginTop: -1 },
   stat: {
     flex: 1,
-    backgroundColor: color.card,
     borderWidth: 1,
     borderColor: color.border,
-    borderRadius: radius.md,
-    paddingVertical: space.md - 2,
-    paddingHorizontal: space.sm + 2,
-    gap: 3,
+    marginLeft: -1,
+    paddingVertical: space.sm + 4,
+    paddingHorizontal: space.sm + 4,
+    gap: 2,
   },
   statValue: {
     fontFamily: font.mono.medium,
-    fontSize: 20,
-    color: color.fg,
+    fontSize: 22,
+    letterSpacing: -0.5,
+    color: color.ink,
   },
   statLabel: {
-    fontFamily: font.body.regular,
-    fontSize: 11,
+    fontFamily: font.mono.medium,
+    fontSize: 10,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
     color: color.fgSubtle,
   },
-  linkCard: { flexDirection: 'row', alignItems: 'center', gap: space.sm + 4 },
-  linkTitle: {
-    fontFamily: font.body.semibold,
-    fontSize: 14,
-    color: color.fg,
+  upgrade: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    marginTop: space.md,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: color.border,
+    paddingHorizontal: 2,
   },
-  linkBody: {
+  upgradeText: {
+    flex: 1,
     fontFamily: font.body.regular,
     fontSize: 13,
-    lineHeight: 19,
-    color: color.fgMuted,
-  },
-  upsell: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  upsellTitle: {
-    fontFamily: font.heading.semibold,
-    fontSize: 15,
     color: color.fg,
   },
-  dock: { marginTop: space.xl },
+  upgradeAction: {
+    fontFamily: font.mono.medium,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: color.accent,
+  },
+  spacer: { flex: 1, minHeight: space.md },
 });

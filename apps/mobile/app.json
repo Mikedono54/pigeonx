@@ -6,9 +6,9 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
-    "backgroundColor": "#0B1220",
-    "primaryColor": "#22D3EE",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FFFFFF",
+    "primaryColor": "#2B5CFF",
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -17,9 +17,9 @@
       "bundleIdentifier": "org.pigeonx.app",
       "infoPlist": {
         "UIBackgroundModes": [
-          "audio",
           "audio"
         ],
+        "UIUserInterfaceStyle": "Light",
         "NSBluetoothAlwaysUsageDescription": "PigeonX uses Bluetooth to find and set up PigeonX emitters near you.",
         "NSBluetoothPeripheralUsageDescription": "PigeonX uses Bluetooth to find and set up PigeonX emitters near you.",
         "ITSAppUsesNonExemptEncryption": false
@@ -29,18 +29,12 @@
       "package": "org.pigeonx.app",
       "predictiveBackGestureEnabled": false,
       "adaptiveIcon": {
-        "backgroundColor": "#0B1220",
+        "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "permissions": [
-        "android.permission.BLUETOOTH_CONNECT",
-        "android.permission.BLUETOOTH_SCAN",
-        "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-        "android.permission.POST_NOTIFICATIONS",
-        "android.permission.WAKE_LOCK",
         "android.permission.BLUETOOTH_CONNECT",
         "android.permission.BLUETOOTH_SCAN",
         "android.permission.FOREGROUND_SERVICE",
@@ -76,15 +70,15 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
-          "imageWidth": 180,
-          "backgroundColor": "#0B1220",
+          "imageWidth": 160,
+          "backgroundColor": "#FFFFFF",
           "resizeMode": "contain"
         }
       ],
       [
         "expo-notifications",
         {
-          "color": "#22D3EE",
+          "color": "#2B5CFF",
           "defaultChannel": "pigeonx-runs"
         }
       ]

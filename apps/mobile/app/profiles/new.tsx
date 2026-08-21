@@ -33,7 +33,7 @@ import {
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { useProfiles } from '../../src/state/useProfiles';
 import { useSession } from '../../src/state/useSession';
-import { color, font, radius, space } from '../../src/theme/tokens';
+import { color, font, space } from '../../src/theme/tokens';
 import { type } from '../../src/theme/typography';
 
 const PREVIEW_MS = 5000;
@@ -91,7 +91,7 @@ export default function ProfileBuilder() {
 
   const preview = useCallback(async () => {
     if (sessionRunning) {
-      setError('Stop the current run before previewing.');
+      setError('Stop the run first.');
       return;
     }
     if (previewing) {
@@ -105,7 +105,7 @@ export default function ProfileBuilder() {
       await engine.load(draft);
       await engine.start(output);
       if (engine.getState() !== 'running') {
-        setError(engine.getError() ?? 'Preview could not start');
+        setError(engine.getError() ?? 'Nothing played');
         return;
       }
       setPreviewing(true);
@@ -114,7 +114,7 @@ export default function ProfileBuilder() {
         timer.current = null;
       }, PREVIEW_MS);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Preview could not start');
+      setError(e instanceof Error ? e.message : 'Nothing played');
     }
   }, [draft, output, previewing, sessionRunning, stopPreview]);
 
@@ -146,7 +146,7 @@ export default function ProfileBuilder() {
           accessibilityLabel="Close"
           style={styles.close}
         >
-          <X size={20} color={color.fgMuted} strokeWidth={2.2} />
+          <X size={20} color={color.ink} strokeWidth={1.75} />
         </Touchable>
       </View>
 
@@ -155,26 +155,26 @@ export default function ProfileBuilder() {
         showsVerticalScrollIndicator={false}
       >
         {error ? (
-          <Banner title="Preview failed" body={error} onRetry={preview} />
+          <Banner title="Nothing played" body={error} onRetry={preview} />
         ) : null}
 
         <Card style={{ gap: space.md }}>
           <SpectrumBars active={previewing} height={92} />
           <View style={styles.pills}>
             <StatusPill
-              label={previewing ? 'Previewing' : 'Ready'}
+              label={previewing ? 'Playing' : 'Ready'}
               tone={previewing ? 'running' : 'idle'}
             />
             {guestsMayHear(draft) ? (
-              <StatusPill label="Guests may hear" tone="warning" dot={false} />
+              <StatusPill label="Guests may hear" tone="warning" />
             ) : null}
             <StatusPill
               label={
                 reach === 'full'
-                  ? 'Full range here'
+                  ? 'Full range'
                   : reach === 'partial'
-                    ? 'Partial range here'
-                    : 'Out of range here'
+                    ? 'Partial range'
+                    : 'Out of range'
               }
               tone={
                 reach === 'full'
@@ -187,14 +187,14 @@ export default function ProfileBuilder() {
             />
           </View>
           <Button
-            label={previewing ? 'Stop preview' : 'Preview 5 seconds'}
-            variant="outline"
+            label={previewing ? 'Stop' : 'Hear 5 seconds'}
+            variant="secondary"
             onPress={preview}
             icon={
               previewing ? (
-                <Square size={15} color={color.fg} strokeWidth={2.5} />
+                <Square size={16} color={color.ink} strokeWidth={1.75} />
               ) : (
-                <Play size={16} color={color.fg} strokeWidth={2.5} />
+                <Play size={16} color={color.ink} strokeWidth={1.75} />
               )
             }
           />
@@ -310,7 +310,7 @@ export default function ProfileBuilder() {
                 />
               </Field>
               <Text style={styles.note}>
-                {PLACEHOLDER_NOTICE} — licensed recordings replace these before
+                {PLACEHOLDER_NOTICE}. Licensed recordings replace these before
                 launch.
               </Text>
               <Slider
@@ -327,14 +327,14 @@ export default function ProfileBuilder() {
 
           {kind !== 'tone' ? (
             <Slider
-              label="Randomisation"
+              label="Randomise"
               min={0}
               max={100}
               step={5}
               value={randomizePct}
               readout={`${Math.round(randomizePct)}%`}
               onChange={setRandomizePct}
-              accessibilityHint="Higher values vary the timing more, so birds cannot get used to the pattern"
+              accessibilityHint="Higher values vary the timing more, so birds do not get used to the pattern"
             />
           ) : null}
         </Card>
@@ -345,7 +345,7 @@ export default function ProfileBuilder() {
       <View
         style={[styles.dock, { paddingBottom: insets.bottom + space.md }]}
       >
-        <Button label="Save profile" variant="gradient" size="lg" onPress={onSave} />
+        <Button label="Save profile" size="lg" onPress={onSave} />
       </View>
     </View>
   );
@@ -437,38 +437,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: space.lg,
+    paddingHorizontal: space.md,
     paddingBottom: space.sm,
   },
   close: { width: 44, height: 44, alignItems: 'flex-end', justifyContent: 'center' },
-  body: { paddingHorizontal: space.lg, gap: space.md },
+  body: { paddingHorizontal: space.md, gap: space.md },
   pills: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   fieldLabel: {
-    fontFamily: font.body.medium,
-    fontSize: 12,
-    letterSpacing: 0.8,
+    fontFamily: font.mono.medium,
+    fontSize: 11,
+    letterSpacing: 1,
     textTransform: 'uppercase',
     color: color.fgSubtle,
   },
   input: {
-    height: 50,
-    borderRadius: radius.md,
+    height: 48,
     borderWidth: 1,
     borderColor: color.border,
-    backgroundColor: color.card,
-    paddingHorizontal: space.md,
-    color: color.fg,
+    backgroundColor: color.background,
+    paddingHorizontal: space.sm + 4,
+    color: color.ink,
     fontFamily: font.body.medium,
     fontSize: 16,
   },
   note: {
     fontFamily: font.body.regular,
     fontSize: 13,
-    lineHeight: 19,
+    lineHeight: 18,
     color: color.fgMuted,
   },
   dock: {
-    paddingHorizontal: space.lg,
+    paddingHorizontal: space.md,
     paddingTop: space.md,
     borderTopWidth: 1,
     borderTopColor: color.border,

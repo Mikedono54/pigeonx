@@ -11,7 +11,7 @@ export interface SliderProps {
   step?: number;
   onChange: (value: number) => void;
   onCommit?: (value: number) => void;
-  /** right-hand readout, e.g. "17.5 kHz" — rendered in the mono face */
+  /** right-hand readout, for example "17.5 kHz", rendered in the mono face */
   readout?: string;
   disabled?: boolean;
   accessibilityHint?: string;
@@ -44,7 +44,7 @@ export function Slider({
         disabled={disabled}
         onValueChange={onChange}
         onSlidingComplete={onCommit ?? onChange}
-        minimumTrackTintColor={color.teal}
+        minimumTrackTintColor={color.accent}
         maximumTrackTintColor={color.border}
         thumbTintColor={color.accent}
         accessibilityLabel={label}
@@ -62,16 +62,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   label: {
-    fontFamily: font.body.medium,
-    fontSize: 13,
+    fontFamily: font.mono.medium,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
     color: color.fgMuted,
-    letterSpacing: 0.2,
   },
   readout: {
     fontFamily: font.mono.medium,
     fontSize: 13,
-    color: color.fg,
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
+    color: color.ink,
   },
-  slider: { width: '100%', height: 44 },
+  slider: { width: '100%', height: 40 },
 });

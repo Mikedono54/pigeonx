@@ -8,7 +8,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { getEngine, SPECTRUM_BINS } from '../audio';
-import { color, radius } from '../theme/tokens';
+import { color } from '../theme/tokens';
 
 export interface SpectrumBarsProps {
   height?: number;
@@ -18,11 +18,12 @@ export interface SpectrumBarsProps {
 }
 
 /**
- * Live spectrum. Reads from the engine directly rather than through React
- * state so 16 fps of frames never re-renders a screen.
+ * Live spectrum: solid accent bars with square tops. Reads from the engine
+ * directly rather than through React state so 16 fps of frames never
+ * re-renders a screen.
  */
 export function SpectrumBars({
-  height = 132,
+  height = 110,
   active = true,
   bins = SPECTRUM_BINS,
 }: SpectrumBarsProps) {
@@ -57,7 +58,6 @@ export function SpectrumBars({
         <Bar
           key={i}
           index={i}
-          total={bins}
           levels={levels}
           height={height}
           active={active}
@@ -70,44 +70,27 @@ export function SpectrumBars({
 
 function Bar({
   index,
-  total,
   levels,
   height,
   active,
   reduced,
 }: {
   index: number;
-  total: number;
   levels: SharedValue<number[]>;
   height: number;
   active: boolean;
   reduced: boolean;
 }) {
-  // low frequencies teal, high frequencies blue — the same brand ramp
-  const t = index / Math.max(1, total - 1);
-  const tint = mix(color.teal, color.blue, t);
-
   const style = useAnimatedStyle(() => {
     const raw = levels.value[index] ?? 0;
-    const target = Math.max(3, raw * height);
+    const target = Math.max(2, raw * height);
     return {
       height: reduced ? target : withTiming(target, { duration: 90 }),
-      opacity: active ? 0.35 + raw * 0.65 : 0.18,
+      opacity: active ? 0.45 + raw * 0.55 : 0.16,
     };
   }, [active, height, index, reduced]);
 
-  return (
-    <Animated.View style={[styles.bar, { backgroundColor: tint }, style]} />
-  );
-}
-
-function mix(a: string, b: string, t: number): string {
-  const pa = parseInt(a.slice(1), 16);
-  const pb = parseInt(b.slice(1), 16);
-  const r = Math.round((((pa >> 16) & 255) * (1 - t) + ((pb >> 16) & 255) * t));
-  const g = Math.round((((pa >> 8) & 255) * (1 - t) + ((pb >> 8) & 255) * t));
-  const bl = Math.round(((pa & 255) * (1 - t) + (pb & 255) * t));
-  return `rgb(${r}, ${g}, ${bl})`;
+  return <Animated.View style={[styles.bar, style]} />;
 }
 
 const styles = StyleSheet.create({
@@ -115,11 +98,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    gap: 3,
+    gap: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: color.border,
   },
   bar: {
     flex: 1,
-    borderRadius: radius.sm / 2,
-    minHeight: 3,
+    borderRadius: 0,
+    minHeight: 2,
+    backgroundColor: color.accent,
   },
 });

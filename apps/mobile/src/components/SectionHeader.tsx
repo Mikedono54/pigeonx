@@ -6,48 +6,73 @@ import { Touchable } from './Touchable';
 
 export interface SectionHeaderProps {
   title: string;
+  /** two-digit index, rendered ahead of the title: "01 PROFILE" */
+  index?: string;
   subtitle?: string;
   actionLabel?: string;
   onAction?: () => void;
   style?: object;
 }
 
+/** Mono index label over a hairline rule. */
 export function SectionHeader({
   title,
+  index,
   subtitle,
   actionLabel,
   onAction,
 }: SectionHeaderProps) {
   return (
-    <View style={styles.row}>
-      <View style={styles.text}>
-        <Text style={type.heading}>{title}</Text>
-        {subtitle ? (
-          <Text style={[type.body, styles.subtitle]}>{subtitle}</Text>
+    <View style={styles.wrap}>
+      <View style={styles.row}>
+        <Text style={styles.title} numberOfLines={1}>
+          {index ? `${index}  ${title}` : title}
+        </Text>
+        {actionLabel && onAction ? (
+          <Touchable
+            onPress={onAction}
+            accessibilityLabel={actionLabel}
+            style={styles.action}
+          >
+            <Text style={styles.actionText}>{actionLabel}</Text>
+          </Touchable>
         ) : null}
       </View>
-      {actionLabel && onAction ? (
-        <Touchable onPress={onAction} accessibilityLabel={actionLabel}>
-          <Text style={styles.action}>{actionLabel}</Text>
-        </Touchable>
+      {subtitle ? (
+        <Text style={[type.caption, styles.subtitle]}>{subtitle}</Text>
       ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrap: {
+    marginBottom: space.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: color.border,
+    paddingBottom: 6,
+  },
   row: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: space.sm + 2,
-    gap: space.md,
+    gap: space.sm,
   },
-  text: { flex: 1, gap: 2 },
-  subtitle: { fontSize: 13, lineHeight: 19 },
-  action: {
+  title: {
+    flex: 1,
+    fontFamily: font.mono.medium,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: color.fgSubtle,
+  },
+  action: { minHeight: 28, justifyContent: 'center' },
+  actionText: {
+    fontFamily: font.mono.medium,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
     color: color.accent,
-    fontSize: 14,
-    fontFamily: font.body.semibold,
   },
+  subtitle: { marginTop: 4 },
 });

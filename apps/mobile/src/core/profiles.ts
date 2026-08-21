@@ -80,7 +80,7 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   },
   {
     id: 'sys_sweep_15_19k',
-    name: 'Sweep 15–19k',
+    name: 'Sweep 15 to 19k',
     description: 'Rolls across the band so no single pitch gets ignored',
     kind: 'sweep',
     params: { startHz: 15000, endHz: 19000, rateHz: 0.5 },

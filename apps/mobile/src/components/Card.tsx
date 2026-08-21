@@ -1,14 +1,14 @@
 import React from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import { color, radius, space } from '../theme/tokens';
+import { color, space } from '../theme/tokens';
 import { Touchable } from './Touchable';
 
 export interface CardProps {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
-  /** raises the surface a level and warms the border */
+  /** swaps white for the grey surface */
   elevated?: boolean;
-  /** soft teal glow — reserve it for the one thing that is live right now */
+  /** marks the one thing that is live right now: ink border, accent rule */
   active?: boolean;
   padded?: boolean;
   onPress?: () => void;
@@ -30,9 +30,9 @@ export function Card({
     <View
       style={[
         styles.card,
-        elevated && { backgroundColor: color.elevated },
-        padded && { padding: space.md },
-        active && styles.active,
+        elevated ? { backgroundColor: color.surface } : null,
+        padded ? { padding: space.md } : null,
+        active ? styles.active : null,
         style,
       ]}
       testID={testID}
@@ -56,18 +56,10 @@ export function Card({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: color.card,
-    borderRadius: radius.lg,
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: color.border,
-    overflow: 'hidden',
   },
-  active: {
-    borderColor: color.teal,
-    shadowColor: color.teal,
-    shadowOpacity: 0.28,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 8,
-  },
+  active: { borderColor: color.ink },
   press: { minHeight: 0 },
 });

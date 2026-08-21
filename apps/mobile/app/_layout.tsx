@@ -8,9 +8,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
 import {
   useFonts,
-  Outfit_600SemiBold,
-  Outfit_700Bold,
-} from '@expo-google-fonts/outfit';
+  InterTight_600SemiBold,
+  InterTight_700Bold,
+} from '@expo-google-fonts/inter-tight';
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -34,10 +34,13 @@ SplashScreen.preventAutoHideAsync().catch(() => {
   /* the splash may already be gone on a fast reload */
 });
 
+/** Sub-screens slide in; nothing fades or scales. */
+const STACK_ANIMATION = 'slide_from_right' as const;
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    Outfit_600SemiBold,
-    Outfit_700Bold,
+    InterTight_600SemiBold,
+    InterTight_700Bold,
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
@@ -80,12 +83,12 @@ export default function RootLayout() {
     <GestureHandlerRootView style={styles.root} onLayout={onLayout}>
       <SafeAreaProvider>
         <ToastProvider>
-          <StatusBar style="light" />
+          <StatusBar style="dark" />
           <Stack
             screenOptions={{
               headerShown: false,
               contentStyle: { backgroundColor: color.background },
-              animation: 'slide_from_right',
+              animation: STACK_ANIMATION,
             }}
           >
             <Stack.Screen name="(tabs)" />
@@ -97,6 +100,7 @@ export default function RootLayout() {
               name="paywall"
               options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
             />
+            <Stack.Screen name="history" />
             <Stack.Screen name="profiles/index" />
             <Stack.Screen
               name="profiles/new"

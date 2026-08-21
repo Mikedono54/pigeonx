@@ -1,26 +1,37 @@
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
-import { CalendarClock, LayoutGrid, Radio, User, Home } from 'lucide-react-native';
+import {
+  CalendarClock,
+  LayoutGrid,
+  Radio,
+  User,
+  Home,
+} from 'lucide-react-native';
 import { color, font } from '../../src/theme/tokens';
+
+const ICON_SIZE = 20;
+const ICON_STROKE = 1.75;
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: color.accent,
+        tabBarActiveTintColor: color.ink,
         tabBarInactiveTintColor: color.fgSubtle,
         tabBarStyle: {
-          backgroundColor: color.surface,
+          backgroundColor: color.background,
           borderTopColor: color.border,
           borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 88 : 64,
+          height: Platform.OS === 'ios' ? 84 : 62,
           paddingTop: 8,
+          elevation: 0,
         },
         tabBarLabelStyle: {
-          fontFamily: font.body.medium,
-          fontSize: 11,
-          letterSpacing: 0.2,
+          fontFamily: font.mono.medium,
+          fontSize: 10,
+          letterSpacing: 1,
+          textTransform: 'uppercase',
         },
         sceneStyle: { backgroundColor: color.background },
       }}
@@ -29,17 +40,17 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color: c, size }) => (
-            <Home size={size ?? 22} color={c} strokeWidth={2.1} />
+          tabBarIcon: ({ color: c }) => (
+            <Home size={ICON_SIZE} color={c} strokeWidth={ICON_STROKE} />
           ),
         }}
       />
       <Tabs.Screen
         name="deterrent"
         options={{
-          title: 'Deterrent',
-          tabBarIcon: ({ color: c, size }) => (
-            <Radio size={size ?? 22} color={c} strokeWidth={2.1} />
+          title: 'Sound',
+          tabBarIcon: ({ color: c }) => (
+            <Radio size={ICON_SIZE} color={c} strokeWidth={ICON_STROKE} />
           ),
         }}
       />
@@ -47,17 +58,17 @@ export default function TabsLayout() {
         name="zones"
         options={{
           title: 'Zones',
-          tabBarIcon: ({ color: c, size }) => (
-            <LayoutGrid size={size ?? 22} color={c} strokeWidth={2.1} />
+          tabBarIcon: ({ color: c }) => (
+            <LayoutGrid size={ICON_SIZE} color={c} strokeWidth={ICON_STROKE} />
           ),
         }}
       />
       <Tabs.Screen
         name="schedules"
         options={{
-          title: 'Schedules',
-          tabBarIcon: ({ color: c, size }) => (
-            <CalendarClock size={size ?? 22} color={c} strokeWidth={2.1} />
+          title: 'Times',
+          tabBarIcon: ({ color: c }) => (
+            <CalendarClock size={ICON_SIZE} color={c} strokeWidth={ICON_STROKE} />
           ),
         }}
       />
@@ -65,8 +76,8 @@ export default function TabsLayout() {
         name="account"
         options={{
           title: 'Account',
-          tabBarIcon: ({ color: c, size }) => (
-            <User size={size ?? 22} color={c} strokeWidth={2.1} />
+          tabBarIcon: ({ color: c }) => (
+            <User size={ICON_SIZE} color={c} strokeWidth={ICON_STROKE} />
           ),
         }}
       />

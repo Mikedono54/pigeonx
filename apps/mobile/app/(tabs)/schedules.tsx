@@ -14,7 +14,6 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { CalendarClock, Plus, Trash2, X } from 'lucide-react-native';
 
 import {
-  Banner,
   Button,
   Card,
   Chip,
@@ -37,7 +36,7 @@ import {
   type Schedule,
 } from '../../src/state/useSchedules';
 import { useSession } from '../../src/state/useSession';
-import { color, font, radius, space } from '../../src/theme/tokens';
+import { color, font, space } from '../../src/theme/tokens';
 import { type } from '../../src/theme/typography';
 
 export default function SchedulesScreen() {
@@ -56,95 +55,96 @@ export default function SchedulesScreen() {
 
   return (
     <Screen
-      title="Schedules"
-      subtitle="Dawn and dusk are when birds settle in. Put the start one tap away."
-      bottomInset={90}
+      title="Times"
+      subtitle="Birds settle at dawn and dusk. Put the start one tap away."
+      scroll={false}
     >
-      <View style={{ marginBottom: space.lg }}>
-        <Banner
-          tone="info"
-          title="Phone schedules are reminders"
-          body="iOS will not run background timers, so a phone schedule sends a notification with a Start now button. PigeonX hardware runs windows unattended."
-        />
-      </View>
+      <SectionHeader
+        index="01"
+        title="Your times"
+        subtitle="This phone sends a reminder with a Start button. PigeonX hardware runs the window on its own."
+      />
 
       {schedules.length === 0 ? (
         <Card padded={false}>
           <EmptyState
-            icon={<CalendarClock size={24} color={color.fgMuted} strokeWidth={2} />}
-            title="No schedules yet"
-            body="Pick the days and time you want a run, choose a profile, and we will remind you."
-            actionLabel="Create a schedule"
+            icon={
+              <CalendarClock size={20} color={color.fgMuted} strokeWidth={1.75} />
+            }
+            title="Nothing set yet"
+            body="Pick the days and the time you want a run, choose a profile, and the phone reminds you."
+            actionLabel="Set a time"
             onAction={openNew}
           />
         </Card>
       ) : (
-        <>
-          <SectionHeader title="Your schedules" />
-          <View style={{ gap: space.sm }}>
-            {schedules.map((s) => (
-              <Card key={s.id}>
-                <View style={styles.row}>
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={type.subheading}>{s.name}</Text>
-                    <Text style={styles.meta}>
-                      {describeDays(s.days)} · {formatMinutes(s.startMinutes)} –{' '}
-                      {formatMinutes(s.endMinutes)}
-                    </Text>
-                    <Text style={styles.meta}>
-                      {s.profileName} ·{' '}
-                      {s.executor === 'device'
-                        ? 'Runs on device'
-                        : 'Reminder on this phone'}
-                    </Text>
-                  </View>
-                  <Switch
-                    value={s.enabled}
-                    onValueChange={() => void toggle(s.id)}
-                    trackColor={{ false: color.border, true: 'rgba(45,212,191,0.5)' }}
-                    thumbColor={s.enabled ? color.teal : color.fgSubtle}
-                    accessibilityLabel={`${s.name} enabled`}
-                  />
+        <ScrollView
+          style={styles.list}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+        >
+          {schedules.map((s) => (
+            <Card key={s.id}>
+              <View style={styles.row}>
+                <View style={styles.rowText}>
+                  <Text style={type.subheading} numberOfLines={1}>
+                    {s.name}
+                  </Text>
+                  <Text style={styles.meta}>
+                    {describeDays(s.days)} · {formatMinutes(s.startMinutes)} to{' '}
+                    {formatMinutes(s.endMinutes)}
+                  </Text>
+                  <Text style={styles.meta} numberOfLines={1}>
+                    {s.profileName} ·{' '}
+                    {s.executor === 'device' ? 'Device runs it' : 'Phone reminds you'}
+                  </Text>
                 </View>
-                <View style={styles.cardFooter}>
-                  <StatusPill
-                    label={s.enabled ? 'Active' : 'Paused'}
-                    tone={s.enabled ? 'scheduled' : 'idle'}
-                  />
-                  <View style={{ flex: 1 }} />
-                  <Touchable
-                    onPress={() => {
-                      setEditing(s);
-                      setOpen(true);
-                    }}
-                    accessibilityLabel={`Edit ${s.name}`}
-                    style={styles.footerAction}
-                  >
-                    <Text style={styles.footerActionText}>Edit</Text>
-                  </Touchable>
-                  <Touchable
-                    onPress={() => void remove(s.id)}
-                    accessibilityLabel={`Delete ${s.name}`}
-                    style={styles.footerAction}
-                  >
-                    <Trash2 size={16} color={color.danger} strokeWidth={2.2} />
-                  </Touchable>
-                </View>
-              </Card>
-            ))}
-          </View>
-
-          <View style={{ marginTop: space.lg }}>
-            <Button
-              label="New schedule"
-              variant="gradient"
-              size="lg"
-              onPress={openNew}
-              icon={<Plus size={18} color={color.onAccent} strokeWidth={2.5} />}
-            />
-          </View>
-        </>
+                <Switch
+                  value={s.enabled}
+                  onValueChange={() => void toggle(s.id)}
+                  trackColor={{ false: color.border, true: color.accent }}
+                  thumbColor={color.background}
+                  ios_backgroundColor={color.border}
+                  accessibilityLabel={`${s.name} on`}
+                />
+              </View>
+              <View style={styles.cardFooter}>
+                <StatusPill
+                  label={s.enabled ? 'On' : 'Off'}
+                  tone={s.enabled ? 'scheduled' : 'idle'}
+                />
+                <View style={styles.grow} />
+                <Touchable
+                  onPress={() => {
+                    setEditing(s);
+                    setOpen(true);
+                  }}
+                  accessibilityLabel={`Edit ${s.name}`}
+                  style={styles.footerAction}
+                >
+                  <Text style={styles.footerActionText}>Edit</Text>
+                </Touchable>
+                <Touchable
+                  onPress={() => void remove(s.id)}
+                  accessibilityLabel={`Delete ${s.name}`}
+                  style={styles.footerAction}
+                >
+                  <Trash2 size={16} color={color.danger} strokeWidth={1.75} />
+                </Touchable>
+              </View>
+            </Card>
+          ))}
+        </ScrollView>
       )}
+
+      <View style={styles.spacer} />
+
+      <Button
+        label="Add a time"
+        size="lg"
+        onPress={openNew}
+        icon={<Plus size={16} color={color.onAccent} strokeWidth={1.75} />}
+      />
 
       <ScheduleEditor
         open={open}
@@ -238,7 +238,7 @@ function ScheduleEditor({
         deviceId: null,
       });
       toast.show(
-        executor === 'reminder' ? 'Reminder scheduled' : 'Schedule saved',
+        executor === 'reminder' ? 'Reminder set' : 'Saved',
         'success'
       );
       onClose();
@@ -266,23 +266,32 @@ function ScheduleEditor({
   }, [endMinutes, picking, startMinutes]);
 
   return (
-    <Modal visible={open} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal
+      visible={open}
+      animationType="slide"
+      transparent
+      onRequestClose={onClose}
+    >
       <View style={styles.backdrop}>
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + space.md }]}>
+        <View
+          style={[styles.sheet, { paddingBottom: insets.bottom + space.md }]}
+        >
           <View style={styles.sheetHead}>
-            <Text style={type.heading}>
-              {schedule ? 'Edit schedule' : 'New schedule'}
-            </Text>
-            <Touchable onPress={onClose} accessibilityLabel="Close" style={styles.close}>
-              <X size={20} color={color.fgMuted} strokeWidth={2.2} />
+            <Text style={type.heading}>{schedule ? 'Edit' : 'New time'}</Text>
+            <Touchable
+              onPress={onClose}
+              accessibilityLabel="Close"
+              style={styles.close}
+            >
+              <X size={20} color={color.ink} strokeWidth={1.75} />
             </Touchable>
           </View>
 
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ gap: space.lg, paddingBottom: space.md }}
+            contentContainerStyle={styles.sheetBody}
           >
-            <View style={{ gap: space.sm }}>
+            <View style={styles.field}>
               <Text style={styles.fieldLabel}>Name</Text>
               <TextInput
                 value={name}
@@ -290,11 +299,11 @@ function ScheduleEditor({
                 placeholder="Dawn patrol"
                 placeholderTextColor={color.fgSubtle}
                 style={styles.input}
-                accessibilityLabel="Schedule name"
+                accessibilityLabel="Name"
               />
             </View>
 
-            <View style={{ gap: space.sm }}>
+            <View style={styles.field}>
               <Text style={styles.fieldLabel}>Days</Text>
               <View style={styles.dayRow}>
                 {DAY_LABELS.map((label, i) => (
@@ -307,12 +316,15 @@ function ScheduleEditor({
                     style={styles.dayPress}
                   >
                     <View
-                      style={[styles.day, days.includes(i) && styles.daySelected]}
+                      style={[
+                        styles.day,
+                        days.includes(i) ? styles.daySelected : null,
+                      ]}
                     >
                       <Text
                         style={[
                           styles.dayText,
-                          days.includes(i) && styles.dayTextSelected,
+                          days.includes(i) ? styles.dayTextSelected : null,
                         ]}
                       >
                         {label}
@@ -323,7 +335,7 @@ function ScheduleEditor({
               </View>
             </View>
 
-            <View style={{ gap: space.sm }}>
+            <View style={styles.field}>
               <Text style={styles.fieldLabel}>Window</Text>
               <View style={styles.timeRow}>
                 <TimeButton
@@ -342,7 +354,7 @@ function ScheduleEditor({
                   <DateTimePicker
                     value={pickerDate}
                     mode="time"
-                    themeVariant="dark"
+                    themeVariant="light"
                     display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                     onChange={(_, date) => {
                       if (Platform.OS !== 'ios') setPicking(null);
@@ -355,7 +367,7 @@ function ScheduleEditor({
                   {Platform.OS === 'ios' ? (
                     <Button
                       label="Done"
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onPress={() => setPicking(null)}
                     />
@@ -364,12 +376,12 @@ function ScheduleEditor({
               ) : null}
             </View>
 
-            <View style={{ gap: space.sm }}>
+            <View style={styles.field}>
               <Text style={styles.fieldLabel}>Profile</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: space.sm }}
+                contentContainerStyle={styles.chipRail}
               >
                 {profiles.map((p) => (
                   <Chip
@@ -378,7 +390,8 @@ function ScheduleEditor({
                     selected={p.id === profile.id}
                     locked={p.minPlan !== 'free' && !ent.can('profiles.all')}
                     onPress={() => {
-                      if (p.minPlan !== 'free' && !ent.guard('profiles.all')) return;
+                      if (p.minPlan !== 'free' && !ent.guard('profiles.all'))
+                        return;
                       setProfileId(p.id);
                     }}
                   />
@@ -386,12 +399,12 @@ function ScheduleEditor({
               </ScrollView>
             </View>
 
-            <View style={{ gap: space.sm }}>
+            <View style={styles.field}>
               <Text style={styles.fieldLabel}>Who runs it</Text>
               <Segmented
                 value={executor}
                 onChange={pickExecutor}
-                accessibilityLabel="Executor"
+                accessibilityLabel="Who runs it"
                 options={[
                   { value: 'reminder', label: 'This phone' },
                   {
@@ -403,22 +416,20 @@ function ScheduleEditor({
               />
               <Text style={styles.hint}>
                 {executor === 'reminder'
-                  ? 'A notification arrives at the start time with a Start now button.'
-                  : 'A paired device runs the whole window on its own — no phone needed.'}
+                  ? 'A notification arrives at the start time with a Start button.'
+                  : 'A paired device runs the whole window. No phone needed.'}
               </Text>
             </View>
           </ScrollView>
 
           <Button
-            label={schedule ? 'Save changes' : 'Create schedule'}
-            variant="gradient"
+            label={schedule ? 'Save' : 'Add it'}
             size="lg"
             loading={saving}
             onPress={save}
           />
         </View>
       </View>
-
     </Modal>
   );
 }
@@ -436,7 +447,7 @@ function TimeButton({
     <Touchable
       onPress={onPress}
       accessibilityLabel={`${label} time, ${value}`}
-      style={{ flex: 1 }}
+      style={styles.grow}
     >
       <View style={styles.timeButton}>
         <Text style={styles.timeLabel}>{label}</Text>
@@ -447,18 +458,22 @@ function TimeButton({
 }
 
 const styles = StyleSheet.create({
+  list: { flexGrow: 0 },
+  listContent: { gap: space.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  rowText: { flex: 1, gap: 3 },
+  grow: { flex: 1 },
   meta: {
-    fontFamily: font.body.regular,
-    fontSize: 13,
-    lineHeight: 19,
+    fontFamily: font.mono.medium,
+    fontSize: 10,
+    letterSpacing: 0.5,
     color: color.fgMuted,
   },
   cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
-    marginTop: space.md,
+    marginTop: space.sm + 4,
     paddingTop: space.sm,
     borderTopWidth: 1,
     borderTopColor: color.border,
@@ -471,23 +486,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   footerActionText: {
-    fontFamily: font.body.semibold,
-    fontSize: 13,
+    fontFamily: font.mono.medium,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
     color: color.accent,
   },
+  spacer: { flex: 1, minHeight: space.md },
   backdrop: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(6,10,20,0.72)',
+    backgroundColor: 'rgba(10,10,10,0.45)',
   },
   sheet: {
     maxHeight: '90%',
-    backgroundColor: color.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
+    backgroundColor: color.background,
     borderTopWidth: 1,
-    borderColor: color.border,
-    padding: space.lg,
+    borderColor: color.ink,
+    padding: space.md,
     gap: space.md,
   },
   sheetHead: {
@@ -495,71 +511,75 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  sheetBody: { gap: space.lg, paddingBottom: space.md },
   close: { width: 44, alignItems: 'flex-end' },
+  field: { gap: space.sm },
   fieldLabel: {
-    fontFamily: font.body.medium,
-    fontSize: 12,
-    letterSpacing: 0.8,
+    fontFamily: font.mono.medium,
+    fontSize: 11,
+    letterSpacing: 1,
     textTransform: 'uppercase',
     color: color.fgSubtle,
   },
   input: {
-    height: 50,
-    borderRadius: radius.md,
+    height: 48,
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: color.border,
-    backgroundColor: color.card,
-    paddingHorizontal: space.md,
-    color: color.fg,
+    backgroundColor: color.background,
+    paddingHorizontal: space.sm + 4,
+    color: color.ink,
     fontFamily: font.body.medium,
     fontSize: 16,
   },
-  dayRow: { flexDirection: 'row', gap: 6 },
-  dayPress: { flex: 1, minHeight: 44 },
+  dayRow: { flexDirection: 'row' },
+  dayPress: { flex: 1, minHeight: 44, marginLeft: -1 },
   day: {
     flex: 1,
     minHeight: 44,
-    borderRadius: radius.md,
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: color.border,
-    backgroundColor: color.card,
+    backgroundColor: color.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  daySelected: {
-    borderColor: color.teal,
-    backgroundColor: 'rgba(45,212,191,0.14)',
-  },
+  daySelected: { borderColor: color.ink, backgroundColor: color.ink },
   dayText: {
-    fontFamily: font.body.semibold,
-    fontSize: 13,
+    fontFamily: font.mono.medium,
+    fontSize: 12,
+    letterSpacing: 0.5,
     color: color.fgMuted,
   },
-  dayTextSelected: { color: color.fg },
+  dayTextSelected: { color: color.onAccent },
   timeRow: { flexDirection: 'row', gap: space.sm },
   timeButton: {
-    borderRadius: radius.md,
+    borderRadius: 0,
     borderWidth: 1,
     borderColor: color.border,
-    backgroundColor: color.card,
-    paddingVertical: space.sm + 2,
-    paddingHorizontal: space.md,
+    backgroundColor: color.background,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.sm + 4,
     gap: 2,
   },
   timeLabel: {
-    fontFamily: font.body.regular,
-    fontSize: 11,
+    fontFamily: font.mono.medium,
+    fontSize: 10,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
     color: color.fgSubtle,
   },
   timeValue: {
     fontFamily: font.mono.medium,
     fontSize: 17,
-    color: color.fg,
+    letterSpacing: -0.5,
+    color: color.ink,
   },
+  chipRail: { gap: space.xs + 2 },
   hint: {
     fontFamily: font.body.regular,
     fontSize: 13,
-    lineHeight: 19,
+    lineHeight: 18,
     color: color.fgMuted,
   },
   pickerWrap: { gap: space.sm },

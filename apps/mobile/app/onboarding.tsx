@@ -11,42 +11,21 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import {
-  Bird,
-  Ear,
-  Radio,
-  Smartphone,
-  Speaker,
-  Cpu,
-  X,
-} from 'lucide-react-native';
+import { Bird, Ear, Radio, Smartphone, Speaker, Cpu, X } from 'lucide-react-native';
 
-import { Banner, Button, Card, Touchable, useToast } from '../src/components';
+import { Banner, Button, Touchable, useToast } from '../src/components';
 import { OUTPUT_LABEL, type OutputKind } from '../src/core/profiles';
 import { getSupabase, isSupabaseConfigured } from '../src/services/supabase';
 import { useAccount } from '../src/state/useAccount';
 import { useSession } from '../src/state/useSession';
-import { color, font, gradient, radius, space } from '../src/theme/tokens';
+import { color, font, space } from '../src/theme/tokens';
 import { type } from '../src/theme/typography';
 
 const OUTPUTS: { kind: OutputKind; icon: typeof Smartphone; hint: string }[] = [
-  {
-    kind: 'phone',
-    icon: Smartphone,
-    hint: 'Works right now. Honest ceiling around 18 kHz.',
-  },
-  {
-    kind: 'bt_speaker',
-    icon: Speaker,
-    hint: 'Louder and better placed. Bluetooth codecs top out near 19 kHz.',
-  },
-  {
-    kind: 'pigeonx_emitter',
-    icon: Cpu,
-    hint: 'Reaches 25 kHz and runs schedules unattended. Coming soon.',
-  },
+  { kind: 'phone', icon: Smartphone, hint: 'Reaches about 18 kHz' },
+  { kind: 'bt_speaker', icon: Speaker, hint: 'Reaches about 19 kHz' },
+  { kind: 'pigeonx_emitter', icon: Cpu, hint: 'Reaches 25 kHz. Not shipping yet.' },
 ];
 
 export default function Onboarding() {
@@ -77,11 +56,6 @@ export default function Onboarding() {
 
   return (
     <View style={styles.root}>
-      <LinearGradient
-        colors={['rgba(45,212,191,0.16)', 'rgba(11,18,32,0)']}
-        style={[styles.wash, { height: 320 }]}
-      />
-
       <ScrollView
         ref={scroller}
         horizontal
@@ -90,81 +64,77 @@ export default function Onboarding() {
         onMomentumScrollEnd={(e) =>
           setPage(Math.round(e.nativeEvent.contentOffset.x / width))
         }
-        style={{ flex: 1 }}
+        style={styles.pager}
       >
-        <Page width={width} top={insets.top}>
-          <IconBadge>
-            <Bird size={26} color={color.onAccent} strokeWidth={2.2} />
-          </IconBadge>
-          <Text style={type.display}>Keep birds off your space</Text>
+        <Page width={width} top={insets.top} index="01">
+          <IconBox>
+            <Bird size={24} color={color.ink} strokeWidth={1.75} />
+          </IconBox>
+          <Text style={type.display}>Bird control from your phone</Text>
+          <Text style={styles.lede}>Pick a profile, start, stop.</Text>
+        </Page>
+
+        <Page width={width} top={insets.top} index="02">
+          <IconBox>
+            <Ear size={24} color={color.ink} strokeWidth={1.75} />
+          </IconBox>
+          <Text style={type.display}>What it can and can&apos;t do</Text>
           <Text style={styles.lede}>
-            PigeonX plays deterrent audio — high-frequency tones, randomised
-            sweeps and recorded alarm calls — through whatever speaker you point
-            it at, and logs every run so you can see what is actually working.
+            Phone speakers play up to about 18 kHz. Bluetooth speakers about 19
+            kHz. PigeonX emitters reach 25 kHz. Profiles above 17 kHz may be
+            audible to some guests. Audible bird calls are included because they
+            work better than ultrasonic alone.
           </Text>
-          <Card style={styles.note} elevated>
-            <Text style={styles.noteTitle}>Built as a system, not a gadget</Text>
-            <Text style={styles.noteBody}>
-              Profiles, schedules, zones and history all connect. Start on your
-              phone today; add hardware to the same account later.
-            </Text>
-          </Card>
         </Page>
 
-        <Page width={width} top={insets.top}>
-          <IconBadge>
-            <Ear size={26} color={color.onAccent} strokeWidth={2.2} />
-          </IconBadge>
-          <Text style={type.display}>What this can and cannot do</Text>
-          <Honest
-            good
-            text="Randomised, varied sound beats a single steady tone. Birds habituate to anything predictable."
-          />
-          <Honest
-            good
-            text="Distress and predator calls have the best evidence behind them. They are audible — that is the trade-off."
-          />
-          <Honest
-            text="Phone speakers roll off around 18 kHz and Bluetooth around 19 kHz. We show you exactly where your output stops."
-          />
-          <Honest text="Plenty of people under 30 hear 15–18 kHz. Anything above 17 kHz gets a “guests may hear this” badge." />
-          <Honest text="iOS will not run background timers, so phone schedules are reminders with one-tap start. Hardware runs them unattended." />
-        </Page>
-
-        <Page width={width} top={insets.top}>
-          <IconBadge>
-            <Radio size={26} color={color.onAccent} strokeWidth={2.2} />
-          </IconBadge>
+        <Page width={width} top={insets.top} index="03">
+          <IconBox>
+            <Radio size={24} color={color.ink} strokeWidth={1.75} />
+          </IconBox>
           <Text style={type.display}>Pick your output</Text>
           <Text style={styles.lede}>
-            You can change this any time on the Deterrent tab.
+            Phone, Bluetooth speaker, or a PigeonX emitter. You can change this
+            any time.
           </Text>
-          <View style={{ gap: space.sm, width: '100%' }}>
+          <View style={styles.outputs}>
             {OUTPUTS.map(({ kind, icon: Icon, hint }) => {
               const selected = output === kind;
               return (
-                <Card
+                <Touchable
                   key={kind}
-                  active={selected}
                   onPress={() => setOutput(kind)}
+                  haptic="selection"
                   accessibilityLabel={`${OUTPUT_LABEL[kind]}. ${hint}`}
+                  accessibilityState={{ selected }}
+                  style={[
+                    styles.outputRow,
+                    selected ? styles.outputRowSelected : null,
+                  ]}
                 >
-                  <View style={styles.outputRow}>
-                    <View style={styles.outputIcon}>
-                      <Icon
-                        size={20}
-                        color={selected ? color.teal : color.fgMuted}
-                        strokeWidth={2.1}
-                      />
-                    </View>
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Text style={styles.outputTitle}>
-                        {OUTPUT_LABEL[kind]}
-                      </Text>
-                      <Text style={styles.outputHint}>{hint}</Text>
-                    </View>
+                  <Icon
+                    size={20}
+                    color={selected ? color.onAccent : color.ink}
+                    strokeWidth={1.75}
+                  />
+                  <View style={styles.outputText}>
+                    <Text
+                      style={[
+                        styles.outputTitle,
+                        selected ? styles.outputInverted : null,
+                      ]}
+                    >
+                      {OUTPUT_LABEL[kind]}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.outputHint,
+                        selected ? styles.outputInverted : null,
+                      ]}
+                    >
+                      {hint}
+                    </Text>
                   </View>
-                </Card>
+                </Touchable>
               );
             })}
           </View>
@@ -176,31 +146,24 @@ export default function Onboarding() {
           {[0, 1, 2].map((i) => (
             <View
               key={i}
-              style={[styles.dot, i === page && styles.dotActive]}
+              style={[styles.dot, i === page ? styles.dotActive : null]}
             />
           ))}
         </View>
 
         {page < 2 ? (
-          <Button
-            label="Continue"
-            variant="gradient"
-            size="lg"
-            onPress={() => goTo(page + 1)}
-          />
+          <Button label="Continue" size="lg" onPress={() => goTo(page + 1)} />
         ) : (
-          <View style={{ gap: space.sm }}>
+          <View style={styles.footerActions}>
             <Button
               label="Continue as guest"
-              variant="gradient"
               size="lg"
               onPress={finish}
               accessibilityHint="Uses PigeonX on this phone only, on the Free plan"
             />
             <Button
               label="Sign in"
-              variant="outline"
-              size="md"
+              variant="secondary"
               onPress={() => setSignInOpen(true)}
             />
           </View>
@@ -223,48 +186,28 @@ export default function Onboarding() {
 function Page({
   width,
   top,
+  index,
   children,
 }: {
   width: number;
   top: number;
+  index: string;
   children: React.ReactNode;
 }) {
   return (
     <ScrollView
       style={{ width }}
-      contentContainerStyle={[styles.page, { paddingTop: top + space.xl }]}
+      contentContainerStyle={[styles.page, { paddingTop: top + space.lg }]}
       showsVerticalScrollIndicator={false}
     >
+      <Text style={styles.pageIndex}>{index} / 03</Text>
       {children}
     </ScrollView>
   );
 }
 
-function IconBadge({ children }: { children: React.ReactNode }) {
-  return (
-    <LinearGradient
-      colors={gradient.brand}
-      start={gradient.brandStart}
-      end={gradient.brandEnd}
-      style={styles.badge}
-    >
-      {children}
-    </LinearGradient>
-  );
-}
-
-function Honest({ text, good = false }: { text: string; good?: boolean }) {
-  return (
-    <View style={styles.honest}>
-      <View
-        style={[
-          styles.honestDot,
-          { backgroundColor: good ? color.teal : color.warning },
-        ]}
-      />
-      <Text style={styles.honestText}>{text}</Text>
-    </View>
-  );
+function IconBox({ children }: { children: React.ReactNode }) {
+  return <View style={styles.iconBox}>{children}</View>;
 }
 
 function SignInSheet({
@@ -298,11 +241,11 @@ function SignInSheet({
       });
       if (err) throw new Error(err.message);
       setSent(true);
-      toast.show('Magic link sent — check your email', 'success');
+      toast.show('Link sent. Check your email.', 'success');
       setSession({ userId: 'pending', email: email.trim() });
       onSignedIn();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not send the link');
+      setError(e instanceof Error ? e.message : 'The link did not send');
     } finally {
       setBusy(false);
     }
@@ -329,14 +272,14 @@ function SignInSheet({
                 accessibilityLabel="Close sign in"
                 style={styles.close}
               >
-                <X size={20} color={color.fgMuted} strokeWidth={2.2} />
+                <X size={20} color={color.ink} strokeWidth={1.75} />
               </Touchable>
             </View>
 
             {configured ? (
               <>
                 <Text style={styles.sheetBody}>
-                  We will email you a magic link. No password to remember.
+                  We email you a link. No password.
                 </Text>
                 <TextInput
                   value={email}
@@ -351,11 +294,14 @@ function SignInSheet({
                   accessibilityLabel="Email address"
                 />
                 {error ? (
-                  <Banner title="Could not send the link" body={error} onRetry={submit} />
+                  <Banner
+                    title="The link did not send"
+                    body={error}
+                    onRetry={submit}
+                  />
                 ) : null}
                 <Button
-                  label={sent ? 'Link sent' : 'Send magic link'}
-                  variant="gradient"
+                  label={sent ? 'Link sent' : 'Send the link'}
                   size="lg"
                   loading={busy}
                   disabled={email.trim().length < 5}
@@ -365,11 +311,10 @@ function SignInSheet({
             ) : (
               <>
                 <Text style={styles.sheetBody}>
-                  Sign-in opens when accounts go live. Everything on this phone
-                  keeps working in the meantime, and your history moves across
-                  when you create an account.
+                  Sign-in opens when accounts go live. This phone keeps working
+                  until then, and your runs move over when you create an account.
                 </Text>
-                <Button label="Got it" variant="outline" onPress={onClose} />
+                <Button label="Got it" variant="secondary" onPress={onClose} />
               </>
             )}
           </View>
@@ -381,69 +326,59 @@ function SignInSheet({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.background },
-  wash: { position: 'absolute', top: 0, left: 0, right: 0 },
+  pager: { flex: 1 },
   page: {
     paddingHorizontal: space.lg,
     paddingBottom: space.xl,
     gap: space.md,
   },
-  badge: {
-    width: 54,
-    height: 54,
-    borderRadius: radius.lg,
+  pageIndex: {
+    fontFamily: font.mono.medium,
+    fontSize: 11,
+    letterSpacing: 1,
+    color: color.fgSubtle,
+  },
+  iconBox: {
+    width: 48,
+    height: 48,
+    borderWidth: 1,
+    borderColor: color.ink,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: space.sm,
+    marginBottom: space.xs,
   },
   lede: {
     fontFamily: font.body.regular,
-    fontSize: 15,
-    lineHeight: 23,
-    color: color.fgMuted,
+    fontSize: 16,
+    lineHeight: 24,
+    color: color.fg,
   },
-  note: { marginTop: space.sm, gap: 6 },
-  noteTitle: {
+  outputs: { marginTop: space.sm, borderWidth: 1, borderColor: color.border },
+  outputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm + 4,
+    minHeight: 64,
+    paddingHorizontal: space.sm + 4,
+    borderTopWidth: 1,
+    borderTopColor: color.border,
+    marginTop: -1,
+  },
+  outputRowSelected: { backgroundColor: color.ink, borderTopColor: color.ink },
+  outputText: { flex: 1, gap: 2 },
+  outputTitle: {
     fontFamily: font.heading.semibold,
     fontSize: 15,
-    color: color.fg,
-  },
-  noteBody: {
-    fontFamily: font.body.regular,
-    fontSize: 14,
-    lineHeight: 21,
-    color: color.fgMuted,
-  },
-  honest: { flexDirection: 'row', gap: space.sm + 2, alignItems: 'flex-start' },
-  honestDot: { width: 7, height: 7, borderRadius: 4, marginTop: 8 },
-  honestText: {
-    flex: 1,
-    fontFamily: font.body.regular,
-    fontSize: 14,
-    lineHeight: 22,
-    color: color.fgMuted,
-  },
-  outputRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm + 4 },
-  outputIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: radius.md,
-    backgroundColor: color.surface,
-    borderWidth: 1,
-    borderColor: color.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  outputTitle: {
-    fontFamily: font.body.semibold,
-    fontSize: 15,
-    color: color.fg,
+    letterSpacing: -0.3,
+    color: color.ink,
   },
   outputHint: {
-    fontFamily: font.body.regular,
-    fontSize: 13,
-    lineHeight: 19,
+    fontFamily: font.mono.medium,
+    fontSize: 10,
+    letterSpacing: 0.5,
     color: color.fgMuted,
   },
+  outputInverted: { color: color.onAccent },
   footer: {
     paddingHorizontal: space.lg,
     paddingTop: space.md,
@@ -452,25 +387,19 @@ const styles = StyleSheet.create({
     borderTopColor: color.border,
     backgroundColor: color.background,
   },
+  footerActions: { gap: space.sm },
   dots: { flexDirection: 'row', gap: 6, justifyContent: 'center' },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: color.border,
-  },
-  dotActive: { backgroundColor: color.teal, width: 20 },
+  dot: { width: 16, height: 3, backgroundColor: color.border },
+  dotActive: { backgroundColor: color.ink },
   sheetBackdrop: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(6,10,20,0.72)',
+    backgroundColor: 'rgba(10,10,10,0.45)',
   },
   sheet: {
-    backgroundColor: color.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
+    backgroundColor: color.background,
     borderTopWidth: 1,
-    borderColor: color.border,
+    borderColor: color.ink,
     padding: space.lg,
     gap: space.md,
   },
@@ -482,18 +411,17 @@ const styles = StyleSheet.create({
   close: { width: 44, alignItems: 'flex-end' },
   sheetBody: {
     fontFamily: font.body.regular,
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 21,
-    color: color.fgMuted,
+    color: color.fg,
   },
   input: {
-    height: 52,
-    borderRadius: radius.md,
+    height: 50,
     borderWidth: 1,
     borderColor: color.border,
-    backgroundColor: color.card,
-    paddingHorizontal: space.md,
-    color: color.fg,
+    backgroundColor: color.background,
+    paddingHorizontal: space.sm + 4,
+    color: color.ink,
     fontFamily: font.body.medium,
     fontSize: 16,
   },

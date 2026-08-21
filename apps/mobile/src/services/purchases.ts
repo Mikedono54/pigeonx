@@ -23,14 +23,9 @@ export function createSandboxPurchases(
 ): PurchaseProvider {
   return {
     isLive: () => false,
-    async purchase(product) {
+    async purchase() {
       setPlan('pro');
-      return {
-        ok: true,
-        message: `Sandbox: plan upgraded (${
-          product === 'pro_yearly' ? 'yearly' : 'monthly'
-        })`,
-      };
+      return { ok: true, message: 'Sandbox: plan set to Pro' };
     },
     async restore() {
       return { ok: true, message: 'Sandbox: nothing to restore yet' };

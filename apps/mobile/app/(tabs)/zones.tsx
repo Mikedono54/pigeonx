@@ -1,16 +1,13 @@
 import { useCallback } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import {
   Building2,
   Cpu,
   LayoutGrid,
   Plus,
   Radio,
-  TestTube,
   Trash2,
-  Users,
 } from 'lucide-react-native';
 
 import {
@@ -25,19 +22,17 @@ import {
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { useAccount } from '../../src/state/useAccount';
 import { useSession } from '../../src/state/useSession';
-import { color, font, gradient, radius, space } from '../../src/theme/tokens';
+import { color, font, space } from '../../src/theme/tokens';
 import { type } from '../../src/theme/typography';
 
 export default function ZonesScreen() {
   const ent = useEntitlement();
-  const unlocked = ent.can('zones');
-
-  return unlocked ? <ZonesUnlocked /> : <ZonesTeaser />;
+  return ent.can('zones') ? <ZonesList /> : <ZonesTeaser />;
 }
 
 /* ------------------------------------------------------------------ */
 
-function ZonesUnlocked() {
+function ZonesList() {
   const toast = useToast();
   const devices = useAccount((s) => s.devices);
   const addSimulatedDevice = useAccount((s) => s.addSimulatedDevice);
@@ -53,210 +48,167 @@ function ZonesUnlocked() {
   return (
     <Screen
       title="Zones"
-      subtitle="Locations, the areas inside them, and what plays where."
-      bottomInset={80}
+      headerRight={
+        <StatusPill
+          label={running ? 'Running' : 'Idle'}
+          tone={running ? 'running' : 'idle'}
+        />
+      }
+      scroll={false}
     >
-      <SectionHeader
-        title="My location"
-        subtitle="Add more locations from the web dashboard."
-      />
-
-      <Card style={{ gap: space.md }}>
-        <View style={styles.locHead}>
-          <View style={styles.locIcon}>
-            <Building2 size={19} color={color.teal} strokeWidth={2.1} />
-          </View>
-          <View style={{ flex: 1, gap: 2 }}>
+      <SectionHeader index="01" title="Location" />
+      <Card style={styles.locCard}>
+        <View style={styles.row}>
+          <Building2 size={20} color={color.ink} strokeWidth={1.75} />
+          <View style={styles.rowText}>
             <Text style={type.subheading}>Main property</Text>
-            <Text style={styles.muted}>1 zone · {devices.length} device{devices.length === 1 ? '' : 's'}</Text>
+            <Text style={styles.meta}>
+              1 zone · {devices.length} device{devices.length === 1 ? '' : 's'}
+            </Text>
           </View>
-          <StatusPill
-            label={running ? 'Running' : 'Idle'}
-            tone={running ? 'running' : 'idle'}
-          />
         </View>
-
         <View style={styles.zoneRow}>
-          <LayoutGrid size={16} color={color.fgMuted} strokeWidth={2.1} />
+          <LayoutGrid size={16} color={color.fgMuted} strokeWidth={1.75} />
           <Text style={styles.zoneName}>Patio</Text>
-          <Text style={styles.muted}>Manual</Text>
+          <Text style={styles.meta}>Manual</Text>
         </View>
       </Card>
 
-      <View style={{ marginTop: space.lg }}>
-        <SectionHeader
-          title="Devices"
-          subtitle="BLE provisioning for real hardware lands with the emitter."
-        />
-        {devices.length === 0 ? (
-          <Card style={styles.emptyDevices}>
-            <Cpu size={22} color={color.fgSubtle} strokeWidth={2} />
-            <Text style={styles.muted}>
-              No devices yet. A simulated device lets you walk the whole flow
-              before hardware exists.
-            </Text>
-          </Card>
-        ) : (
-          <View style={{ gap: space.sm }}>
-            {devices.map((d) => (
-              <Card key={d.id}>
-                <View style={styles.deviceRow}>
-                  <View style={styles.locIcon}>
-                    <TestTube size={18} color={color.blue} strokeWidth={2.1} />
-                  </View>
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={styles.zoneName}>{d.name}</Text>
-                    <Text style={styles.muted}>
-                      Simulated · paired{' '}
-                      {new Date(d.pairedAt).toLocaleDateString()}
-                    </Text>
-                  </View>
-                  <Touchable
-                    onPress={() => setOutput('simulated', d.id)}
-                    accessibilityLabel={`Use ${d.name} as the output`}
-                    style={styles.iconButton}
-                  >
-                    <Radio size={17} color={color.teal} strokeWidth={2.2} />
-                  </Touchable>
-                  <Touchable
-                    onPress={() => removeDevice(d.id)}
-                    accessibilityLabel={`Remove ${d.name}`}
-                    style={styles.iconButton}
-                  >
-                    <Trash2 size={17} color={color.danger} strokeWidth={2.2} />
-                  </Touchable>
-                </View>
-              </Card>
-            ))}
-          </View>
-        )}
-
-        <View style={{ marginTop: space.md }}>
-          <Button
-            label="Add simulated device"
-            variant="outline"
-            onPress={addDevice}
-            icon={<Plus size={17} color={color.fg} strokeWidth={2.4} />}
-          />
-        </View>
+      <View style={styles.listHead}>
+        <SectionHeader index="02" title="Devices" />
       </View>
+
+      {devices.length === 0 ? (
+        <Card style={styles.empty}>
+          <Cpu size={20} color={color.fgSubtle} strokeWidth={1.75} />
+          <Text style={styles.meta}>
+            No devices yet. A test device walks the whole flow before hardware
+            arrives.
+          </Text>
+        </Card>
+      ) : (
+        <ScrollView
+          style={styles.list}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+        >
+          {devices.map((d) => (
+            <Card key={d.id}>
+              <View style={styles.row}>
+                <Cpu size={20} color={color.ink} strokeWidth={1.75} />
+                <View style={styles.rowText}>
+                  <Text style={styles.zoneName}>{d.name}</Text>
+                  <Text style={styles.meta}>
+                    Test device · paired{' '}
+                    {new Date(d.pairedAt).toLocaleDateString()}
+                  </Text>
+                </View>
+                <Touchable
+                  onPress={() => setOutput('simulated', d.id)}
+                  accessibilityLabel={`Play through ${d.name}`}
+                  style={styles.iconButton}
+                >
+                  <Radio size={18} color={color.accent} strokeWidth={1.75} />
+                </Touchable>
+                <Touchable
+                  onPress={() => removeDevice(d.id)}
+                  accessibilityLabel={`Remove ${d.name}`}
+                  style={styles.iconButton}
+                >
+                  <Trash2 size={18} color={color.danger} strokeWidth={1.75} />
+                </Touchable>
+              </View>
+            </Card>
+          ))}
+        </ScrollView>
+      )}
+
+      <View style={styles.spacer} />
+
+      <Button
+        label="Add test device"
+        variant="secondary"
+        onPress={addDevice}
+        icon={<Plus size={16} color={color.ink} strokeWidth={1.75} />}
+      />
     </Screen>
   );
 }
 
 /* ------------------------------------------------------------------ */
 
-const TEASER_ZONES = [
+const SAMPLE_ZONES = [
   { name: 'Rooftop terrace', status: 'Running 12:40', tone: 'running' as const },
-  { name: 'Loading dock', status: 'Scheduled 6:00 PM', tone: 'scheduled' as const },
+  {
+    name: 'Loading dock',
+    status: 'Scheduled 6:00 PM',
+    tone: 'scheduled' as const,
+  },
   { name: 'Guest patio', status: 'Idle', tone: 'idle' as const },
+];
+
+const BUSINESS_LINES = [
+  'Any number of zones per property',
+  'Devices that run a window on their own',
+  'Five team members with roles',
 ];
 
 function ZonesTeaser() {
   return (
     <Screen
       title="Zones"
-      subtitle="Run several areas from one account, each with its own profile and schedule."
-      bottomInset={80}
+      subtitle="Run several areas from one account, each with its own profile and times."
+      scroll={false}
     >
-      <View style={styles.teaserWrap}>
-        <View style={styles.teaserStack} pointerEvents="none">
-          {TEASER_ZONES.map((z) => (
-            <Card key={z.name} style={styles.teaserCard}>
-              <View style={styles.teaserRow}>
-                <View style={styles.locIcon}>
-                  <LayoutGrid size={18} color={color.fgMuted} strokeWidth={2} />
-                </View>
-                <View style={{ flex: 1, gap: 3 }}>
-                  <Text style={styles.zoneName}>{z.name}</Text>
-                  <Text style={styles.muted}>Pigeon Guard 18k · Patio speaker</Text>
-                </View>
-                <StatusPill label={z.status} tone={z.tone} />
-              </View>
-            </Card>
-          ))}
-        </View>
-        <LinearGradient
-          colors={['rgba(11,18,32,0)', 'rgba(11,18,32,0.92)', color.background]}
-          style={styles.teaserFade}
-          pointerEvents="none"
-        />
+      <SectionHeader index="01" title="What it looks like" />
+      <View style={styles.sample}>
+        {SAMPLE_ZONES.map((z, i) => (
+          <View
+            key={z.name}
+            style={[styles.sampleRow, i > 0 ? styles.sampleDivider : null]}
+          >
+            <LayoutGrid size={16} color={color.fgSubtle} strokeWidth={1.75} />
+            <Text style={styles.zoneName} numberOfLines={1}>
+              {z.name}
+            </Text>
+            <StatusPill label={z.status} tone={z.tone} />
+          </View>
+        ))}
       </View>
 
-      <Card elevated style={{ gap: space.md }}>
-        <LinearGradient
-          colors={gradient.brand}
-          start={gradient.brandStart}
-          end={gradient.brandEnd}
-          style={styles.badge}
-        >
-          <Building2 size={22} color={color.onAccent} strokeWidth={2.2} />
-        </LinearGradient>
+      <View style={styles.listHead}>
+        <SectionHeader index="02" title="Business plan" />
+      </View>
+      <View style={styles.lines}>
+        {BUSINESS_LINES.map((t) => (
+          <Text key={t} style={styles.line}>
+            {t}
+          </Text>
+        ))}
+      </View>
 
-        <Text style={type.heading}>Zones are a Business feature</Text>
-        <Text style={styles.body}>
-          Group a property into zones, assign a device and profile to each, and
-          watch live status from the phone or the web dashboard. Staff can start
-          a run without touching billing.
-        </Text>
+      <View style={styles.spacer} />
 
-        <View style={{ gap: space.sm }}>
-          <Perk icon={LayoutGrid} text="Unlimited zones per location" />
-          <Perk icon={Cpu} text="Devices that run schedules unattended" />
-          <Perk icon={Users} text="Up to 5 team members with roles" />
-        </View>
-
-        <Button
-          label="Upgrade to Business"
-          variant="gradient"
-          size="lg"
-          onPress={() =>
-            router.push({ pathname: '/paywall', params: { tab: 'business' } })
-          }
-        />
-      </Card>
+      <Button
+        label="Upgrade to Business"
+        size="lg"
+        onPress={() =>
+          router.push({ pathname: '/paywall', params: { tab: 'business' } })
+        }
+      />
     </Screen>
   );
 }
 
-function Perk({
-  icon: Icon,
-  text,
-}: {
-  icon: typeof LayoutGrid;
-  text: string;
-}) {
-  return (
-    <View style={styles.perk}>
-      <Icon size={15} color={color.teal} strokeWidth={2.2} />
-      <Text style={styles.perkText}>{text}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  muted: {
-    fontFamily: font.body.regular,
-    fontSize: 13,
-    lineHeight: 19,
+  locCard: { gap: space.sm + 4 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.sm + 4 },
+  rowText: { flex: 1, gap: 2 },
+  meta: {
+    fontFamily: font.mono.medium,
+    fontSize: 10,
+    letterSpacing: 0.5,
     color: color.fgMuted,
-  },
-  body: {
-    fontFamily: font.body.regular,
-    fontSize: 14,
-    lineHeight: 21,
-    color: color.fgMuted,
-  },
-  locHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm + 4 },
-  locIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    backgroundColor: color.surface,
-    borderWidth: 1,
-    borderColor: color.border,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   zoneRow: {
     flexDirection: 'row',
@@ -264,49 +216,40 @@ const styles = StyleSheet.create({
     gap: space.sm,
     borderTopWidth: 1,
     borderTopColor: color.border,
-    paddingTop: space.md,
+    paddingTop: space.sm + 4,
   },
   zoneName: {
-    fontFamily: font.body.semibold,
-    fontSize: 15,
-    color: color.fg,
     flex: 1,
+    fontFamily: font.heading.semibold,
+    fontSize: 15,
+    letterSpacing: -0.3,
+    color: color.ink,
   },
-  deviceRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  listHead: { marginTop: space.lg },
+  list: { flexGrow: 0 },
+  listContent: { gap: space.sm },
+  empty: { alignItems: 'center', gap: space.sm, paddingVertical: space.lg },
   iconButton: {
     width: 44,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emptyDevices: {
+  sample: { borderWidth: 1, borderColor: color.border },
+  sampleRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
-    paddingVertical: space.lg,
+    paddingHorizontal: space.sm + 4,
+    paddingVertical: space.sm + 2,
   },
-  teaserWrap: { marginBottom: space.lg },
-  teaserStack: { gap: space.sm, opacity: 0.55 },
-  teaserCard: {},
-  teaserRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm + 4 },
-  teaserFade: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 120,
-  },
-  badge: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  perk: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  perkText: {
-    fontFamily: font.body.medium,
+  sampleDivider: { borderTopWidth: 1, borderTopColor: color.border },
+  lines: { gap: 6 },
+  line: {
+    fontFamily: font.body.regular,
     fontSize: 14,
+    lineHeight: 20,
     color: color.fg,
-    flex: 1,
   },
+  spacer: { flex: 1, minHeight: space.md },
 });

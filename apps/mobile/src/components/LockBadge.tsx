@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Lock } from 'lucide-react-native';
 import { PLAN_LABEL, type Plan } from '../core/entitlements';
-import { color, font, radius } from '../theme/tokens';
+import { color, font } from '../theme/tokens';
 
 export interface LockBadgeProps {
   plan: Plan;
@@ -14,11 +14,11 @@ export function LockBadge({ plan, compact = false }: LockBadgeProps) {
   const label = PLAN_LABEL[plan];
   return (
     <View
-      style={[styles.badge, compact && styles.compact]}
+      style={[styles.badge, compact ? styles.compact : null]}
       accessibilityRole="text"
       accessibilityLabel={`${label} feature, locked`}
     >
-      <Lock size={11} color={color.warning} strokeWidth={2.5} />
+      <Lock size={10} color={color.warning} strokeWidth={1.75} />
       {compact ? null : <Text style={styles.text}>{label}</Text>}
     </View>
   );
@@ -30,18 +30,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-    backgroundColor: 'rgba(251,191,36,0.12)',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 0,
+    backgroundColor: color.background,
     borderWidth: 1,
-    borderColor: 'rgba(251,191,36,0.30)',
+    borderColor: color.warning,
   },
-  compact: { paddingHorizontal: 6 },
+  compact: { paddingHorizontal: 4 },
   text: {
     color: color.warning,
-    fontFamily: font.body.semibold,
-    fontSize: 11,
-    letterSpacing: 0.4,
+    fontFamily: font.mono.medium,
+    fontSize: 10,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
 });
