@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+coverage/
+.env
+.env.*
+!.env.example
+.expo/
+.expo-shared/
+ios/
+android/
+*.log
+.DS_Store
+supabase/.temp/
+supabase/.branches/
+.netlify/
+*.tsbuildinfo
