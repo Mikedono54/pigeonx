@@ -22,7 +22,8 @@
         "UIUserInterfaceStyle": "Light",
         "NSBluetoothAlwaysUsageDescription": "PigeonX uses Bluetooth to find and set up PigeonX emitters near you.",
         "NSBluetoothPeripheralUsageDescription": "PigeonX uses Bluetooth to find and set up PigeonX emitters near you.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "PigeonX does not record audio. The audio engine links microphone APIs, and Apple requires this notice."
       }
     },
     "android": {
