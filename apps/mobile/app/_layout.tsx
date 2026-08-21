@@ -1,0 +1,171 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState, StyleSheet, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Stack, router, useRootNavigationState, useSegments } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
+import {
+  useFonts,
+  Outfit_600SemiBold,
+  Outfit_700Bold,
+} from '@expo-google-fonts/outfit';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+} from '@expo-google-fonts/inter';
+import { JetBrainsMono_500Medium } from '@expo-google-fonts/jetbrains-mono';
+
+import { ToastProvider } from '../src/components';
+import { configureAudioSession } from '../src/audio';
+import {
+  ACTION_START_NOW,
+  ACTION_STOP,
+  configureNotifications,
+} from '../src/services/notifications';
+import { sessionRecorder } from '../src/services/sessionRecorder';
+import { color } from '../src/theme/tokens';
+import { useAccount } from '../src/state/useAccount';
+import { useSession } from '../src/state/useSession';
+
+SplashScreen.preventAutoHideAsync().catch(() => {
+  /* the splash may already be gone on a fast reload */
+});
+
+export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    Outfit_600SemiBold,
+    Outfit_700Bold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    JetBrainsMono_500Medium,
+  });
+
+  const [hydrated, setHydrated] = useState(
+    () => useAccount.persist.hasHydrated?.() ?? false
+  );
+
+  useEffect(() => {
+    if (hydrated) return;
+    const unsub = useAccount.persist.onFinishHydration?.(() =>
+      setHydrated(true)
+    );
+    if (useAccount.persist.hasHydrated?.()) setHydrated(true);
+    return unsub;
+  }, [hydrated]);
+
+  const ready = (fontsLoaded || !!fontError) && hydrated;
+
+  const onLayout = useCallback(() => {
+    if (ready) void SplashScreen.hideAsync().catch(() => {});
+  }, [ready]);
+
+  useEffect(() => {
+    void configureAudioSession();
+    void configureNotifications();
+    const detach = useSession.getState().attach();
+    return detach;
+  }, []);
+
+  useNotificationActions();
+  useQueueFlush();
+  useOnboardingGate(ready);
+
+  if (!ready) return <View style={styles.root} />;
+
+  return (
+    <GestureHandlerRootView style={styles.root} onLayout={onLayout}>
+      <SafeAreaProvider>
+        <ToastProvider>
+          <StatusBar style="light" />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: color.background },
+              animation: 'slide_from_right',
+            }}
+          >
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen
+              name="onboarding"
+              options={{ animation: 'fade', gestureEnabled: false }}
+            />
+            <Stack.Screen
+              name="paywall"
+              options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+            />
+            <Stack.Screen name="profiles/index" />
+            <Stack.Screen
+              name="profiles/new"
+              options={{ presentation: 'modal' }}
+            />
+          </Stack>
+        </ToastProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+/** Sends first-run users to onboarding and keeps them out of it afterwards. */
+function useOnboardingGate(ready: boolean) {
+  const onboarded = useAccount((s) => s.onboarded);
+  const segments = useSegments();
+  const navState = useRootNavigationState();
+
+  useEffect(() => {
+    if (!ready || !navState?.key) return;
+    const inOnboarding = segments[0] === 'onboarding';
+    if (!onboarded && !inOnboarding) router.replace('/onboarding');
+    if (onboarded && inOnboarding) router.replace('/');
+  }, [navState?.key, onboarded, ready, segments]);
+}
+
+/** Wires the notification Stop / Start now buttons to the session. */
+function useNotificationActions() {
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const action = response.actionIdentifier;
+        const data = response.notification.request.content.data as {
+          kind?: string;
+          profileId?: string;
+        };
+
+        if (action === ACTION_STOP || data?.kind === 'running') {
+          void useSession.getState().stop();
+          return;
+        }
+        if (action === ACTION_START_NOW || data?.kind === 'schedule') {
+          router.navigate('/deterrent');
+          void useSession.getState().start({
+            profileId: data?.profileId,
+            source: 'schedule',
+          });
+        }
+      }
+    );
+    return () => sub.remove();
+  }, []);
+}
+
+/** Retries queued session writes whenever the app comes back to the front. */
+function useQueueFlush() {
+  const appState = useRef(AppState.currentState);
+  useEffect(() => {
+    void sessionRecorder.flush();
+    const sub = AppState.addEventListener('change', (next) => {
+      if (appState.current.match(/inactive|background/) && next === 'active') {
+        void sessionRecorder.flush();
+      }
+      appState.current = next;
+    });
+    return () => sub.remove();
+  }, []);
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: color.background },
+});
