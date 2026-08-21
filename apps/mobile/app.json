@@ -84,6 +84,13 @@
     ],
     "experiments": {
       "typedRoutes": false
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "8acab2d4-b596-4d4e-8840-95cb78667ea0"
+      }
+    },
+    "owner": "snapmind"
   }
 }
