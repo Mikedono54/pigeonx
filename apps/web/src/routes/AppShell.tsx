@@ -1,41 +1,35 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import { ArrowLeft, Building2, CalendarRange, Info, MapPin, Radio } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { Container } from '../components/ui/Container';
-import { Card } from '../components/ui/Card';
-import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
-import { WaveBackdrop } from '../components/WaveBackdrop';
 
 const PREVIEW = [
   {
-    icon: MapPin,
+    num: '01',
     title: 'Locations',
     body: 'Every property in one grid, with the zones that are covered and the ones that are not.',
-    rows: ['Harbour House · 3 zones', 'Pier 27 Rooftop · 2 zones', 'Grand Terrace · 4 zones'],
   },
   {
-    icon: Radio,
+    num: '02',
     title: 'Live zones',
-    body: 'What is running right now, on which device, at which frequency — updated in about a second.',
-    rows: ['Front patio · Running 12:40', 'Rooftop bar · Scheduled 6:00 pm', 'Loading dock · Idle'],
+    body: 'What is running right now, on which device, at which frequency, about a second behind the phone.',
   },
   {
-    icon: CalendarRange,
+    num: '03',
     title: 'Weekly report',
     body: 'Sessions, run time and coverage per location, in a summary you can forward to ownership.',
-    rows: ['42 sessions · 11h 20m', 'Coverage 86% of service hours', 'Sent Mondays, 7:00 am'],
   },
 ];
 
 /**
- * Business dashboard shell. The magic-link form is intentionally inert for now —
- * wire `onSubmit` to Supabase `signInWithOtp` when the backend is live.
+ * Business dashboard shell. The magic-link form stays inert until the Supabase
+ * backend is live: wire `onSubmit` to `signInWithOtp` at that point.
  */
 export default function AppShell() {
   const [email, setEmail] = useState('');
-  const [toast, setToast] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
   const timer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -46,46 +40,42 @@ export default function AppShell() {
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setToast('Dashboard access opens with Business pilots');
+    setNote('Dashboard access opens with Business pilots.');
     if (timer.current) window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setToast(null), 4200);
+    timer.current = window.setTimeout(() => setNote(null), 4200);
   }
 
   return (
-    <div className="relative isolate min-h-dvh overflow-hidden bg-bg">
-      <div aria-hidden className="absolute inset-0 -z-20">
-        <div className="absolute inset-0 bg-[radial-gradient(110%_70%_at_50%_-10%,#16233D_0%,#0B1220_60%)]" />
-        <div className="absolute inset-0 px-noise opacity-50" />
-      </div>
-      <WaveBackdrop className="-z-10 opacity-40 [mask-image:linear-gradient(to_bottom,#000,transparent_70%)]" />
-
-      <Container className="flex min-h-dvh flex-col py-8 sm:py-10">
-        <div className="flex items-center justify-between gap-4">
+    <div className="flex min-h-dvh flex-col bg-bg">
+      <header className="border-b border-line">
+        <Container className="flex h-16 items-center justify-between gap-4">
           <Link to="/" aria-label="PigeonX home">
-            <Logo size={34} />
+            <Logo size={28} />
           </Link>
           <Link
             to="/"
-            className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] px-2.5 py-2 text-[13px] font-medium text-fg-muted transition-colors duration-200 hover:bg-white/[0.05] hover:text-fg"
+            className="inline-flex items-center gap-2 text-[14px] text-muted hover:text-ink"
           >
-            <ArrowLeft size={15} aria-hidden />
+            <ArrowLeft size={16} strokeWidth={1.75} aria-hidden />
             Back to site
           </Link>
-        </div>
+        </Container>
+      </header>
 
-        <main className="flex flex-1 flex-col justify-center py-12 sm:py-16">
-          <div className="mx-auto w-full max-w-md">
-            <Card glow className="bg-[linear-gradient(160deg,#16203A_0%,#111A2E_100%)] p-7 sm:p-8">
-              <Badge tone="teal">Business &amp; Enterprise</Badge>
-              <h1 className="mt-4 font-display text-[26px] leading-tight font-bold text-fg">
-                Sign in to your dashboard
+      <main id="main-content" className="flex-1">
+        <section className="border-b border-line">
+          <Container className="grid gap-10 py-12 md:grid-cols-12 lg:py-16">
+            <div className="md:col-span-6 lg:col-span-5">
+              <p className="px-label text-muted">Business and Enterprise</p>
+              <h1 className="mt-4 text-[clamp(1.9rem,4vw,2.75rem)] leading-[1.05] font-bold tracking-[-0.03em]">
+                Sign in to your dashboard.
               </h1>
-              <p className="mt-2.5 text-[14px] leading-relaxed text-fg-muted">
-                We will email you a one-time link. No password to remember, none to leak.
+              <p className="mt-4 max-w-[42ch] text-[16px] text-muted">
+                We email you a one time link. No password to remember, none to leak.
               </p>
 
-              <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-3">
-                <label htmlFor="dashboard-email" className="text-[12.5px] font-medium text-fg-muted">
+              <form onSubmit={onSubmit} className="mt-8 max-w-[26rem]">
+                <label htmlFor="dashboard-email" className="px-label block text-muted">
                   Work email
                 </label>
                 <input
@@ -97,76 +87,52 @@ export default function AppShell() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="alex@harbourhouse.com"
-                  className="h-11 w-full rounded-[var(--radius-md)] border border-border-line bg-white/[0.035] px-3.5 text-[14px] text-fg placeholder:text-fg-muted transition-colors duration-200 focus:border-teal/50 focus:outline-none"
+                  className="mt-2 h-11 w-full border border-line bg-bg px-3 text-[15px] text-ink placeholder:text-muted focus:border-accent focus:outline-none"
                 />
-                <Button type="submit" size="lg" className="mt-1 w-full">
-                  Send magic link
+                <Button type="submit" className="mt-4 w-full">
+                  Send the link
                 </Button>
               </form>
 
-              <p
-                role="status"
-                aria-live="polite"
-                className={`mt-4 flex items-start gap-2 rounded-[var(--radius-md)] border px-3.5 py-3 text-[13px] leading-snug transition-opacity duration-200 ${
-                  toast
-                    ? 'border-accent/30 bg-accent/10 text-accent opacity-100'
-                    : 'pointer-events-none border-transparent opacity-0'
-                }`}
-              >
-                <Info size={15} className="mt-px shrink-0" aria-hidden />
-                <span>{toast ?? ''}</span>
+              <p role="status" aria-live="polite" className="mt-4 min-h-6 text-[14px] text-accent">
+                {note ?? ''}
               </p>
 
-              <p className="mt-4 text-center text-[13px] text-fg-muted">
-                Not on a Business plan yet?{' '}
-                <Link to="/#contact" className="font-medium text-teal underline-offset-4 hover:underline">
+              <p className="mt-2 text-[15px] text-muted">
+                No Business plan yet?{' '}
+                <Link
+                  to="/pilot"
+                  className="border-b border-accent pb-0.5 font-medium text-accent hover:border-ink hover:text-ink"
+                >
                   Start a pilot
                 </Link>
               </p>
-            </Card>
-          </div>
-
-          <section aria-labelledby="dashboard-preview" className="mx-auto mt-16 w-full max-w-5xl">
-            <div className="flex items-center justify-center gap-2.5">
-              <Building2 size={16} className="text-teal" aria-hidden />
-              <h2
-                id="dashboard-preview"
-                className="font-sans text-[11px] font-semibold tracking-[0.18em] text-fg-muted uppercase"
-              >
-                What the dashboard shows
-              </h2>
             </div>
 
-            <ul className="mt-7 grid gap-4 md:grid-cols-3">
-              {PREVIEW.map(({ icon: Icon, title, body, rows }) => (
-                <li key={title} className="h-full">
-                  <Card className="flex h-full flex-col gap-3.5">
-                    <span className="grid h-10 w-10 place-items-center rounded-[10px] border border-border-line bg-elevated text-teal">
-                      <Icon size={18} aria-hidden />
-                    </span>
-                    <h3 className="font-display text-[16px] font-semibold text-fg">{title}</h3>
-                    <p className="text-[13.5px] leading-relaxed text-fg-muted">{body}</p>
-                    <ul className="mt-auto flex flex-col gap-2 border-t border-border-line pt-4">
-                      {rows.map((r) => (
-                        <li
-                          key={r}
-                          className="flex items-center gap-2 font-mono text-[11.5px] text-fg-muted"
-                        >
-                          <span aria-hidden className="h-1 w-1 shrink-0 rounded-full bg-teal/60" />
-                          {r}
-                        </li>
-                      ))}
-                    </ul>
-                  </Card>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-6 text-center text-[12.5px] text-fg-muted">
-              Sample data. Your dashboard fills in from the sessions your team actually runs.
-            </p>
-          </section>
-        </main>
-      </Container>
+            <div className="border-line md:col-span-6 md:border-l md:pl-8 lg:col-span-6 lg:col-start-7">
+              <p className="px-label text-muted">What the dashboard shows</p>
+              <ul className="mt-5 border-t border-line">
+                {PREVIEW.map((p) => (
+                  <li key={p.num} className="border-b border-line py-4">
+                    <p className="px-label text-accent">{p.num}</p>
+                    <h2 className="mt-2 font-display text-[17px] font-semibold">{p.title}</h2>
+                    <p className="mt-1 max-w-[46ch] text-[15px] text-muted">{p.body}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Container>
+        </section>
+      </main>
+
+      <footer className="border-t border-line">
+        <Container className="flex h-14 items-center justify-between">
+          <p className="px-label text-muted">© 2026 PigeonX</p>
+          <Link to="/privacy" className="px-label text-muted hover:text-ink">
+            Privacy
+          </Link>
+        </Container>
+      </footer>
     </div>
   );
 }

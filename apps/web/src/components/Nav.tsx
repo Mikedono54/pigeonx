@@ -1,78 +1,54 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router';
-import { Menu, X, LayoutDashboard } from 'lucide-react';
+import { Link, NavLink, useLocation } from 'react-router';
+import { Menu, X } from 'lucide-react';
 import { Logo } from './Logo';
 import { Container } from './ui/Container';
 import { ButtonLink } from './ui/Button';
 import { cn } from '../lib/cn';
 
 const LINKS = [
-  { label: 'How it works', href: '/#how-it-works' },
-  { label: 'Platform', href: '/#platform' },
-  { label: 'Pricing', href: '/#pricing' },
-  { label: 'Hardware', href: '/#hardware' },
-  { label: 'FAQ', href: '/#faq' },
+  { label: 'Platform', to: '/platform' },
+  { label: 'Pricing', to: '/pricing' },
+  { label: 'Pilot', to: '/pilot' },
 ];
 
 export function Nav() {
-  const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
 
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
 
-  useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : '';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [open]);
-
   return (
-    <header
-      className={cn(
-        'fixed inset-x-0 top-0 z-50 transition-[background-color,border-color,backdrop-filter] duration-300',
-        scrolled || open
-          ? 'border-b border-border-line bg-bg/85 backdrop-blur-xl'
-          : 'border-b border-transparent bg-transparent',
-      )}
-    >
-      <Container className="flex h-16 items-center justify-between gap-4 sm:h-18">
-        <Link
-          to="/"
-          className="rounded-md focus-visible:outline-2"
-          aria-label="PigeonX home"
-        >
-          <Logo size={34} />
+    <header className="sticky top-0 z-50 border-b border-line bg-bg">
+      <Container className="flex h-16 items-center justify-between gap-6">
+        <Link to="/" aria-label="PigeonX home" className="shrink-0">
+          <Logo size={28} />
         </Link>
 
-        <nav aria-label="Primary" className="hidden items-center gap-1 lg:flex">
+        <nav aria-label="Primary" className="hidden items-center gap-7 md:flex">
           {LINKS.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              className="rounded-[var(--radius-sm)] px-3 py-2 text-sm font-medium text-fg-muted transition-colors duration-200 hover:bg-white/[0.05] hover:text-fg"
+            <NavLink
+              key={l.to}
+              to={l.to}
+              className={({ isActive }) =>
+                cn(
+                  'text-[15px] font-medium transition-colors duration-150 hover:text-ink',
+                  isActive ? 'text-ink' : 'text-muted',
+                )
+              }
             >
               {l.label}
-            </a>
+            </NavLink>
           ))}
         </nav>
 
         <div className="hidden items-center gap-2.5 md:flex">
-          <ButtonLink href="/app" variant="secondary">
-            <LayoutDashboard size={15} aria-hidden />
+          <ButtonLink href="/app" variant="secondary" className="h-10 px-4 text-[14px]">
             Dashboard
           </ButtonLink>
-          <ButtonLink href="/#download">
+          <ButtonLink href="/pilot#download" className="h-10 px-4 text-[14px]">
             Get the app
           </ButtonLink>
         </div>
@@ -83,36 +59,35 @@ export function Nav() {
           aria-expanded={open}
           aria-controls="mobile-nav"
           aria-label={open ? 'Close menu' : 'Open menu'}
-          className="grid h-10 w-10 cursor-pointer place-items-center rounded-[var(--radius-sm)] border border-border-line bg-white/[0.03] text-fg transition-colors duration-200 hover:bg-white/[0.08] md:hidden"
+          className="grid h-11 w-11 cursor-pointer place-items-center border border-ink text-ink md:hidden"
         >
-          {open ? <X size={18} aria-hidden /> : <Menu size={18} aria-hidden />}
+          {open ? <X size={18} strokeWidth={1.75} aria-hidden /> : <Menu size={18} strokeWidth={1.75} aria-hidden />}
         </button>
       </Container>
 
-      <div
-        id="mobile-nav"
-        hidden={!open}
-        className="border-t border-border-line bg-bg/95 backdrop-blur-xl md:hidden"
-      >
-        <Container className="flex flex-col gap-1 py-4">
+      <div id="mobile-nav" hidden={!open} className="border-t border-line bg-bg md:hidden">
+        <ul className="flex flex-col">
           {LINKS.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              onClick={() => setOpen(false)}
-              className="rounded-[var(--radius-sm)] px-3 py-3 text-[15px] font-medium text-fg-muted transition-colors hover:bg-white/[0.05] hover:text-fg"
-            >
-              {l.label}
-            </a>
+            <li key={l.to} className="border-b border-line">
+              <Link
+                to={l.to}
+                className="block px-5 py-4 text-[16px] font-medium text-ink sm:px-8"
+              >
+                {l.label}
+              </Link>
+            </li>
           ))}
-          <div className="mt-3 flex flex-col gap-2.5">
-            <ButtonLink href="/app" variant="secondary">
-              <LayoutDashboard size={16} aria-hidden />
+          <li className="border-b border-line">
+            <Link to="/app" className="block px-5 py-4 text-[16px] font-medium text-ink sm:px-8">
               Dashboard
-            </ButtonLink>
-            <ButtonLink href="/#download">Get the app</ButtonLink>
-          </div>
-        </Container>
+            </Link>
+          </li>
+        </ul>
+        <div className="p-5 sm:p-8">
+          <ButtonLink href="/pilot#download" className="w-full">
+            Get the app
+          </ButtonLink>
+        </div>
       </div>
     </header>
   );

@@ -1,12 +1,12 @@
 {
-  "name": "PigeonX — Smarter, humane bird deterrence",
+  "name": "PigeonX: bird control you run from your phone",
   "short_name": "PigeonX",
-  "description": "A smartphone control center for humane, sound-based bird deterrence.",
+  "description": "The controller for sound based bird deterrence.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0B1220",
-  "theme_color": "#0B1220",
+  "background_color": "#FFFFFF",
+  "theme_color": "#FFFFFF",
   "icons": [
     { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
     { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }

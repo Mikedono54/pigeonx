@@ -8,9 +8,17 @@ export function Container({
 }: {
   children: ReactNode;
   className?: string;
-  size?: 'default' | 'narrow' | 'wide';
+  size?: 'default' | 'narrow';
 }) {
-  const width =
-    size === 'narrow' ? 'max-w-3xl' : size === 'wide' ? 'max-w-[88rem]' : 'max-w-6xl';
-  return <div className={cn('mx-auto w-full px-5 sm:px-6 lg:px-8', width, className)}>{children}</div>;
+  return (
+    <div
+      className={cn(
+        'mx-auto w-full px-5 sm:px-8 lg:px-12',
+        size === 'narrow' ? 'max-w-[52rem]' : 'max-w-[76rem]',
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
 }

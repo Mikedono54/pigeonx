@@ -1,10 +1,7 @@
 import type { CSSProperties } from 'react';
 import { cn } from '../lib/cn';
 
-/**
- * Original PigeonX bird mark: a minimal bird in flight (a gull-like silhouette with
- * swept, lifted wings) inside a rounded-square gradient badge.
- */
+/** The PigeonX bird: a flat, single-colour glyph. No gradient, no glow. */
 export function BirdGlyph({
   className,
   style,
@@ -24,24 +21,20 @@ export function BirdGlyph({
   );
 }
 
-export function LogoMark({ className, size = 36 }: { className?: string; size?: number }) {
+export function LogoMark({ className, size = 28 }: { className?: string; size?: number }) {
   return (
     <span
-      className={cn(
-        'relative grid shrink-0 place-items-center rounded-[10px] px-gradient-bg',
-        'shadow-[0_6px_20px_-8px_rgba(45,212,191,0.75)]',
-        className,
-      )}
+      className={cn('grid shrink-0 place-items-center bg-ink', className)}
       style={{ width: size, height: size }}
     >
-      <BirdGlyph className="text-on-accent" style={{ width: size * 0.62, height: size * 0.62 }} />
+      <BirdGlyph className="text-bg" style={{ width: size * 0.66, height: size * 0.66 }} />
     </span>
   );
 }
 
 export function Logo({
   className,
-  size = 36,
+  size = 28,
   showWordmark = true,
 }: {
   className?: string;
@@ -53,10 +46,10 @@ export function Logo({
       <LogoMark size={size} />
       {showWordmark ? (
         <span
-          className="font-display text-[1.05rem] font-bold tracking-[-0.02em] text-fg"
-          style={{ fontSize: size * 0.52 }}
+          className="font-display font-bold tracking-[-0.03em] text-ink"
+          style={{ fontSize: size * 0.66 }}
         >
-          Pigeon<span className="px-gradient-text">X</span>
+          Pigeon<span className="text-accent">X</span>
         </span>
       ) : null}
     </span>

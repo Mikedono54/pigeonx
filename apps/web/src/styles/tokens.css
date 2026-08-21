@@ -1,64 +1,48 @@
 @import 'tailwindcss';
 
 /* ------------------------------------------------------------------ *
- * PigeonX design tokens — dark theme only
+ * PigeonX design tokens: light, flat, square, one accent.
  * ------------------------------------------------------------------ */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  --px-bg: #0b1220;
-  --px-surface: #111a2e;
-  --px-card: #151f36;
-  --px-elevated: #1b2742;
-  --px-border: #243049;
+  --px-bg: #ffffff;
+  --px-alt: #f5f5f3;
+  --px-ink: #0a0a0a;
+  --px-body: #1f1f1f;
+  --px-muted: #5f5f5f;
+  --px-line: #e3e3df;
 
-  --px-fg: #f1f5f9;
-  --px-fg-muted: #8b97ad;
-  --px-fg-subtle: #5b6881;
-
-  --px-teal: #2dd4bf;
-  --px-blue: #3b82f6;
-  --px-accent: #22d3ee;
-  --px-on-accent: #06121f;
-  --px-success: #34d399;
-  --px-warning: #fbbf24;
-  --px-danger: #f87171;
-
-  --px-gradient: linear-gradient(135deg, #2dd4bf 0%, #3b82f6 100%);
-
-  --px-radius-sm: 8px;
-  --px-radius-md: 12px;
-  --px-radius-lg: 16px;
-  --px-radius-xl: 24px;
+  --px-accent: #2b5cff;
+  --px-on-accent: #ffffff;
+  --px-success: #0f8a4b;
+  --px-warning: #b26a00;
+  --px-danger: #c62828;
 }
 
 @theme {
-  --color-bg: #0b1220;
-  --color-surface: #111a2e;
-  --color-card: #151f36;
-  --color-elevated: #1b2742;
-  --color-border-line: #243049;
+  /* no curves anywhere: the radius namespace is emptied */
+  --radius-*: initial;
 
-  --color-fg: #f1f5f9;
-  --color-fg-muted: #8b97ad;
-  --color-fg-subtle: #5b6881;
+  /* no soft edges: the shadow and blur namespaces are emptied */
+  --shadow-*: initial;
+  --drop-shadow-*: initial;
+  --blur-*: initial;
 
-  --color-teal: #2dd4bf;
-  --color-blue: #3b82f6;
-  --color-accent: #22d3ee;
-  --color-on-accent: #06121f;
-  --color-success: #34d399;
-  --color-warning: #fbbf24;
-  --color-danger: #f87171;
+  --color-bg: #ffffff;
+  --color-alt: #f5f5f3;
+  --color-ink: #0a0a0a;
+  --color-body: #1f1f1f;
+  --color-muted: #5f5f5f;
+  --color-line: #e3e3df;
 
-  --font-display: 'Outfit', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --color-accent: #2b5cff;
+  --color-on-accent: #ffffff;
+  --color-success: #0f8a4b;
+  --color-warning: #b26a00;
+  --color-danger: #c62828;
+
+  --font-display: 'Inter Tight', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
