@@ -1,5 +1,6 @@
 import { BaseAudioEngine, SPECTRUM_BINS, type Spectrum } from './engine';
 import { SAMPLE_ASSETS } from './samples';
+import { PLAYBACK_SESSION_OPTIONS } from './session';
 import type {
   AudioProfile,
   OutputKind,
@@ -40,12 +41,14 @@ export async function configureAudioSession(): Promise<void> {
     api.AudioManager.setAudioSessionOptions({
       iosCategory: 'playback',
       iosMode: 'default',
-      iosOptions: ['mixWithOthers', 'allowBluetoothA2DP', 'allowAirPlay'],
+      iosOptions: PLAYBACK_SESSION_OPTIONS,
     });
     api.AudioManager.observeAudioInterruptions(true);
     await api.AudioManager.setAudioSessionActivity(true);
-  } catch {
-    // A failure here only costs background playback; the run still works.
+  } catch (e) {
+    // Surface it: when the session cannot start, nothing can play, and the user needs to know why.
+    const detail = e instanceof Error ? e.message : String(e);
+    throw new Error(`The phone's sound system did not start. Close other sound apps and try again. (${detail})`);
   }
 }
 
