@@ -2,17 +2,23 @@ import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 import {
   CalendarClock,
-  LayoutGrid,
-  Radio,
-  User,
+  Building2,
+  Music,
+  Settings,
   Home,
 } from 'lucide-react-native';
+import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { color, font } from '../../src/theme/tokens';
 
 const ICON_SIZE = 20;
 const ICON_STROKE = 1.75;
 
 export default function TabsLayout() {
+  const ent = useEntitlement();
+  // Only a Business plan gets the fifth tab. Everyone else finds the same
+  // thing under Settings, "For businesses".
+  const showPlaces = ent.can('zones');
+
   return (
     <Tabs
       screenOptions={{
@@ -46,38 +52,39 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="deterrent"
+        name="sounds"
         options={{
-          title: 'Sound',
+          title: 'Sounds',
           tabBarIcon: ({ color: c }) => (
-            <Radio size={ICON_SIZE} color={c} strokeWidth={ICON_STROKE} />
+            <Music size={ICON_SIZE} color={c} strokeWidth={ICON_STROKE} />
           ),
         }}
       />
       <Tabs.Screen
-        name="zones"
+        name="schedule"
         options={{
-          title: 'Zones',
-          tabBarIcon: ({ color: c }) => (
-            <LayoutGrid size={ICON_SIZE} color={c} strokeWidth={ICON_STROKE} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="schedules"
-        options={{
-          title: 'Times',
+          title: 'Schedule',
           tabBarIcon: ({ color: c }) => (
             <CalendarClock size={ICON_SIZE} color={c} strokeWidth={ICON_STROKE} />
           ),
         }}
       />
       <Tabs.Screen
-        name="account"
+        name="places"
         options={{
-          title: 'Account',
+          title: 'Places',
+          href: showPlaces ? undefined : null,
           tabBarIcon: ({ color: c }) => (
-            <User size={ICON_SIZE} color={c} strokeWidth={ICON_STROKE} />
+            <Building2 size={ICON_SIZE} color={c} strokeWidth={ICON_STROKE} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color: c }) => (
+            <Settings size={ICON_SIZE} color={c} strokeWidth={ICON_STROKE} />
           ),
         }}
       />

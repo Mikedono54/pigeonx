@@ -12,15 +12,14 @@ import { color } from '../theme/tokens';
 
 export interface SpectrumBarsProps {
   height?: number;
-  /** dims the whole meter when nothing is running */
+  /** dims the bars when nothing is playing */
   active?: boolean;
   bins?: number;
 }
 
 /**
- * Live spectrum: solid accent bars with square tops. Reads from the engine
- * directly rather than through React state so 16 fps of frames never
- * re-renders a screen.
+ * The live bars you see while a sound plays. Reads straight from the engine
+ * instead of React state, so 16 frames a second never re-render a screen.
  */
 export function SpectrumBars({
   height = 110,
@@ -50,9 +49,7 @@ export function SpectrumBars({
     <View
       style={[styles.wrap, { height }]}
       accessibilityRole="image"
-      accessibilityLabel={
-        active ? 'Live frequency meter' : 'Frequency meter, idle'
-      }
+      accessibilityLabel={active ? 'Sound playing' : 'Nothing playing'}
     >
       {indices.map((i) => (
         <Bar

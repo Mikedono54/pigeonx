@@ -39,6 +39,7 @@ export const STORAGE_KEYS = {
   schedules: 'pigeonx.schedules',
   history: 'pigeonx.history',
   session: 'pigeonx.session',
+  places: 'pigeonx.places',
 } as const;
 
 export function uid(prefix: string): string {

@@ -17,19 +17,19 @@ Notifications.setNotificationHandler({
   }),
 });
 
-/** Idempotent: permissions + the two action categories the app relies on. */
+/** Safe to call again: permissions plus the two reminder buttons. */
 export async function configureNotifications(): Promise<boolean> {
   try {
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('pigeonx-runs', {
-        name: 'Deterrent runs',
+        name: 'Bird sounds playing',
         importance: Notifications.AndroidImportance.LOW,
         sound: null,
         vibrationPattern: [0],
         enableVibrate: false,
       });
       await Notifications.setNotificationChannelAsync('pigeonx-reminders', {
-        name: 'Schedule reminders',
+        name: 'Reminders',
         importance: Notifications.AndroidImportance.DEFAULT,
       });
     }
@@ -45,7 +45,7 @@ export async function configureNotifications(): Promise<boolean> {
       await Notifications.setNotificationCategoryAsync(SCHEDULE_CATEGORY, [
         {
           identifier: ACTION_START_NOW,
-          buttonTitle: 'Start now',
+          buttonTitle: 'Play now',
           options: { opensAppToForeground: true },
         },
       ]);
@@ -61,7 +61,7 @@ export async function configureNotifications(): Promise<boolean> {
   }
 }
 
-/** The persistent "running" notification with a Stop action. */
+/** The reminder that sits there while a sound plays, with a Stop button. */
 export async function presentRunningNotification(args: {
   profileName: string;
   outputLabel: string;
@@ -69,8 +69,8 @@ export async function presentRunningNotification(args: {
   try {
     return await Notifications.scheduleNotificationAsync({
       content: {
-        title: 'PigeonX is running',
-        body: `${args.profileName} · ${args.outputLabel}`,
+        title: 'PigeonX is playing',
+        body: `${args.profileName} on ${args.outputLabel}`,
         categoryIdentifier: RUNNING_CATEGORY,
         sticky: true,
         autoDismiss: false,
@@ -90,7 +90,7 @@ export async function dismissRunningNotification(
     if (id) await Notifications.dismissNotificationAsync(id);
     else await Notifications.dismissAllNotificationsAsync();
   } catch {
-    // nothing actionable — the banner just lingers until the user swipes it
+    // nothing to do here. The banner sits until you swipe it away.
   }
 }
 
@@ -105,7 +105,7 @@ export interface ReminderSpec {
   label: string;
 }
 
-/** One weekly repeating local notification per selected day. */
+/** One weekly repeating reminder per day you picked. */
 export async function scheduleReminders(
   spec: ReminderSpec
 ): Promise<string[]> {
@@ -114,8 +114,8 @@ export async function scheduleReminders(
     try {
       const id = await Notifications.scheduleNotificationAsync({
         content: {
-          title: `Time to run ${spec.profileName}`,
-          body: `${spec.label} · tap Start now to begin on this phone`,
+          title: `Time to play ${spec.profileName}`,
+          body: `${spec.label}. Tap Play now to start on this phone.`,
           categoryIdentifier: SCHEDULE_CATEGORY,
           data: {
             kind: 'schedule',
@@ -132,7 +132,7 @@ export async function scheduleReminders(
       });
       ids.push(id);
     } catch {
-      // a device that refuses notifications still keeps the schedule row
+      // a phone that refuses reminders still keeps the schedule
     }
   }
   return ids;

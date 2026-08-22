@@ -7,6 +7,7 @@ import {
 } from '../services/notifications';
 import { persistStorage, STORAGE_KEYS, uid } from './storage';
 
+/** Who actually starts the sound: this phone, or a PigeonX speaker. */
 export type Executor = 'reminder' | 'device';
 
 export interface Schedule {
@@ -14,9 +15,9 @@ export interface Schedule {
   name: string;
   profileId: string;
   profileName: string;
-  /** 0 = Sunday … 6 = Saturday */
+  /** 0 is Sunday, 6 is Saturday */
   days: number[];
-  /** minutes from midnight */
+  /** minutes past midnight */
   startMinutes: number;
   endMinutes: number;
   enabled: boolean;
@@ -47,7 +48,7 @@ export function formatMinutes(mins: number): string {
 
 export function describeDays(days: number[]): string {
   if (days.length === 7) return 'Every day';
-  if (days.length === 0) return 'No days';
+  if (days.length === 0) return 'No days picked';
   const weekdays = [1, 2, 3, 4, 5];
   if (
     days.length === 5 &&
@@ -60,8 +61,24 @@ export function describeDays(days: number[]): string {
     .slice()
     .sort((a, b) => a - b)
     .map((d) => DAY_NAMES[d].slice(0, 3))
-    .join(' · ');
+    .join(', ');
 }
+
+/** How a schedule reads in the list: "Weekdays, 6:00 PM to 10:00 PM, Pigeon sound". */
+export function describeSchedule(s: {
+  days: number[];
+  startMinutes: number;
+  endMinutes: number;
+  profileName: string;
+}): string {
+  return `${describeDays(s.days)}, ${formatMinutes(s.startMinutes)} to ${formatMinutes(s.endMinutes)}, ${s.profileName}`;
+}
+
+/** Who runs it, in words. */
+export const EXECUTOR_LABEL: Record<Executor, string> = {
+  reminder: 'This phone reminds me',
+  device: 'A PigeonX speaker runs it by itself',
+};
 
 export type ScheduleInput = Omit<
   Schedule,
@@ -73,11 +90,11 @@ interface SchedulesState {
   upsert: (input: ScheduleInput) => Promise<Schedule>;
   toggle: (id: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
-  /** Next upcoming reminder across all enabled schedules, for the Home card. */
+  /** The next reminder coming up, for the Home screen. */
   nextUp: () => { schedule: Schedule; at: Date } | null;
 }
 
-async function syncReminders(s: Schedule): Promise<string[]> {
+async function refreshReminders(s: Schedule): Promise<string[]> {
   await cancelReminders(s.notificationIds);
   if (!s.enabled || s.executor !== 'reminder' || s.days.length === 0) return [];
   const ok = await configureNotifications();
@@ -108,7 +125,7 @@ export const useSchedules = create<SchedulesState>()(
           enabled: input.enabled ?? existing?.enabled ?? true,
           notificationIds: existing?.notificationIds ?? [],
         };
-        const notificationIds = await syncReminders(draft);
+        const notificationIds = await refreshReminders(draft);
         const saved: Schedule = { ...draft, notificationIds };
         set({
           schedules: existing
@@ -122,7 +139,7 @@ export const useSchedules = create<SchedulesState>()(
         const s = get().schedules.find((x) => x.id === id);
         if (!s) return;
         const next = { ...s, enabled: !s.enabled };
-        const notificationIds = await syncReminders(next);
+        const notificationIds = await refreshReminders(next);
         set({
           schedules: get().schedules.map((x) =>
             x.id === id ? { ...next, notificationIds } : x

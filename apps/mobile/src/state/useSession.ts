@@ -4,7 +4,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { getEngine, type EngineState } from '../audio';
 import { limit } from '../core/entitlements';
 import {
-  OUTPUT_LABEL,
+  SPEAKER_LABEL,
   type AudioProfile,
   type OutputKind,
 } from '../core/profiles';
@@ -18,9 +18,9 @@ import { useAccount } from './useAccount';
 import { useHistory, type SessionSource } from './useHistory';
 import { useProfiles } from './useProfiles';
 
-const KEEP_AWAKE_TAG = 'pigeonx-run';
+const KEEP_SCREEN_ON_TAG = 'pigeonx-play';
 
-/** minutes; null = unlimited */
+/** minutes. null means until you stop it. */
 export type DurationChoice = 15 | 30 | 60 | null;
 
 interface SessionState {
@@ -33,7 +33,7 @@ interface SessionState {
   engineState: EngineState;
   error: string | null;
   startedAt: number | null;
-  /** set when a run ended because the plan's cap was reached */
+  /** set when a play stopped because the plan ran out of time */
   hitPlanCap: boolean;
   currentEntryId: string | null;
   notificationId: string | null;
@@ -50,7 +50,7 @@ interface SessionState {
   }) => Promise<void>;
   stop: () => Promise<void>;
   clearError: () => void;
-  /** effective cap in ms for the current plan + chip, null = unlimited */
+  /** time limit in ms for this plan and choice. null means no limit. */
   effectiveCapMs: () => number | null;
   isRunning: () => boolean;
 }
@@ -79,7 +79,10 @@ export const useSession = create<SessionState>()(
         const off = engine.onStateChange((e) => {
           set({
             engineState: e.state,
-            error: e.state === 'error' ? (e.error ?? 'Audio failed') : null,
+            error:
+              e.state === 'error'
+                ? (e.error ?? "That didn't work. Try again.")
+                : null,
           });
           if (e.state === 'idle' && get().currentEntryId) {
             // the engine ended the run itself (duration cap or interruption)
@@ -129,7 +132,7 @@ export const useSession = create<SessionState>()(
         const profileId = opts?.profileId ?? get().profileId;
         const profile = useProfiles.getState().byId(profileId);
         if (!profile) {
-          set({ error: 'That profile is no longer available' });
+          set({ error: 'That sound is gone. Pick another one.' });
           return;
         }
         if (get().engineState === 'running') return;
@@ -158,13 +161,13 @@ export const useSession = create<SessionState>()(
 
         const notificationId = await presentRunningNotification({
           profileName: profile.name,
-          outputLabel: OUTPUT_LABEL[get().output],
+          outputLabel: SPEAKER_LABEL[get().output],
         });
 
         try {
-          await activateKeepAwakeAsync(KEEP_AWAKE_TAG);
+          await activateKeepAwakeAsync(KEEP_SCREEN_ON_TAG);
         } catch {
-          // screen may sleep; audio keeps going via the background audio mode
+          // the screen may sleep. The sound keeps playing in the background.
         }
 
         set({
@@ -211,13 +214,13 @@ async function finalise(
   if (currentEntryId) await sessionRecorder.end(currentEntryId);
   await dismissRunningNotification(notificationId);
   try {
-    deactivateKeepAwake(KEEP_AWAKE_TAG);
+    deactivateKeepAwake(KEEP_SCREEN_ON_TAG);
   } catch {
-    // keep-awake was never activated
+    // we never asked to keep the screen on
   }
 }
 
-/** Helper for screens: mm:ss for a running session. */
+/** Helper for screens: mm:ss while a sound plays. */
 export function formatElapsed(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
   const m = Math.floor(total / 60);

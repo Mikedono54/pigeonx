@@ -34,7 +34,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {
   /* the splash may already be gone on a fast reload */
 });
 
-/** Sub-screens slide in; nothing fades or scales. */
+/** Sub-screens slide in. Nothing fades or scales. */
 const STACK_ANIMATION = 'slide_from_right' as const;
 
 export default function RootLayout() {
@@ -101,11 +101,13 @@ export default function RootLayout() {
               options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
             />
             <Stack.Screen name="history" />
-            <Stack.Screen name="profiles/index" />
+            <Stack.Screen name="for-businesses" />
             <Stack.Screen
-              name="profiles/new"
+              name="make-a-sound"
               options={{ presentation: 'modal' }}
             />
+            <Stack.Screen name="deterrent" options={{ animation: 'none' }} />
+            <Stack.Screen name="profiles" options={{ animation: 'none' }} />
           </Stack>
         </ToastProvider>
       </SafeAreaProvider>
@@ -113,7 +115,7 @@ export default function RootLayout() {
   );
 }
 
-/** Sends first-run users to onboarding and keeps them out of it afterwards. */
+/** Sends new people to the welcome screens, once. */
 function useOnboardingGate(ready: boolean) {
   const onboarded = useAccount((s) => s.onboarded);
   const segments = useSegments();
@@ -127,7 +129,7 @@ function useOnboardingGate(ready: boolean) {
   }, [navState?.key, onboarded, ready, segments]);
 }
 
-/** Wires the notification Stop / Start now buttons to the session. */
+/** Wires the reminder Stop and Play now buttons to the sound. */
 function useNotificationActions() {
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener(
@@ -143,7 +145,7 @@ function useNotificationActions() {
           return;
         }
         if (action === ACTION_START_NOW || data?.kind === 'schedule') {
-          router.navigate('/deterrent');
+          router.navigate('/');
           void useSession.getState().start({
             profileId: data?.profileId,
             source: 'schedule',
@@ -155,7 +157,7 @@ function useNotificationActions() {
   }, []);
 }
 
-/** Retries queued session writes whenever the app comes back to the front. */
+/** Retries any writes that are still waiting when the app comes back. */
 function useQueueFlush() {
   const appState = useRef(AppState.currentState);
   useEffect(() => {

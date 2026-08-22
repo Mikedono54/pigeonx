@@ -31,7 +31,7 @@ export function isSupabaseConfigured(): boolean {
   return client !== null;
 }
 
-/** Test seam — lets tests inject a stub client or force the offline path. */
+/** Test seam. Lets tests inject a stub client or force the offline path. */
 export function __setSupabase(next: SupabaseClient | null): void {
   client = next;
 }

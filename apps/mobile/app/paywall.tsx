@@ -7,6 +7,7 @@ import { X } from 'lucide-react-native';
 import { Button, Segmented, Touchable, useToast } from '../src/components';
 import {
   FEATURE_LABEL,
+  PLAN_LABEL,
   PRICES,
   requiredPlan,
   type Feature,
@@ -19,51 +20,38 @@ import { useAccount } from '../src/state/useAccount';
 import { color, font, space } from '../src/theme/tokens';
 import { type } from '../src/theme/typography';
 
-type Tab = 'pro' | 'business' | 'enterprise';
+const FREE_LINES = [
+  'Three sounds',
+  'Play for up to 15 minutes at a time',
+  'The last 7 days of what played',
+];
 
 const PRO_LINES = [
-  'Every system profile',
-  'Distress and predator calls',
-  'Build your own profiles',
-  'Any number of saved profiles',
-  'No run time limit',
-  'Reminder times with one-tap start',
-  'Remembered Bluetooth speakers',
-  'Full run history',
+  'All the sounds, including bird alarm calls',
+  'Make your own sounds',
+  'Schedules',
+  'No time limit',
 ];
 
 const BUSINESS_LINES = [
-  'Locations, zones and devices',
-  'Devices that run a window on their own',
-  'Five team members with roles',
-  'Web dashboard with live zone status',
-];
-
-const ENTERPRISE_LINES = [
-  'Every location in one view',
-  'Analytics and CSV export',
-  'Any number of team members',
-  'Priority support and pilot reporting',
+  'Places',
+  'Areas',
+  'Speakers',
+  'Your team, up to five people',
+  'Web dashboard',
 ];
 
 export default function Paywall() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
-  const params = useLocalSearchParams<{ feature?: string; tab?: string }>();
+  const params = useLocalSearchParams<{ feature?: string }>();
   const setPlan = useAccount((s) => s.setPlan);
+  const plan = useAccount((s) => s.plan);
 
-  const feature = params.feature as Feature | undefined;
-  const initialTab: Tab =
-    params.tab === 'business' || params.tab === 'enterprise'
-      ? params.tab
-      : feature
-        ? tabForPlan(requiredPlan(feature))
-        : 'pro';
-
-  const [tab, setTab] = useState<Tab>(initialTab);
   const [term, setTerm] = useState<'monthly' | 'yearly'>('yearly');
   const [busy, setBusy] = useState(false);
 
+  const feature = params.feature as Feature | undefined;
   const purchases = useMemo(() => createSandboxPurchases(setPlan), [setPlan]);
 
   const buy = useCallback(
@@ -100,105 +88,83 @@ export default function Paywall() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        <Text style={type.title}>Get more sounds and schedules</Text>
         {feature ? (
-          <Text style={type.title}>
-            {FEATURE_LABEL[feature]} needs {planName(requiredPlan(feature))}
+          <Text style={styles.why}>
+            {FEATURE_LABEL[feature]} comes with{' '}
+            {PLAN_LABEL[requiredPlan(feature)]}.
           </Text>
-        ) : (
-          <Text style={type.title}>Pick a plan</Text>
-        )}
+        ) : null}
 
-        <Segmented
-          value={tab}
-          onChange={setTab}
-          accessibilityLabel="Plan"
-          options={[
-            { value: 'pro', label: 'Pro' },
-            { value: 'business', label: 'Business' },
-            { value: 'enterprise', label: 'Enterprise' },
-          ]}
+        <PlanCard
+          name="Free"
+          price="$0"
+          note="What you have now"
+          lines={FREE_LINES}
+          current={plan === 'free'}
         />
 
-        {tab === 'pro' ? (
-          <>
-            <View style={styles.priceRow}>
-              <PriceCard
-                title="Yearly"
-                price={PRICES.pro.yearly.label}
-                period="per year"
-                selected={term === 'yearly'}
-                onPress={() => setTerm('yearly')}
-              />
-              <PriceCard
-                title="Monthly"
-                price={PRICES.pro.monthly.label}
-                period="per month"
-                selected={term === 'monthly'}
-                onPress={() => setTerm('monthly')}
-              />
-            </View>
+        <PlanCard
+          name="Pro"
+          price={
+            term === 'yearly'
+              ? `${PRICES.pro.yearly.label} a year`
+              : `${PRICES.pro.monthly.label} a month`
+          }
+          note="For one person and one phone"
+          lines={PRO_LINES}
+          current={plan === 'pro'}
+        >
+          <Segmented
+            value={term}
+            onChange={setTerm}
+            accessibilityLabel="How often you pay"
+            options={[
+              { value: 'yearly', label: '$29.99 a year' },
+              { value: 'monthly', label: '$4.99 a month' },
+            ]}
+          />
+          <Button
+            label="Get Pro"
+            size="lg"
+            loading={busy}
+            onPress={() => buy(term === 'yearly' ? 'pro_yearly' : 'pro_monthly')}
+          />
+        </PlanCard>
 
-            <Lines items={PRO_LINES} />
+        <PlanCard
+          name="Business"
+          price={`${PRICES.business.monthly.label} a month for each place`}
+          note="For a team looking after buildings"
+          lines={BUSINESS_LINES}
+          current={plan === 'business' || plan === 'enterprise'}
+        >
+          <Button
+            label="Set up Business on the web"
+            size="lg"
+            variant="secondary"
+            onPress={() => void Linking.openURL('https://pigeonx.org/app')}
+            accessibilityHint="Opens PigeonX in your browser"
+          />
+        </PlanCard>
 
-            <Button
-              label="Upgrade to Pro"
-              size="lg"
-              loading={busy}
-              onPress={() =>
-                buy(term === 'yearly' ? 'pro_yearly' : 'pro_monthly')
-              }
-            />
-            <Text style={styles.fine}>
-              Sandbox mode. No payment is taken and no store SDK is running.
-            </Text>
-          </>
-        ) : null}
-
-        {tab === 'business' ? (
-          <>
-            <View style={styles.bigPrice}>
-              <Text style={styles.bigPriceValue}>
-                {PRICES.business.monthly.label}
-              </Text>
-              <Text style={styles.bigPricePeriod}>
-                per {PRICES.business.monthly.period}
-              </Text>
-            </View>
-            <Lines items={BUSINESS_LINES} />
-            <Button
-              label="Set up Business on the web"
-              size="lg"
-              onPress={() => void Linking.openURL('https://pigeonx.org/app')}
-              accessibilityHint="Opens the PigeonX dashboard in your browser"
-            />
-            <Text style={styles.fine}>
-              Business bills per location on the web, so several people can run
-              the same property.
-            </Text>
-          </>
-        ) : null}
-
-        {tab === 'enterprise' ? (
-          <>
-            <View style={styles.bigPrice}>
-              <Text style={styles.bigPriceValue}>By portfolio</Text>
-              <Text style={styles.bigPricePeriod}>priced per site count</Text>
-            </View>
-            <Lines items={ENTERPRISE_LINES} />
-            <Button
-              label="Talk to us"
-              size="lg"
-              onPress={() =>
-                void Linking.openURL(
-                  'mailto:hello@pigeonx.org?subject=PigeonX%20Enterprise'
-                )
-              }
-            />
-          </>
-        ) : null}
+        <View style={styles.talk}>
+          <Text style={styles.talkText}>
+            More buildings than that? We will build a price around them.
+          </Text>
+          <Button
+            label="Talk to us"
+            variant="secondary"
+            onPress={() =>
+              void Linking.openURL(
+                'mailto:hello@pigeonx.org?subject=PigeonX%20for%20my%20buildings'
+              )
+            }
+          />
+        </View>
 
         <Button
-          label="Restore purchases"
+          label="Bring back what I paid for"
           variant="ghost"
           size="sm"
           onPress={async () => {
@@ -206,71 +172,48 @@ export default function Paywall() {
             toast.show(r.message);
           }}
         />
+
+        <Text style={styles.fine}>
+          Test mode. No money moves and no store is connected yet.
+        </Text>
       </ScrollView>
     </View>
   );
 }
 
-function PriceCard({
-  title,
+function PlanCard({
+  name,
   price,
-  period,
-  selected,
-  onPress,
+  note,
+  lines,
+  current,
+  children,
 }: {
-  title: string;
+  name: string;
   price: string;
-  period: string;
-  selected: boolean;
-  onPress: () => void;
+  note: string;
+  lines: string[];
+  current: boolean;
+  children?: React.ReactNode;
 }) {
   return (
-    <Touchable
-      onPress={onPress}
-      haptic="selection"
-      accessibilityLabel={`${title}, ${price} ${period}`}
-      accessibilityState={{ selected }}
-      style={styles.pricePress}
-    >
-      <View style={[styles.priceCard, selected ? styles.priceSelected : null]}>
-        <Text style={[styles.priceTitle, selected ? styles.inverted : null]}>
-          {title}
-        </Text>
-        <Text style={[styles.priceValue, selected ? styles.inverted : null]}>
-          {price}
-        </Text>
-        <Text style={[styles.pricePeriod, selected ? styles.inverted : null]}>
-          {period}
-        </Text>
+    <View style={[styles.card, current ? styles.cardCurrent : null]}>
+      <View style={styles.cardHead}>
+        <Text style={type.heading}>{name}</Text>
+        {current ? <Text style={styles.current}>You have this</Text> : null}
       </View>
-    </Touchable>
-  );
-}
-
-function Lines({ items }: { items: string[] }) {
-  return (
-    <View style={styles.lines}>
-      {items.map((t) => (
-        <Text key={t} style={styles.line}>
-          {t}
-        </Text>
-      ))}
+      <Text style={styles.price}>{price}</Text>
+      <Text style={styles.note}>{note}</Text>
+      <View style={styles.lines}>
+        {lines.map((t) => (
+          <Text key={t} style={styles.line}>
+            {t}
+          </Text>
+        ))}
+      </View>
+      {children}
     </View>
   );
-}
-
-function tabForPlan(plan: string): Tab {
-  if (plan === 'business') return 'business';
-  if (plan === 'enterprise') return 'enterprise';
-  return 'pro';
-}
-
-function planName(plan: string): string {
-  return plan === 'business'
-    ? 'Business'
-    : plan === 'enterprise'
-      ? 'Enterprise'
-      : 'Pro';
 }
 
 const styles = StyleSheet.create({
@@ -288,60 +231,65 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: color.fgSubtle,
   },
-  close: { width: 44, height: 44, alignItems: 'flex-end', justifyContent: 'center' },
+  close: {
+    width: 44,
+    height: 44,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
   body: { paddingHorizontal: space.md, gap: space.md },
-  priceRow: { flexDirection: 'row' },
-  pricePress: { flex: 1, minHeight: 0, marginLeft: -1 },
-  priceCard: {
+  why: {
+    fontFamily: font.body.regular,
+    fontSize: 15,
+    lineHeight: 21,
+    color: color.fg,
+  },
+  card: {
     borderWidth: 1,
     borderColor: color.border,
-    backgroundColor: color.background,
     padding: space.md,
-    gap: 2,
-    minHeight: 104,
+    gap: space.sm,
   },
-  priceSelected: { borderColor: color.ink, backgroundColor: color.ink },
-  priceTitle: {
+  cardCurrent: { borderColor: color.ink },
+  cardHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space.sm,
+  },
+  current: {
     fontFamily: font.mono.medium,
     fontSize: 10,
     letterSpacing: 1,
     textTransform: 'uppercase',
     color: color.fgSubtle,
   },
-  priceValue: {
+  price: {
     fontFamily: font.heading.bold,
-    fontSize: 26,
+    fontSize: 24,
     letterSpacing: -0.8,
     color: color.ink,
   },
-  pricePeriod: {
+  note: {
     fontFamily: font.body.regular,
-    fontSize: 12,
+    fontSize: 13,
+    lineHeight: 18,
     color: color.fgMuted,
   },
-  inverted: { color: color.onAccent },
-  bigPrice: {
-    borderWidth: 1,
-    borderColor: color.border,
-    alignItems: 'center',
-    gap: 2,
-    paddingVertical: space.lg,
-  },
-  bigPriceValue: {
-    fontFamily: font.heading.bold,
-    fontSize: 32,
-    letterSpacing: -1,
-    color: color.ink,
-  },
-  bigPricePeriod: {
-    fontFamily: font.mono.medium,
-    fontSize: 10,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.fgMuted,
-  },
-  lines: { gap: 8, marginVertical: space.xs },
+  lines: { gap: 6, marginVertical: space.xs },
   line: {
+    fontFamily: font.body.regular,
+    fontSize: 14,
+    lineHeight: 20,
+    color: color.fg,
+  },
+  talk: {
+    borderTopWidth: 1,
+    borderTopColor: color.border,
+    paddingTop: space.md,
+    gap: space.sm,
+  },
+  talkText: {
     fontFamily: font.body.regular,
     fontSize: 14,
     lineHeight: 20,

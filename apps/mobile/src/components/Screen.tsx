@@ -15,13 +15,13 @@ export interface ScreenProps {
   title?: string;
   subtitle?: string;
   children: React.ReactNode;
-  /** ScrollView for sub-screens. Tab screens pass false and fit one screen. */
+  /** Scrolls on sub-screens. Tab screens pass false and fit one screen. */
   scroll?: boolean;
-  /** extra bottom padding so content clears the tab bar and any docked action */
+  /** extra bottom padding so nothing hides behind the tab bar */
   bottomInset?: number;
   contentStyle?: StyleProp<ViewStyle>;
   header?: React.ReactNode;
-  /** right-hand slot in the title row, usually a status tag */
+  /** the right hand slot in the title row, usually a status tag */
   headerRight?: React.ReactNode;
 }
 

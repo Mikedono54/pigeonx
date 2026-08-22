@@ -1,12 +1,15 @@
 /**
- * PigeonX audio profiles.
+ * PigeonX bird sounds.
  *
  * NOTE: temporary duplicate of `packages/core/profiles.ts`. When core ships,
  * this file becomes a re-export. Keep the shape identical.
  *
- * Physics constraints this encodes (spec §3):
- *  - phone speakers roll off ~18 kHz, BT codecs ~19 kHz, PigeonX hardware 25 kHz
- *  - anything with energy above 17 kHz is audible to many humans under 30
+ * Physics this file encodes (spec section 3):
+ *  - phone speakers stop near 18 kHz, Bluetooth near 19 kHz, PigeonX 25 kHz
+ *  - anything above 17 kHz is audible to many people under 30
+ *
+ * Every string in here is read by a person. Plain words only. See
+ * docs/mobile-glossary.md before you add one.
  */
 
 import type { Plan } from './entitlements';
@@ -19,20 +22,20 @@ export interface ToneParams {
 export interface SweepParams {
   startHz: number;
   endHz: number;
-  /** sweeps per second */
+  /** rises and falls per second */
   rateHz: number;
 }
 export interface PulseParams {
   freqHz: number;
   onMs: number;
   offMs: number;
-  /** 0–100: how much the on/off timing wanders, so birds cannot habituate */
+  /** 0 to 100: how much the on/off timing wanders, so birds cannot learn it */
   randomizePct: number;
 }
 export interface SampleParams {
   /** key into SAMPLE_ASSETS */
   asset: SampleAsset;
-  /** silence between plays, ms */
+  /** quiet gap between plays, ms */
   gapMs: number;
   randomizePct: number;
 }
@@ -62,8 +65,8 @@ export interface AudioProfile {
 export const SYSTEM_PROFILES: AudioProfile[] = [
   {
     id: 'sys_pigeon_18k',
-    name: 'Pigeon Guard 18k',
-    description: 'Pigeons · balconies & ledges',
+    name: 'Pigeon sound',
+    description: 'A steady high sound. Pigeons leave the ledge.',
     kind: 'tone',
     params: { freqHz: 18000 },
     minPlan: 'free',
@@ -71,8 +74,8 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   },
   {
     id: 'sys_pulse_16k',
-    name: 'Pulse 16k',
-    description: 'Broad coverage · on-off pulsing so birds do not settle',
+    name: 'Beeping sound',
+    description: 'Beeps on and off. Birds do not get used to it.',
     kind: 'pulse',
     params: { freqHz: 16000, onMs: 400, offMs: 600, randomizePct: 20 },
     minPlan: 'free',
@@ -80,8 +83,8 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   },
   {
     id: 'sys_sweep_15_19k',
-    name: 'Sweep 15 to 19k',
-    description: 'Rolls across the band so no single pitch gets ignored',
+    name: 'Rising and falling sound',
+    description: 'Slides up and down. No one pitch gets ignored.',
     kind: 'sweep',
     params: { startHz: 15000, endHz: 19000, rateHz: 0.5 },
     minPlan: 'free',
@@ -89,8 +92,8 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   },
   {
     id: 'sys_gull_17k',
-    name: 'Gull Guard 17k',
-    description: 'Gulls · rooftops, docks & patios',
+    name: 'Gull sound',
+    description: 'A steady high sound. Made for roofs and docks.',
     kind: 'tone',
     params: { freqHz: 17000 },
     minPlan: 'pro',
@@ -98,8 +101,8 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   },
   {
     id: 'sys_random_pulse',
-    name: 'Random Pulse',
-    description: 'Heavily randomised timing for long unattended runs',
+    name: 'Mixed up beeping',
+    description: 'Beeps at times birds cannot guess. Good for long plays.',
     kind: 'pulse',
     params: { freqHz: 17500, onMs: 250, offMs: 900, randomizePct: 60 },
     minPlan: 'pro',
@@ -107,8 +110,8 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   },
   {
     id: 'sys_distress_pigeon',
-    name: 'Pigeon Distress Call',
-    description: 'Flock alarm call · the best-evidenced approach',
+    name: 'Pigeon alarm call',
+    description: 'The call pigeons make when they are scared. Works best.',
     kind: 'sample',
     params: { asset: 'distress_pigeon', gapMs: 8000, randomizePct: 40 },
     minPlan: 'pro',
@@ -116,8 +119,8 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   },
   {
     id: 'sys_predator_hawk',
-    name: 'Hawk Call',
-    description: 'Predator overhead · use sparingly so it stays believable',
+    name: 'Hawk call',
+    description: 'A hawk cry. Birds think a hunter is above.',
     kind: 'sample',
     params: { asset: 'predator_hawk', gapMs: 15000, randomizePct: 50 },
     minPlan: 'pro',
@@ -125,8 +128,8 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   },
   {
     id: 'sys_predator_falcon',
-    name: 'Falcon Call',
-    description: 'Predator overhead · pairs well with the hawk call',
+    name: 'Falcon call',
+    description: 'A falcon cry. Use it with the hawk call.',
     kind: 'sample',
     params: { asset: 'predator_falcon', gapMs: 15000, randomizePct: 50 },
     minPlan: 'pro',
@@ -134,8 +137,8 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   },
   {
     id: 'sys_max_22k',
-    name: 'Max 22k',
-    description: 'Needs PigeonX hardware · above what a phone can reproduce',
+    name: 'Very high sound',
+    description: 'Only a PigeonX speaker can play this one.',
     kind: 'tone',
     params: { freqHz: 22000 },
     minPlan: 'pro',
@@ -147,9 +150,9 @@ export function findSystemProfile(id: string): AudioProfile | undefined {
   return SYSTEM_PROFILES.find((p) => p.id === id);
 }
 
-/** Nominal peak frequency for a sample-based profile (bird calls are audible). */
+/** Nominal top pitch of a bird call. Calls are ordinary audible audio. */
 export const SAMPLE_PEAK_HZ = 8000;
-/** Nominal lowest frequency for a sample-based profile. */
+/** Nominal lowest pitch of a bird call. */
 export const SAMPLE_LOW_HZ = 500;
 
 export function peakFreqHz(p: AudioProfile): number {
@@ -182,10 +185,27 @@ export function lowFreqHz(p: AudioProfile): number {
   }
 }
 
-/** True when people nearby are likely to hear this profile. */
+export type PitchWord = 'Low' | 'High' | 'Very high';
+
+/** Pitch as a word. Numbers stay off the main screens. */
+export function pitchWord(hz: number): PitchWord {
+  if (hz < 15000) return 'Low';
+  if (hz < 19000) return 'High';
+  return 'Very high';
+}
+
+/** The pitch word for a whole sound. */
+export function soundPitch(p: AudioProfile): PitchWord {
+  return pitchWord(peakFreqHz(p));
+}
+
+/** True when people nearby can hear this sound. */
 export function guestsMayHear(p: AudioProfile): boolean {
   return peakFreqHz(p) > 17000 || p.kind === 'sample';
 }
+
+/** The tag shown next to a sound people can hear. */
+export const AUDIBLE_TAG = 'Some people can hear this';
 
 export type OutputKind =
   | 'phone'
@@ -200,18 +220,27 @@ export const OUTPUT_CEILING_HZ: Record<OutputKind, number> = {
   simulated: 25000,
 };
 
-export const OUTPUT_LABEL: Record<OutputKind, string> = {
-  phone: 'Phone speaker',
+/** What each speaker is called on screen. */
+export const SPEAKER_LABEL: Record<OutputKind, string> = {
+  phone: 'This phone',
   bt_speaker: 'Bluetooth speaker',
-  pigeonx_emitter: 'PigeonX device',
-  simulated: 'Simulated device',
+  pigeonx_emitter: 'PigeonX speaker',
+  simulated: 'Test speaker',
+};
+
+/** One line telling you what each speaker is good for. */
+export const SPEAKER_HINT: Record<OutputKind, string> = {
+  phone: 'Plays out of the phone in your hand.',
+  bt_speaker: 'Plays out of a speaker you already paired.',
+  pigeonx_emitter: 'Plays the highest sounds. Not out yet.',
+  simulated: 'Pretend speaker. Lets you try the whole app.',
 };
 
 export type Effectiveness = 'full' | 'partial' | 'none';
 
 /**
- * How much of a profile this output can actually reproduce.
- * Samples are ordinary audible audio — every speaker plays them in full.
+ * How much of a sound this speaker can really play.
+ * Bird calls are ordinary audible audio, so every speaker plays them whole.
  */
 export function effectiveForOutput(
   p: AudioProfile,
@@ -225,26 +254,33 @@ export function effectiveForOutput(
   return 'none';
 }
 
-export const EFFECTIVENESS_COPY: Record<
-  Effectiveness,
-  { title: string; detail: string }
-> = {
-  full: {
-    title: 'Full range',
-    detail: 'This output can reproduce the whole profile.',
-  },
-  partial: {
-    title: 'Partial range',
-    detail:
-      'Only the lower part of this profile comes out of this speaker. The top of the sweep is lost.',
-  },
-  none: {
-    title: 'Out of range',
-    detail:
-      'This speaker cannot produce these frequencies at all. Pick a lower profile or PigeonX hardware.',
-  },
+/** The question the reach meter answers. */
+export const REACH_QUESTION = 'Will this speaker play it?';
+
+export const EFFECTIVENESS_COPY: Record<Effectiveness, { title: string }> = {
+  full: { title: 'Yes' },
+  partial: { title: 'Partly' },
+  none: { title: 'No' },
 };
 
+/** One sentence saying why the answer is what it is. */
+export function reachSentence(
+  p: AudioProfile,
+  output: OutputKind
+): string {
+  const level = effectiveForOutput(p, output);
+  if (level === 'full') return 'This speaker plays the whole sound.';
+  if (level === 'partial') {
+    return output === 'phone'
+      ? 'Phone speakers play the low part. The top is lost.'
+      : 'This speaker plays the low part. The top is lost.';
+  }
+  return output === 'phone'
+    ? "Phone speakers can't play sounds this high. Use a PigeonX speaker."
+    : "This speaker can't play sounds this high. Use a PigeonX speaker.";
+}
+
+/** Small mono readout. Only the Adjust sheet shows a number. */
 export function formatHz(hz: number): string {
   if (hz >= 1000) {
     const k = hz / 1000;
@@ -253,31 +289,11 @@ export function formatHz(hz: number): string {
   return `${Math.round(hz)} Hz`;
 }
 
-/** Short human summary of a profile's parameters, for cards and lists. */
-export function describeParams(p: AudioProfile): string {
-  switch (p.kind) {
-    case 'tone':
-      return formatHz((p.params as ToneParams).freqHz);
-    case 'pulse': {
-      const q = p.params as PulseParams;
-      return `${formatHz(q.freqHz)} · ${q.onMs}/${q.offMs} ms`;
-    }
-    case 'sweep': {
-      const q = p.params as SweepParams;
-      return `${formatHz(q.startHz)} → ${formatHz(q.endHz)}`;
-    }
-    case 'sample': {
-      const q = p.params as SampleParams;
-      return `Call every ${Math.round(q.gapMs / 1000)} s`;
-    }
-  }
-}
-
 export const KIND_LABEL: Record<ProfileKind, string> = {
-  tone: 'Steady tone',
-  sweep: 'Sweep',
-  pulse: 'Pulse',
-  sample: 'Recorded call',
+  tone: 'Steady sound',
+  sweep: 'Rising and falling sound',
+  pulse: 'Beeping sound',
+  sample: 'Bird call',
 };
 
 export function defaultParamsFor(kind: ProfileKind): ProfileParams {

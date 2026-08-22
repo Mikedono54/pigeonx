@@ -16,9 +16,9 @@ export interface SessionEntry {
   source: SessionSource;
   zoneId: string | null;
   deviceId: string | null;
-  /** id returned by the backend once the row is written */
+  /** the id the server gives back once the row is written */
   remoteId: string | null;
-  /** false while the row still needs pushing to Supabase */
+  /** false while the row still has to reach the server */
   synced: boolean;
 }
 
@@ -135,7 +135,7 @@ export const useHistory = create<HistoryState>()(
   )
 );
 
-/** Groups sessions into per-day totals for the Account history list. */
+/** Groups plays into per day totals for the History screen. */
 export function groupByDay(entries: SessionEntry[]): {
   day: string;
   label: string;

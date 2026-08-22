@@ -10,7 +10,7 @@ import {
   SectionHeader,
   Touchable,
 } from '../src/components';
-import { OUTPUT_LABEL, formatHz } from '../src/core/profiles';
+import { SPEAKER_LABEL } from '../src/core/profiles';
 import { useEntitlement } from '../src/hooks/useEntitlement';
 import { groupByDay, useHistory } from '../src/state/useHistory';
 import { color, font, space } from '../src/theme/tokens';
@@ -40,16 +40,14 @@ export default function HistoryScreen() {
           >
             <ChevronLeft size={22} color={color.ink} strokeWidth={1.75} />
           </Touchable>
-          <Text style={type.title}>History</Text>
+          <Text style={type.title}>What played and when</Text>
         </View>
       }
     >
       <SectionHeader
-        index="01"
-        title="Runs"
-        subtitle={
+        title={
           historyDays == null
-            ? `${visible.length} run${visible.length === 1 ? '' : 's'} logged`
+            ? `${visible.length} time${visible.length === 1 ? '' : 's'} so far`
             : `Free keeps the last ${historyDays} days`
         }
       />
@@ -60,10 +58,10 @@ export default function HistoryScreen() {
             icon={
               <HistoryIcon size={20} color={color.fgMuted} strokeWidth={1.75} />
             }
-            title="No runs yet"
-            body="Every start and stop lands here with the profile, the output and the peak frequency."
-            actionLabel="Start one"
-            onAction={() => router.navigate('/deterrent')}
+            title="Nothing has played yet"
+            body="Every time you press Start, it shows up here with the sound, the speaker and how long it played."
+            actionLabel="Go play one"
+            onAction={() => router.navigate('/')}
           />
         </Card>
       ) : (
@@ -73,7 +71,7 @@ export default function HistoryScreen() {
               <View style={styles.dayHead}>
                 <Text style={styles.dayLabel}>{d.label}</Text>
                 <Text style={styles.dayTotal}>
-                  {d.count} run{d.count === 1 ? '' : 's'} ·{' '}
+                  {d.count} time{d.count === 1 ? '' : 's'},{' '}
                   {Math.round(d.totalMs / 60000)} min
                 </Text>
               </View>
@@ -84,7 +82,7 @@ export default function HistoryScreen() {
                       {e.profileName}
                     </Text>
                     <Text style={styles.entryMeta} numberOfLines={1}>
-                      {OUTPUT_LABEL[e.outputKind]} · {formatHz(e.peakFreqHz)} ·{' '}
+                      {SPEAKER_LABEL[e.outputKind]} at{' '}
                       {new Date(e.startedAt).toLocaleTimeString(undefined, {
                         hour: 'numeric',
                         minute: '2-digit',
@@ -96,8 +94,8 @@ export default function HistoryScreen() {
                       ? `${Math.max(
                           1,
                           Math.round((e.endedAt - e.startedAt) / 60000)
-                        )}m`
-                      : 'Open'}
+                        )} min`
+                      : 'Still going'}
                   </Text>
                 </View>
               ))}
@@ -132,9 +130,8 @@ const styles = StyleSheet.create({
     color: color.ink,
   },
   dayTotal: {
-    fontFamily: font.mono.medium,
-    fontSize: 10,
-    letterSpacing: 0.5,
+    fontFamily: font.body.regular,
+    fontSize: 13,
     color: color.fgMuted,
   },
   entryRow: {
@@ -152,15 +149,14 @@ const styles = StyleSheet.create({
     color: color.ink,
   },
   entryMeta: {
-    fontFamily: font.mono.medium,
-    fontSize: 10,
-    letterSpacing: 0.5,
+    fontFamily: font.body.regular,
+    fontSize: 13,
     color: color.fgSubtle,
   },
   entryDur: {
     fontFamily: font.mono.medium,
-    fontSize: 13,
-    letterSpacing: -0.5,
+    fontSize: 12,
+    letterSpacing: -0.3,
     color: color.ink,
   },
 });

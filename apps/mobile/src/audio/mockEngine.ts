@@ -9,7 +9,7 @@ export interface MockBackendLog {
 /**
  * In-memory engine used by tests, by Expo Go (where the native audio module is
  * absent), and by the "Simulated device" output. It walks exactly the same
- * state machine as the native engine — only the backend is fake.
+ * state machine as the native engine. Only the backend is fake.
  */
 export class MockAudioEngine extends BaseAudioEngine {
   readonly log: MockBackendLog[] = [];

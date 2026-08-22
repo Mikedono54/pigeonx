@@ -25,7 +25,7 @@ export const supabaseSink: RemoteSink = {
   },
   async startSession(entry) {
     const sb = getSupabase();
-    if (!sb) throw new Error('Supabase not configured');
+    if (!sb) throw new Error('No account yet.');
     const { data, error } = await sb.rpc('start_session', {
       zone_id: entry.zoneId,
       profile_id: entry.profileId,
@@ -36,7 +36,7 @@ export const supabaseSink: RemoteSink = {
   },
   async endSession(entry) {
     const sb = getSupabase();
-    if (!sb) throw new Error('Supabase not configured');
+    if (!sb) throw new Error('No account yet.');
     const { error } = await sb.rpc('end_session', {
       session_id: entry.remoteId,
     });

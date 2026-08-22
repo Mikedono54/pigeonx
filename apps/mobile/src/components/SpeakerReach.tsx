@@ -4,10 +4,12 @@ import { CircleCheck, TriangleAlert, CircleSlash } from 'lucide-react-native';
 import {
   EFFECTIVENESS_COPY,
   OUTPUT_CEILING_HZ,
-  OUTPUT_LABEL,
+  SPEAKER_LABEL,
+  REACH_QUESTION,
   effectiveForOutput,
   formatHz,
   peakFreqHz,
+  reachSentence,
   type AudioProfile,
   type OutputKind,
 } from '../core/profiles';
@@ -15,22 +17,19 @@ import { color, font, space } from '../theme/tokens';
 
 const MAX_HZ = 25000;
 
-export interface EffectiveRangeMeterProps {
+export interface SpeakerReachProps {
   profile: AudioProfile;
   output: OutputKind;
 }
 
 /**
- * The honesty widget. Shows where this profile's energy sits against what the
- * selected output can physically reproduce (spec section 3). The app never
- * pretends 25 kHz comes out of a phone.
+ * The honest widget. It answers one question: will this speaker play it?
+ * The app never pretends a phone can play a 25 kHz sound.
  */
-export function EffectiveRangeMeter({
-  profile,
-  output,
-}: EffectiveRangeMeterProps) {
+export function SpeakerReach({ profile, output }: SpeakerReachProps) {
   const level = effectiveForOutput(profile, output);
-  const copy = EFFECTIVENESS_COPY[level];
+  const answer = EFFECTIVENESS_COPY[level].title;
+  const why = reachSentence(profile, output);
   const ceiling = OUTPUT_CEILING_HZ[output];
   const peak = peakFreqHz(profile);
 
@@ -55,16 +54,14 @@ export function EffectiveRangeMeter({
     <View style={styles.wrap}>
       <View style={styles.head}>
         <Icon size={14} color={tint} strokeWidth={1.75} />
-        <Text style={[styles.title, { color: tint }]}>{copy.title}</Text>
-        <Text style={styles.output}>{OUTPUT_LABEL[output]}</Text>
+        <Text style={styles.question}>{REACH_QUESTION}</Text>
+        <Text style={[styles.answer, { color: tint }]}>{answer}</Text>
       </View>
 
       <View
         style={styles.track}
         accessibilityRole="progressbar"
-        accessibilityLabel={`${copy.title}. ${OUTPUT_LABEL[output]} reaches ${formatHz(
-          ceiling
-        )}. This profile peaks at ${formatHz(peak)}.`}
+        accessibilityLabel={`${REACH_QUESTION} ${answer}. ${why}`}
       >
         <View style={[styles.reach, { width: `${ceilingPct * 100}%` }]} />
         <View
@@ -76,14 +73,13 @@ export function EffectiveRangeMeter({
       </View>
 
       <View style={styles.scale}>
-        <Text style={styles.scaleText}>0</Text>
         <Text style={styles.scaleText}>
-          {OUTPUT_LABEL[output]} reaches {formatHz(ceiling)}
+          {SPEAKER_LABEL[output]} stops at {formatHz(ceiling)}
         </Text>
-        <Text style={styles.scaleText}>25 kHz</Text>
+        <Text style={styles.scaleText}>{formatHz(peak)}</Text>
       </View>
 
-      <Text style={styles.detail}>{copy.detail}</Text>
+      <Text style={styles.detail}>{why}</Text>
     </View>
   );
 }
@@ -91,19 +87,17 @@ export function EffectiveRangeMeter({
 const styles = StyleSheet.create({
   wrap: { gap: space.sm },
   head: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  title: {
+  question: {
+    flex: 1,
+    fontFamily: font.body.medium,
+    fontSize: 14,
+    color: color.ink,
+  },
+  answer: {
     fontFamily: font.mono.medium,
     fontSize: 11,
     letterSpacing: 1,
     textTransform: 'uppercase',
-  },
-  output: {
-    marginLeft: 'auto',
-    fontFamily: font.mono.medium,
-    fontSize: 10,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.fgSubtle,
   },
   track: {
     height: 10,

@@ -22,7 +22,7 @@ export interface StatusPillProps {
 }
 
 /**
- * A square status tag with a mono label: IDLE, RUNNING 12:40, SCHEDULED 6:00 PM.
+ * A square tag with a small label: OFF, PLAYING 12:40, STARTS 6:00 PM.
  */
 export function StatusPill({ label, tone = 'idle', dot = false }: StatusPillProps) {
   const t = TONE[tone];

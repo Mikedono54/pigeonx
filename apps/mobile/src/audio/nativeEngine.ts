@@ -84,14 +84,14 @@ export class NativeAudioEngine extends BaseAudioEngine {
 
   protected async backendLoad(profile: AudioProfile): Promise<void> {
     const api = audioApi();
-    if (!api) throw new Error('Audio engine unavailable on this device');
+    if (!api) throw new Error('This phone cannot play the sound.');
 
     if (profile.kind === 'sample') {
       const asset = SAMPLE_ASSETS[(profile.params as SampleParams).asset];
-      if (!asset) throw new Error('Missing call recording');
+      if (!asset) throw new Error('That bird call is missing.');
       const ctx = this.ensureContext(api);
       const decoded = await api.decodeAudioData(asset, ctx.sampleRate);
-      if (!decoded) throw new Error('Could not decode call recording');
+      if (!decoded) throw new Error('That bird call did not open.');
       this.buffer = decoded;
     } else {
       this.buffer = null;
@@ -100,9 +100,9 @@ export class NativeAudioEngine extends BaseAudioEngine {
 
   protected async backendStart(output: OutputKind): Promise<void> {
     const api = audioApi();
-    if (!api) throw new Error('Audio engine unavailable on this device');
+    if (!api) throw new Error('This phone cannot play the sound.');
     const profile = this.getProfile();
-    if (!profile) throw new Error('No profile loaded');
+    if (!profile) throw new Error('Pick a sound first.');
 
     await configureAudioSession();
     const ctx = this.ensureContext(api);

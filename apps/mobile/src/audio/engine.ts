@@ -4,7 +4,7 @@ export type EngineState = 'idle' | 'loading' | 'running' | 'error';
 
 export type Unsubscribe = () => void;
 
-/** Normalised magnitudes, 0–1, low frequency first. */
+/** Levels from 0 to 1, lowest pitch first. */
 export type Spectrum = number[];
 
 export interface EngineStateEvent {
@@ -31,8 +31,8 @@ const SPECTRUM_INTERVAL_MS = 60;
 
 /**
  * The state machine every engine shares. Subclasses only implement the four
- * `backend*` hooks; everything the product depends on — legal transitions,
- * the Free-plan duration cap, spectrum fan-out, error surfacing — lives here
+ * `backend*` hooks. Everything the product depends on lives here: legal
+ * moves, the Free time limit, the live bars and error handling,
  * so it can be tested against a mock backend.
  */
 export abstract class BaseAudioEngine implements AudioEngine {
@@ -103,7 +103,7 @@ export abstract class BaseAudioEngine implements AudioEngine {
   async start(output: OutputKind): Promise<void> {
     if (this.state === 'running') return;
     if (!this.profile) {
-      this.fail(new Error('No profile loaded'));
+      this.fail(new Error('Pick a sound first.'));
       return;
     }
     this.output = output;
@@ -158,7 +158,7 @@ export abstract class BaseAudioEngine implements AudioEngine {
     };
   }
 
-  /** Tear everything down — call when the owning screen unmounts for good. */
+  /** Tear everything down. Call it when the screen goes away for good. */
   async dispose(): Promise<void> {
     await this.stop();
     this.stateListeners.clear();
@@ -175,7 +175,7 @@ export abstract class BaseAudioEngine implements AudioEngine {
     try {
       await this.backendStop();
     } catch {
-      // stopping must never throw at the caller — the run is over either way
+      // stopping must never throw at the caller. It is over either way.
     }
     this.startedAt = null;
     this.setState('idle', undefined, autoStopped);

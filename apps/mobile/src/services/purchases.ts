@@ -8,9 +8,9 @@ export interface PurchaseResult {
 }
 
 /**
- * The seam RevenueCat drops into later. Nothing here initialises an SDK — the
- * sandbox implementation just flips the local plan so every gated path is
- * walkable before keys exist (spec §2, §4.2).
+ * The seam RevenueCat drops into later. Nothing here starts a store SDK. The
+ * test version just flips the local plan so every locked path is walkable
+ * before store keys exist (spec sections 2 and 4.2).
  */
 export interface PurchaseProvider {
   isLive(): boolean;
@@ -25,10 +25,10 @@ export function createSandboxPurchases(
     isLive: () => false,
     async purchase() {
       setPlan('pro');
-      return { ok: true, message: 'Sandbox: plan set to Pro' };
+      return { ok: true, message: 'Test mode: plan set to Pro' };
     },
     async restore() {
-      return { ok: true, message: 'Sandbox: nothing to restore yet' };
+      return { ok: true, message: 'Nothing to bring back yet.' };
     },
   };
 }

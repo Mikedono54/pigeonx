@@ -6,7 +6,7 @@ import { Touchable } from './Touchable';
 
 export interface SectionHeaderProps {
   title: string;
-  /** two-digit index, rendered ahead of the title: "01 PROFILE" */
+  /** two digit index, drawn ahead of the title: "01 SOUND" */
   index?: string;
   subtitle?: string;
   actionLabel?: string;
@@ -14,7 +14,7 @@ export interface SectionHeaderProps {
   style?: object;
 }
 
-/** Mono index label over a hairline rule. */
+/** A small label over a hairline rule. */
 export function SectionHeader({
   title,
   index,

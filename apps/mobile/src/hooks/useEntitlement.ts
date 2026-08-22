@@ -18,7 +18,7 @@ export interface Entitlement {
   requiredPlan: (feature: Feature) => Plan;
   /**
    * Gate a tap. Returns true when the action may proceed; otherwise opens the
-   * paywall and returns false — no gated control is ever a dead button.
+   * plans screen and returns false. No locked control is ever a dead button.
    */
   guard: (feature: Feature) => boolean;
 }

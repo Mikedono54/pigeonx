@@ -6,7 +6,7 @@ import { color, font } from '../theme/tokens';
 
 export interface LockBadgeProps {
   plan: Plan;
-  /** icon-only variant for tight corners */
+  /** icon only, for tight corners */
   compact?: boolean;
 }
 
@@ -16,7 +16,7 @@ export function LockBadge({ plan, compact = false }: LockBadgeProps) {
     <View
       style={[styles.badge, compact ? styles.compact : null]}
       accessibilityRole="text"
-      accessibilityLabel={`${label} feature, locked`}
+      accessibilityLabel={`Needs ${label}`}
     >
       <Lock size={10} color={color.warning} strokeWidth={1.75} />
       {compact ? null : <Text style={styles.text}>{label}</Text>}

@@ -11,11 +11,11 @@ export interface SimulatedDevice {
 }
 
 interface AccountState {
-  /** Sandbox entitlements: real plan resolution lands with RevenueCat/Stripe. */
+  /** Test plan for now. Real plans arrive with RevenueCat or Stripe. */
   plan: Plan;
   guest: boolean;
   email: string | null;
-  /** Supabase auth user id once accounts go live. */
+  /** Sign-in user id once accounts go live. */
   userId: string | null;
   onboarded: boolean;
   devices: SimulatedDevice[];
@@ -56,7 +56,7 @@ export const useAccount = create<AccountState>()(
         const n = get().devices.length + 1;
         const device: SimulatedDevice = {
           id: `sim_${Date.now().toString(36)}`,
-          name: name ?? `Simulated emitter ${n}`,
+          name: name ?? `Test speaker ${n}`,
           kind: 'simulated',
           pairedAt: Date.now(),
         };

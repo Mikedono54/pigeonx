@@ -47,7 +47,7 @@ describe('can()', () => {
     }
   });
 
-  it('is monotonic — a higher plan never loses a feature', () => {
+  it('is monotonic, so a higher plan never loses a feature', () => {
     for (const feature of Object.keys(FEATURE_MIN_PLAN) as Feature[]) {
       let seenTrue = false;
       for (const plan of PLAN_ORDER) {

@@ -13,7 +13,7 @@ export interface DisclosureProps {
   children: React.ReactNode;
 }
 
-/** A square row that opens a panel in place. Keeps fine-tuning off the main view. */
+/** A square row that opens a panel in place. Keeps fine controls out of the way. */
 export function Disclosure({
   label,
   open,

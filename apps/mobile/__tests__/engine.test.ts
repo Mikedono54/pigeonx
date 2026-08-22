@@ -58,10 +58,10 @@ describe('engine state machine', () => {
     ]);
   });
 
-  it('refuses to start without a loaded profile', async () => {
+  it('refuses to start without a sound, in plain words', async () => {
     await engine.start('phone');
     expect(engine.getState()).toBe('error');
-    expect(engine.getError()).toMatch(/No profile loaded/);
+    expect(engine.getError()).toBe('Pick a sound first.');
   });
 
   it('surfaces a backend start failure as the error state', async () => {
@@ -95,7 +95,7 @@ describe('engine state machine', () => {
     expect(engine.log.filter((l) => l.op === 'start')).toHaveLength(1);
   });
 
-  it('stops the current run before loading a different profile', async () => {
+  it('stops what is playing before loading a different sound', async () => {
     await engine.load(TONE);
     await engine.start('phone');
     await engine.load(SWEEP);
@@ -105,7 +105,7 @@ describe('engine state machine', () => {
     expect(engine.getProfile()?.id).toBe(SWEEP.id);
   });
 
-  it('clamps volume into 0–1 and forwards it while running', async () => {
+  it('clamps loudness into 0 to 1 and forwards it while playing', async () => {
     await engine.load(TONE);
     await engine.start('phone');
 
@@ -156,7 +156,7 @@ describe('duration cap', () => {
     jest.useRealTimers();
   });
 
-  it('auto-stops a Free run at exactly 15 minutes', async () => {
+  it('stops a Free play at exactly 15 minutes', async () => {
     const freeCapMinutes = limit('free', 'sessionMinutes');
     expect(freeCapMinutes).toBe(15);
 
@@ -177,7 +177,7 @@ describe('duration cap', () => {
     expect(engine.log.map((l) => l.op)).toContain('stop');
   });
 
-  it('runs past 15 minutes when the cap is lifted', async () => {
+  it('plays past 15 minutes when the limit is lifted', async () => {
     expect(limit('pro', 'sessionMinutes')).toBeNull();
 
     engine.setDurationLimitMs(null);
@@ -188,7 +188,7 @@ describe('duration cap', () => {
     expect(engine.getState()).toBe('running');
   });
 
-  it('marks a manual stop as not auto-stopped', async () => {
+  it('marks a stop you pressed as not auto-stopped', async () => {
     engine.setDurationLimitMs(15 * 60_000);
     await engine.load(TONE);
     const events = record(engine);
@@ -200,7 +200,7 @@ describe('duration cap', () => {
     expect(events.at(-1)).toMatchObject({ state: 'idle', autoStopped: false });
   });
 
-  it('cancels the cap timer when the run is stopped early', async () => {
+  it('cancels the timer when you stop early', async () => {
     engine.setDurationLimitMs(15 * 60_000);
     await engine.load(TONE);
     await engine.start('phone');

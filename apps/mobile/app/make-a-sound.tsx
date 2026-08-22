@@ -10,18 +10,20 @@ import {
   Card,
   Segmented,
   Slider,
+  SpeakerReach,
   SpectrumBars,
   StatusPill,
   Touchable,
   useToast,
-} from '../../src/components';
-import { getEngine } from '../../src/audio';
-import { PLACEHOLDER_NOTICE, SAMPLE_LABEL } from '../../src/audio/samples';
+} from '../src/components';
+import { getEngine } from '../src/audio';
+import { PLACEHOLDER_NOTICE, SAMPLE_LABEL } from '../src/audio/samples';
 import {
+  AUDIBLE_TAG,
   KIND_LABEL,
-  effectiveForOutput,
   formatHz,
   guestsMayHear,
+  pitchWord,
   type AudioProfile,
   type ProfileKind,
   type PulseParams,
@@ -29,25 +31,25 @@ import {
   type SampleParams,
   type SweepParams,
   type ToneParams,
-} from '../../src/core/profiles';
-import { useEntitlement } from '../../src/hooks/useEntitlement';
-import { useProfiles } from '../../src/state/useProfiles';
-import { useSession } from '../../src/state/useSession';
-import { color, font, space } from '../../src/theme/tokens';
-import { type } from '../../src/theme/typography';
+} from '../src/core/profiles';
+import { useEntitlement } from '../src/hooks/useEntitlement';
+import { useProfiles } from '../src/state/useProfiles';
+import { useSession } from '../src/state/useSession';
+import { color, font, space } from '../src/theme/tokens';
+import { type } from '../src/theme/typography';
 
 const PREVIEW_MS = 5000;
 
-export default function ProfileBuilder() {
+export default function MakeASound() {
   const insets = useSafeAreaInsets();
   const ent = useEntitlement();
   const toast = useToast();
   const save = useProfiles((s) => s.save);
   const setProfile = useSession((s) => s.setProfile);
   const output = useSession((s) => s.output);
-  const sessionRunning = useSession((s) => s.engineState) === 'running';
+  const somethingPlaying = useSession((s) => s.engineState) === 'running';
 
-  const [name, setName] = useState('My profile');
+  const [name, setName] = useState('My sound');
   const [kind, setKind] = useState<ProfileKind>('pulse');
   const [freqHz, setFreqHz] = useState(17500);
   const [startHz, setStartHz] = useState(15000);
@@ -59,7 +61,7 @@ export default function ProfileBuilder() {
   const [gapMs, setGapMs] = useState(8000);
   const [asset, setAsset] = useState<SampleAsset>('distress_pigeon');
   const [previewing, setPreviewing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const draft = buildDraft({
@@ -90,22 +92,22 @@ export default function ProfileBuilder() {
   }, []);
 
   const preview = useCallback(async () => {
-    if (sessionRunning) {
-      setError('Stop the run first.');
+    if (somethingPlaying) {
+      toast.show('Stop the sound on Home first.', 'danger');
       return;
     }
     if (previewing) {
       await stopPreview();
       return;
     }
-    setError(null);
+    setFailed(false);
     const engine = getEngine();
     try {
       engine.setDurationLimitMs(PREVIEW_MS);
       await engine.load(draft);
       await engine.start(output);
       if (engine.getState() !== 'running') {
-        setError(engine.getError() ?? 'Nothing played');
+        setFailed(true);
         return;
       }
       setPreviewing(true);
@@ -113,31 +115,29 @@ export default function ProfileBuilder() {
         setPreviewing(false);
         timer.current = null;
       }, PREVIEW_MS);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Nothing played');
+    } catch {
+      setFailed(true);
     }
-  }, [draft, output, previewing, sessionRunning, stopPreview]);
+  }, [draft, output, previewing, somethingPlaying, stopPreview, toast]);
 
   const onSave = useCallback(async () => {
     if (!ent.guard('profiles.builder')) return;
     await stopPreview();
     const saved = save({
-      name: name.trim() || 'My profile',
+      name: name.trim() || 'My sound',
       description: describeDraft(draft),
       kind,
       params: draft.params,
     });
     setProfile(saved.id);
-    toast.show('Profile saved', 'success');
+    toast.show('Saved. It is ready on Home.', 'success');
     router.back();
   }, [draft, ent, kind, name, save, setProfile, stopPreview, toast]);
-
-  const reach = effectiveForOutput(draft, output);
 
   return (
     <View style={[styles.root, { paddingTop: insets.top + space.sm }]}>
       <View style={styles.head}>
-        <Text style={type.heading}>Build a profile</Text>
+        <Text style={type.heading}>Make your own</Text>
         <Touchable
           onPress={() => {
             void stopPreview();
@@ -153,38 +153,26 @@ export default function ProfileBuilder() {
       <ScrollView
         contentContainerStyle={[styles.body, { paddingBottom: space.xl }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        {error ? (
-          <Banner title="Nothing played" body={error} onRetry={preview} />
+        {failed ? (
+          <Banner
+            title="Nothing played"
+            body="That didn't work. Try again."
+            onRetry={preview}
+          />
         ) : null}
 
-        <Card style={{ gap: space.md }}>
+        <Card style={styles.previewCard}>
           <SpectrumBars active={previewing} height={92} />
-          <View style={styles.pills}>
+          <View style={styles.tags}>
             <StatusPill
               label={previewing ? 'Playing' : 'Ready'}
               tone={previewing ? 'running' : 'idle'}
             />
             {guestsMayHear(draft) ? (
-              <StatusPill label="Guests may hear" tone="warning" />
+              <StatusPill label={AUDIBLE_TAG} tone="warning" />
             ) : null}
-            <StatusPill
-              label={
-                reach === 'full'
-                  ? 'Full range'
-                  : reach === 'partial'
-                    ? 'Partial range'
-                    : 'Out of range'
-              }
-              tone={
-                reach === 'full'
-                  ? 'running'
-                  : reach === 'partial'
-                    ? 'warning'
-                    : 'danger'
-              }
-              dot={false}
-            />
           </View>
           <Button
             label={previewing ? 'Stop' : 'Hear 5 seconds'}
@@ -204,64 +192,75 @@ export default function ProfileBuilder() {
           <TextInput
             value={name}
             onChangeText={setName}
-            placeholder="My profile"
+            placeholder="My sound"
             placeholderTextColor={color.fgSubtle}
             style={styles.input}
-            accessibilityLabel="Profile name"
+            accessibilityLabel="Name your sound"
           />
         </Field>
 
-        <Field label="Kind">
+        <Field label="What kind of sound">
           <Segmented
             value={kind}
             onChange={setKind}
-            accessibilityLabel="Profile kind"
+            accessibilityLabel="What kind of sound"
             options={(['tone', 'pulse', 'sweep', 'sample'] as ProfileKind[]).map(
-              (k) => ({ value: k, label: KIND_LABEL[k] })
+              (k) => ({ value: k, label: SHORT_KIND[k] })
             )}
           />
+          <Text style={styles.note}>{KIND_HINT[kind]}</Text>
         </Field>
 
-        <Card style={{ gap: space.md }}>
+        <Card style={styles.previewCard}>
           {kind === 'tone' || kind === 'pulse' ? (
-            <Slider
-              label="Frequency"
-              min={8000}
-              max={25000}
-              step={100}
-              value={freqHz}
-              readout={formatHz(freqHz)}
-              onChange={setFreqHz}
-            />
+            <View style={styles.field}>
+              <Slider
+                label="Pitch"
+                min={8000}
+                max={25000}
+                step={100}
+                value={freqHz}
+                readout={pitchWord(freqHz)}
+                onChange={setFreqHz}
+                accessibilityHint="Higher pitches are harder for people to hear and harder for speakers to play"
+              />
+              <Text style={styles.mono}>{formatHz(freqHz)}</Text>
+            </View>
           ) : null}
 
           {kind === 'sweep' ? (
             <>
+              <View style={styles.field}>
+                <Slider
+                  label="Starts at"
+                  min={8000}
+                  max={24000}
+                  step={100}
+                  value={startHz}
+                  readout={pitchWord(startHz)}
+                  onChange={setStartHz}
+                />
+                <Text style={styles.mono}>{formatHz(startHz)}</Text>
+              </View>
+              <View style={styles.field}>
+                <Slider
+                  label="Ends at"
+                  min={8000}
+                  max={25000}
+                  step={100}
+                  value={endHz}
+                  readout={pitchWord(endHz)}
+                  onChange={setEndHz}
+                />
+                <Text style={styles.mono}>{formatHz(endHz)}</Text>
+              </View>
               <Slider
-                label="Sweep from"
-                min={8000}
-                max={24000}
-                step={100}
-                value={startHz}
-                readout={formatHz(startHz)}
-                onChange={setStartHz}
-              />
-              <Slider
-                label="Sweep to"
-                min={8000}
-                max={25000}
-                step={100}
-                value={endHz}
-                readout={formatHz(endHz)}
-                onChange={setEndHz}
-              />
-              <Slider
-                label="Sweep speed"
+                label="How fast it rises and falls"
                 min={0.1}
                 max={4}
                 step={0.1}
                 value={rateHz}
-                readout={`${rateHz.toFixed(1)} Hz`}
+                readout={rateHz < 1 ? 'Slow' : rateHz < 2.5 ? 'Medium' : 'Fast'}
                 onChange={setRateHz}
               />
             </>
@@ -270,21 +269,21 @@ export default function ProfileBuilder() {
           {kind === 'pulse' ? (
             <>
               <Slider
-                label="On time"
+                label="How long each beep lasts"
                 min={50}
                 max={2000}
                 step={10}
                 value={onMs}
-                readout={`${Math.round(onMs)} ms`}
+                readout={`${(onMs / 1000).toFixed(1)} sec`}
                 onChange={setOnMs}
               />
               <Slider
-                label="Off time"
+                label="Quiet gap between beeps"
                 min={50}
                 max={4000}
                 step={10}
                 value={offMs}
-                readout={`${Math.round(offMs)} ms`}
+                readout={`${(offMs / 1000).toFixed(1)} sec`}
                 onChange={setOffMs}
               />
             </>
@@ -292,11 +291,11 @@ export default function ProfileBuilder() {
 
           {kind === 'sample' ? (
             <>
-              <Field label="Call">
+              <Field label="Which call">
                 <Segmented
                   value={asset}
                   onChange={setAsset}
-                  accessibilityLabel="Call recording"
+                  accessibilityLabel="Which call"
                   options={(
                     [
                       'distress_pigeon',
@@ -310,16 +309,15 @@ export default function ProfileBuilder() {
                 />
               </Field>
               <Text style={styles.note}>
-                {PLACEHOLDER_NOTICE}. Licensed recordings replace these before
-                launch.
+                {PLACEHOLDER_NOTICE}. Real recordings replace it before launch.
               </Text>
               <Slider
-                label="Gap between calls"
+                label="Quiet gap between calls"
                 min={2000}
                 max={60000}
                 step={500}
                 value={gapMs}
-                readout={`${Math.round(gapMs / 1000)} s`}
+                readout={`${Math.round(gapMs / 1000)} sec`}
                 onChange={setGapMs}
               />
             </>
@@ -327,29 +325,44 @@ export default function ProfileBuilder() {
 
           {kind !== 'tone' ? (
             <Slider
-              label="Randomise"
+              label="Mix up the timing"
               min={0}
               max={100}
               step={5}
               value={randomizePct}
               readout={`${Math.round(randomizePct)}%`}
               onChange={setRandomizePct}
-              accessibilityHint="Higher values vary the timing more, so birds do not get used to the pattern"
+              accessibilityHint="Turn this up so birds cannot learn the pattern"
             />
           ) : null}
+
+          <SpeakerReach profile={draft} output={output} />
         </Card>
 
         <Text style={styles.note}>{describeDraft(draft)}</Text>
       </ScrollView>
 
-      <View
-        style={[styles.dock, { paddingBottom: insets.bottom + space.md }]}
-      >
-        <Button label="Save profile" size="lg" onPress={onSave} />
+      <View style={[styles.dock, { paddingBottom: insets.bottom + space.md }]}>
+        <Button label="Save this sound" size="lg" onPress={onSave} />
       </View>
     </View>
   );
 }
+
+/** Short names for the four kinds, so all four fit on one row. */
+const SHORT_KIND: Record<ProfileKind, string> = {
+  tone: 'Steady',
+  pulse: 'Beeping',
+  sweep: 'Up and down',
+  sample: 'Bird call',
+};
+
+const KIND_HINT: Record<ProfileKind, string> = {
+  tone: 'One pitch that never changes.',
+  pulse: 'One pitch that beeps on and off.',
+  sweep: 'A pitch that slides up and down.',
+  sample: 'A real bird call, played again and again.',
+};
 
 function Field({
   label,
@@ -412,21 +425,28 @@ function buildDraft(v: {
   };
 }
 
+/** One plain line describing the sound, saved with it and shown in the list. */
 function describeDraft(p: AudioProfile): string {
   switch (p.kind) {
-    case 'tone':
-      return `Steady ${formatHz((p.params as ToneParams).freqHz)} tone.`;
+    case 'tone': {
+      const q = p.params as ToneParams;
+      return `${KIND_LABEL.tone}. ${pitchWord(q.freqHz)} pitch.`;
+    }
     case 'pulse': {
       const q = p.params as PulseParams;
-      return `${formatHz(q.freqHz)} pulsing ${q.onMs} ms on, ${q.offMs} ms off, ${q.randomizePct}% randomised.`;
+      return `Beeps for ${(q.onMs / 1000).toFixed(1)} sec, then rests for ${(
+        q.offMs / 1000
+      ).toFixed(1)} sec. ${pitchWord(q.freqHz)} pitch.`;
     }
     case 'sweep': {
       const q = p.params as SweepParams;
-      return `Sweeps ${formatHz(q.startHz)} to ${formatHz(q.endHz)} at ${q.rateHz.toFixed(1)} Hz.`;
+      return `Slides from ${pitchWord(q.startHz).toLowerCase()} to ${pitchWord(
+        q.endHz
+      ).toLowerCase()} pitch, again and again.`;
     }
     case 'sample': {
       const q = p.params as SampleParams;
-      return `${SAMPLE_LABEL[q.asset]} every ${Math.round(q.gapMs / 1000)} s, ${q.randomizePct}% randomised.`;
+      return `${SAMPLE_LABEL[q.asset]} every ${Math.round(q.gapMs / 1000)} sec.`;
     }
   }
 }
@@ -440,9 +460,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
     paddingBottom: space.sm,
   },
-  close: { width: 44, height: 44, alignItems: 'flex-end', justifyContent: 'center' },
+  close: {
+    width: 44,
+    height: 44,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
   body: { paddingHorizontal: space.md, gap: space.md },
-  pills: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
+  previewCard: { gap: space.md },
+  tags: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
+  field: { gap: space.xs },
   fieldLabel: {
     fontFamily: font.mono.medium,
     fontSize: 11,
@@ -465,6 +492,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     color: color.fgMuted,
+  },
+  mono: {
+    fontFamily: font.mono.medium,
+    fontSize: 11,
+    letterSpacing: 0.5,
+    color: color.fgSubtle,
   },
   dock: {
     paddingHorizontal: space.md,

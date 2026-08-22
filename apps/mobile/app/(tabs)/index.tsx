@@ -1,250 +1,407 @@
-import { useCallback, useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowUpRight, Play, Square } from 'lucide-react-native';
+import { Play, Square } from 'lucide-react-native';
 
-import { Banner, Button, Card, Screen, StatusPill, Touchable } from '../../src/components';
+import {
+  Banner,
+  Button,
+  Chip,
+  ListRow,
+  Screen,
+  Sheet,
+  Slider,
+  SpeakerReach,
+  SpectrumBars,
+  Touchable,
+  useToast,
+} from '../../src/components';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { useElapsed } from '../../src/hooks/useElapsed';
-import { OUTPUT_LABEL, describeParams } from '../../src/core/profiles';
-import { useHistory } from '../../src/state/useHistory';
+import {
+  SPEAKER_HINT,
+  SPEAKER_LABEL,
+  formatHz,
+  peakFreqHz,
+  pitchWord,
+  soundPitch,
+  type OutputKind,
+  type PulseParams,
+  type SweepParams,
+  type ToneParams,
+} from '../../src/core/profiles';
+import { useAccount } from '../../src/state/useAccount';
 import { useProfiles } from '../../src/state/useProfiles';
-import { useSchedules, formatMinutes } from '../../src/state/useSchedules';
 import { formatElapsed, useSession } from '../../src/state/useSession';
+import type { DurationChoice } from '../../src/state/useSession';
 import { color, font, space } from '../../src/theme/tokens';
 import { type } from '../../src/theme/typography';
 
+const HOW_LONG: { value: DurationChoice; label: string }[] = [
+  { value: 15, label: '15 min' },
+  { value: 30, label: '30 min' },
+  { value: 60, label: '1 hour' },
+  { value: null, label: 'Until I stop' },
+];
+
+const SPEAKERS: OutputKind[] = [
+  'phone',
+  'bt_speaker',
+  'pigeonx_emitter',
+  'simulated',
+];
+
+const BLUETOOTH_NOTE =
+  "Connect a Bluetooth speaker in your phone's settings first, then it plays there.";
+
 export default function HomeScreen() {
-  const { plan } = useEntitlement();
+  const ent = useEntitlement();
+  const toast = useToast();
+  const [speakerOpen, setSpeakerOpen] = useState(false);
+  const [adjustOpen, setAdjustOpen] = useState(false);
+
   const profileId = useSession((s) => s.profileId);
-  const output = useSession((s) => s.output);
+  const playsOn = useSession((s) => s.output);
+  const duration = useSession((s) => s.duration);
   const engineState = useSession((s) => s.engineState);
   const startedAt = useSession((s) => s.startedAt);
   const error = useSession((s) => s.error);
   const hitPlanCap = useSession((s) => s.hitPlanCap);
+  const setPlaysOn = useSession((s) => s.setOutput);
+  const setDuration = useSession((s) => s.setDuration);
   const start = useSession((s) => s.start);
   const stop = useSession((s) => s.stop);
 
   const byId = useProfiles((s) => s.byId);
-  const profile = byId(profileId);
-  const entries = useHistory((s) => s.entries);
-  const schedules = useSchedules((s) => s.schedules);
+  const sound = byId(profileId);
+
+  const speakers = useAccount((s) => s.devices);
+  const addTestSpeaker = useAccount((s) => s.addSimulatedDevice);
 
   const elapsed = useElapsed(startedAt);
-  const running = engineState === 'running';
+  const playing = engineState === 'running';
+  const busy = engineState === 'loading';
 
-  const todayCount = useMemo(() => {
-    const midnight = new Date();
-    midnight.setHours(0, 0, 0, 0);
-    return entries.filter((e) => e.startedAt >= midnight.getTime()).length;
-  }, [entries]);
-
-  const nextSchedule = useMemo(() => {
-    const now = new Date();
-    let best: Date | null = null;
-    for (const s of schedules) {
-      if (!s.enabled || s.days.length === 0) continue;
-      for (let offset = 0; offset < 8; offset++) {
-        const d = new Date(now);
-        d.setDate(now.getDate() + offset);
-        if (!s.days.includes(d.getDay())) continue;
-        d.setHours(Math.floor(s.startMinutes / 60), s.startMinutes % 60, 0, 0);
-        if (d.getTime() <= now.getTime()) continue;
-        if (!best || d < best) best = d;
-        break;
+  const pickSpeaker = useCallback(
+    (o: OutputKind) => {
+      if (o === 'pigeonx_emitter' && speakers.length === 0) {
+        const d = addTestSpeaker();
+        setPlaysOn('simulated', d.id);
+        toast.show('PigeonX speakers are not out yet. Added a test speaker.');
+        setSpeakerOpen(false);
+        return;
       }
-    }
-    return best;
-  }, [schedules]);
+      setPlaysOn(o, o === 'simulated' ? (speakers[0]?.id ?? null) : null);
+      setSpeakerOpen(false);
+    },
+    [addTestSpeaker, setPlaysOn, speakers, toast]
+  );
 
-  const nextLabel = nextSchedule
-    ? formatMinutes(nextSchedule.getHours() * 60 + nextSchedule.getMinutes())
-    : 'None';
+  const pickHowLong = useCallback(
+    (d: DurationChoice) => {
+      if (d === null && !ent.guard('session.unlimited')) return;
+      setDuration(d);
+    },
+    [ent, setDuration]
+  );
 
-  const onPrimary = useCallback(() => {
-    if (running) {
-      void stop();
-      return;
-    }
-    router.navigate('/deterrent');
-    void start();
-  }, [running, start, stop]);
-
-  const status = running
-    ? { label: `Running ${formatElapsed(elapsed)}`, tone: 'running' as const }
-    : nextSchedule
-      ? { label: `Scheduled ${nextLabel}`, tone: 'scheduled' as const }
-      : { label: 'Idle', tone: 'idle' as const };
+  const onBigButton = useCallback(() => {
+    if (playing) void stop();
+    else void start();
+  }, [playing, start, stop]);
 
   return (
     <Screen
-      title="My space"
-      subtitle={
-        running
-          ? 'Audio keeps playing with the screen off.'
-          : 'Pick a profile. Start. Stop when service ends.'
+      header={
+        <View style={styles.statusBlock}>
+          <Text style={type.display}>
+            {playing ? `Playing ${formatElapsed(elapsed)}` : 'Off'}
+          </Text>
+          <Text style={type.body}>
+            {playing
+              ? 'You can lock the phone. The sound keeps going.'
+              : 'Press Start. Birds leave.'}
+          </Text>
+        </View>
       }
-      headerRight={<StatusPill label={status.label} tone={status.tone} />}
       scroll={false}
     >
       {error ? (
         <View style={styles.banner}>
           <Banner
-            title="Audio did not start"
+            title="That didn't work"
             body={error}
             onRetry={() => void start()}
           />
         </View>
       ) : null}
 
-      {hitPlanCap && !running ? (
+      {hitPlanCap && !playing ? (
         <View style={styles.banner}>
           <Banner
             tone="info"
-            title="Run stopped at 15 minutes"
-            body="Free caps every run. Pro runs as long as you leave it on."
+            title="Stopped after 15 minutes"
+            body="Free stops the sound after 15 minutes. Pro plays as long as you like."
             retryLabel="See Pro"
             onRetry={() => router.push('/paywall')}
           />
         </View>
       ) : null}
 
-      <Card
-        active={running}
-        onPress={() => router.navigate('/deterrent')}
-        accessibilityLabel={`Change profile. Now set to ${profile?.name ?? 'none'}`}
-        style={styles.profileCard}
-      >
-        <View style={styles.profileTop}>
-          <Text style={styles.kicker}>Profile</Text>
-          <ArrowUpRight size={16} color={color.fgSubtle} strokeWidth={1.75} />
-        </View>
-        <Text style={type.heading} numberOfLines={1}>
-          {profile?.name ?? 'Nothing picked yet'}
-        </Text>
-        <Text style={styles.meta} numberOfLines={1}>
-          {profile ? describeParams(profile) : 'No profile'} ·{' '}
-          {OUTPUT_LABEL[output]}
-        </Text>
-      </Card>
-
-      <View style={styles.statRow}>
-        <Stat label="Runs today" value={String(todayCount)} />
-        <Stat label="Next" value={nextLabel} />
+      <View style={styles.list}>
+        <ListRow
+          title={
+            sound
+              ? `Sound: ${sound.name}, ${soundPitch(sound).toLowerCase()} pitch`
+              : 'Sound: none picked yet'
+          }
+          meta="Tap to change"
+          onPress={() => router.navigate('/sounds')}
+          accessibilityLabel={`Sound, ${sound?.name ?? 'none picked yet'}. Tap to change.`}
+        />
+        <ListRow
+          title={`Plays on: ${SPEAKER_LABEL[playsOn]}`}
+          meta={SPEAKER_HINT[playsOn]}
+          onPress={() => setSpeakerOpen(true)}
+          accessibilityLabel={`Plays on ${SPEAKER_LABEL[playsOn]}. Tap to change.`}
+        />
       </View>
 
-      {plan === 'free' ? (
+      {playsOn === 'bt_speaker' ? (
         <Touchable
-          onPress={() => router.push('/paywall')}
-          accessibilityLabel="Upgrade to Pro"
-          style={styles.upgrade}
+          onPress={() => void Linking.openSettings()}
+          accessibilityLabel="Open your phone settings to connect a speaker"
+          style={styles.note}
         >
-          <Text style={styles.upgradeText} numberOfLines={1}>
-            Free stops a run at 15 minutes.
-          </Text>
-          <Text style={styles.upgradeAction}>Upgrade</Text>
+          <Text style={styles.noteText}>{BLUETOOTH_NOTE}</Text>
         </Touchable>
+      ) : null}
+
+      <View style={styles.howLong}>
+        <Text style={styles.fieldLabel}>How long</Text>
+        <View style={styles.chipRow}>
+          {HOW_LONG.map((d) => (
+            <Chip
+              key={String(d.value)}
+              label={d.label}
+              selected={duration === d.value}
+              locked={d.value === null && !ent.can('session.unlimited')}
+              onPress={() => pickHowLong(d.value)}
+            />
+          ))}
+        </View>
+      </View>
+
+      {playing ? (
+        <View style={styles.meter}>
+          <Text style={styles.fieldLabel}>Sound playing</Text>
+          <SpectrumBars active height={72} />
+        </View>
       ) : null}
 
       <View style={styles.spacer} />
 
+      <Touchable
+        onPress={() => setAdjustOpen(true)}
+        accessibilityLabel="Adjust the pitch and the loudness"
+        style={styles.adjust}
+      >
+        <Text style={styles.adjustText}>Adjust</Text>
+      </Touchable>
+
       <Button
-        label={running ? 'Stop' : 'Start'}
-        variant={running ? 'danger' : 'primary'}
+        label={playing ? 'Stop' : 'Start'}
+        variant={playing ? 'danger' : 'primary'}
         size="lg"
-        onPress={onPrimary}
+        loading={busy}
+        onPress={onBigButton}
         icon={
-          running ? (
+          playing ? (
             <Square size={16} color={color.danger} strokeWidth={1.75} />
           ) : (
             <Play size={16} color={color.onAccent} strokeWidth={1.75} />
           )
         }
         accessibilityHint={
-          running ? 'Stops the run' : 'Starts the profile shown above'
+          playing ? 'Stops the sound' : 'Plays the sound shown above'
         }
       />
+
+      <Sheet
+        open={speakerOpen}
+        title="Where should it play?"
+        onClose={() => setSpeakerOpen(false)}
+      >
+        <View style={styles.list}>
+          {SPEAKERS.map((o) => (
+            <ListRow
+              key={o}
+              title={SPEAKER_LABEL[o]}
+              meta={SPEAKER_HINT[o]}
+              selected={playsOn === o}
+              chevron={false}
+              onPress={() => pickSpeaker(o)}
+            />
+          ))}
+        </View>
+        <Text style={styles.sheetNote}>{BLUETOOTH_NOTE}</Text>
+      </Sheet>
+
+      <AdjustSheet open={adjustOpen} onClose={() => setAdjustOpen(false)} />
     </Screen>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+/* ------------------------------------------------------------------ */
+
+/** Pitch and loudness. Kept behind one link so Home stays simple. */
+function AdjustSheet({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const profileId = useSession((s) => s.profileId);
+  const playsOn = useSession((s) => s.output);
+  const volume = useSession((s) => s.volume);
+  const setVolume = useSession((s) => s.setVolume);
+  const setParam = useSession((s) => s.setParam);
+  const byId = useProfiles((s) => s.byId);
+  const sound = byId(profileId);
+
+  const hasPitch = sound?.kind === 'tone' || sound?.kind === 'pulse';
+  const isSweep = sound?.kind === 'sweep';
+
+  const [hz, setHz] = useState(() =>
+    sound ? peakFreqHz(sound) : 17000
+  );
+  const [rate, setRate] = useState(() =>
+    isSweep ? (sound.params as SweepParams).rateHz : 0.5
+  );
+
+  useEffect(() => {
+    if (!sound) return;
+    setHz(peakFreqHz(sound));
+    if (sound.kind === 'sweep') setRate((sound.params as SweepParams).rateHz);
+  }, [sound]);
+
+  const changeHz = useCallback(
+    (v: number) => {
+      setHz(v);
+      setParam('freqHz', v);
+    },
+    [setParam]
+  );
+
+  const changeRate = useCallback(
+    (v: number) => {
+      setRate(v);
+      setParam('rateHz', v);
+    },
+    [setParam]
+  );
+
+  const shown = sound
+    ? {
+        ...sound,
+        params: hasPitch
+          ? ({ ...(sound.params as ToneParams | PulseParams), freqHz: hz })
+          : sound.params,
+      }
+    : null;
+
   return (
-    <View style={styles.stat}>
-      <Text style={styles.statValue} numberOfLines={1}>
-        {value}
-      </Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
+    <Sheet open={open} title="Adjust" onClose={onClose}>
+      {hasPitch ? (
+        <View style={styles.field}>
+          <Slider
+            label="Pitch"
+            min={8000}
+            max={25000}
+            step={100}
+            value={hz}
+            readout={pitchWord(hz)}
+            onChange={changeHz}
+            accessibilityHint="Higher pitches are harder for people to hear and harder for speakers to play"
+          />
+          <Text style={styles.mono}>{formatHz(hz)}</Text>
+        </View>
+      ) : null}
+
+      {isSweep ? (
+        <Slider
+          label="How fast it rises and falls"
+          min={0.1}
+          max={4}
+          step={0.1}
+          value={rate}
+          readout={rate < 1 ? 'Slow' : rate < 2.5 ? 'Medium' : 'Fast'}
+          onChange={changeRate}
+        />
+      ) : null}
+
+      <Slider
+        label="Loudness"
+        min={0}
+        max={1}
+        step={0.01}
+        value={volume}
+        readout={`${Math.round(volume * 100)}%`}
+        onChange={setVolume}
+      />
+
+      {shown ? <SpeakerReach profile={shown} output={playsOn} /> : null}
+    </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
+  statusBlock: { gap: 4 },
   banner: { marginBottom: space.sm },
-  profileCard: { gap: 6 },
-  profileTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  kicker: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.fgSubtle,
-  },
-  meta: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    letterSpacing: 0.5,
-    color: color.fgMuted,
-  },
-  statRow: { flexDirection: 'row', marginTop: -1 },
-  stat: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: color.border,
-    marginLeft: -1,
-    paddingVertical: space.sm + 4,
-    paddingHorizontal: space.sm + 4,
-    gap: 2,
-  },
-  statValue: {
-    fontFamily: font.mono.medium,
-    fontSize: 22,
-    letterSpacing: -0.5,
-    color: color.ink,
-  },
-  statLabel: {
-    fontFamily: font.mono.medium,
-    fontSize: 10,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.fgSubtle,
-  },
-  upgrade: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    marginTop: space.md,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: color.border,
-    paddingHorizontal: 2,
-  },
-  upgradeText: {
-    flex: 1,
+  list: { borderWidth: 1, borderColor: color.border },
+  note: { minHeight: 40, justifyContent: 'center', marginTop: space.sm },
+  noteText: {
     fontFamily: font.body.regular,
     fontSize: 13,
-    color: color.fg,
+    lineHeight: 18,
+    color: color.accent,
   },
-  upgradeAction: {
+  howLong: { marginTop: space.md, gap: space.sm },
+  fieldLabel: {
+    fontFamily: font.mono.medium,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: color.fgSubtle,
+  },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs + 2 },
+  meter: { marginTop: space.md, gap: space.sm },
+  spacer: { flex: 1, minHeight: space.md },
+  adjust: {
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: space.sm,
+  },
+  adjustText: {
     fontFamily: font.mono.medium,
     fontSize: 11,
     letterSpacing: 1,
     textTransform: 'uppercase',
     color: color.accent,
   },
-  spacer: { flex: 1, minHeight: space.md },
+  sheetNote: {
+    fontFamily: font.body.regular,
+    fontSize: 13,
+    lineHeight: 18,
+    color: color.fgMuted,
+  },
+  field: { gap: space.xs },
+  mono: {
+    fontFamily: font.mono.medium,
+    fontSize: 11,
+    letterSpacing: 0.5,
+    color: color.fgSubtle,
+  },
 });
