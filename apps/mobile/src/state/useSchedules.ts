@@ -82,7 +82,7 @@ export function describeSchedule(s: {
 /** Who runs it, in words. */
 export const EXECUTOR_LABEL: Record<Executor, string> = {
   reminder: 'This phone reminds me',
-  device: 'A PigeonX speaker runs it by itself',
+  device: 'This phone in Speaker mode, or a PigeonX speaker',
 };
 
 export type ScheduleInput = Omit<

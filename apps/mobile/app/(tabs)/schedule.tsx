@@ -21,6 +21,7 @@ import {
   Touchable,
   useToast,
 } from '../../src/components';
+import { overlappingPairs } from '../../src/core/scheduler';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { useProfiles } from '../../src/state/useProfiles';
 import {
@@ -28,6 +29,7 @@ import {
   DAY_NAMES,
   describeDays,
   describeSchedule,
+  EXECUTOR_LABEL,
   formatMinutes,
   useSchedules,
   type Executor,
@@ -39,6 +41,7 @@ import { color, font, space } from '../../src/theme/tokens';
 export default function ScheduleScreen() {
   const ent = useEntitlement();
   const schedules = useSchedules((s) => s.schedules);
+  const clashes = useMemo(() => overlappingPairs(schedules), [schedules]);
   const toggle = useSchedules((s) => s.toggle);
   const remove = useSchedules((s) => s.remove);
   const [editing, setEditing] = useState<Schedule | null>(null);
@@ -80,9 +83,7 @@ export default function ScheduleScreen() {
                 <View style={styles.rowText}>
                   <Text style={styles.line}>{describeSchedule(s)}</Text>
                   <Text style={styles.meta}>
-                    {s.executor === 'device'
-                      ? 'A PigeonX speaker runs it by itself'
-                      : 'This phone reminds you'}
+                    {EXECUTOR_LABEL[s.executor]}
                   </Text>
                 </View>
                 <Switch
@@ -121,6 +122,13 @@ export default function ScheduleScreen() {
           ))}
         </ScrollView>
       )}
+
+      {clashes.length > 0 ? (
+        <Text style={styles.clash}>
+          Two of your times cover the same minutes. The one that starts later
+          takes over.
+        </Text>
+      ) : null}
 
       <View style={styles.spacer} />
 
@@ -362,7 +370,7 @@ function ScheduleForm({
             { value: 'reminder', label: 'This phone' },
             {
               value: 'device',
-              label: 'PigeonX speaker',
+              label: 'Speaker mode',
               locked: !ent.can('schedules.device'),
             },
           ]}
@@ -370,7 +378,7 @@ function ScheduleForm({
         <Text style={styles.hint}>
           {executor === 'reminder'
             ? 'This phone reminds me. A reminder shows up with a Play now button.'
-            : 'A PigeonX speaker runs it by itself. Your phone can stay in your pocket.'}
+            : 'This phone in Speaker mode runs it on its own, and a PigeonX speaker will too. Turn Speaker mode on in Settings.'}
         </Text>
       </View>
     </Sheet>
@@ -450,6 +458,13 @@ const styles = StyleSheet.create({
     color: color.accent,
   },
   spacer: { flex: 1, minHeight: space.md },
+  clash: {
+    fontFamily: font.body.regular,
+    fontSize: 13,
+    lineHeight: 18,
+    color: color.warning,
+    marginTop: space.sm,
+  },
   field: { gap: space.sm },
   fieldLabel: {
     fontFamily: font.mono.medium,

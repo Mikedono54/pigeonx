@@ -7,6 +7,7 @@ import {
   LogIn,
   LogOut,
   Plus,
+  RadioTower,
   RotateCcw,
   Trash2,
 } from 'lucide-react-native';
@@ -106,6 +107,15 @@ export default function SettingsScreen() {
                 : `What played and when. ${entries.length} so far.`
             }
             onPress={() => router.push('/history')}
+          />
+          <ListRow
+            icon={<RadioTower size={18} color={color.ink} strokeWidth={1.75} />}
+            title="Use this phone as a speaker"
+            meta="The phone stays on this screen and plays your times on its own."
+            onPress={() => {
+              if (!ent.guard('schedules.reminder')) return;
+              router.push('/speaker');
+            }}
           />
           <ListRow
             icon={<Building2 size={18} color={color.ink} strokeWidth={1.75} />}

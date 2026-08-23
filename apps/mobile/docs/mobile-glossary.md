@@ -71,7 +71,7 @@ Write for a ten year old holding the phone.
 | Place | A building. |
 | Area | One part of a building, like a roof or a patio. |
 | Schedule | Days and times you want the sound to play. |
-| Who runs it | This phone reminds me, or a PigeonX speaker runs it by itself. |
+| Who runs it | This phone reminds me, or Speaker mode runs it on its own. |
 | Plan | Free, Pro or Business. |
 | History | What played and when. |
 | Business | The company a team works for. It owns the places. |
