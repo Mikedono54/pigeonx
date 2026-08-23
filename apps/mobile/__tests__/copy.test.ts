@@ -14,6 +14,8 @@ import {
 import { FEATURE_LABEL, PLAN_LABEL } from '../src/core/entitlements';
 import { ROLE_HINT, ROLE_LABEL } from '../src/services/business';
 import { liveLabel } from '../src/core/places';
+import { plainMessage } from '../src/services/supabase';
+import { describeLinkProblem } from '../src/services/auth';
 import { describeDays, describeSchedule } from '../src/state/useSchedules';
 
 /** Words a person should never have to read. See docs/mobile-glossary.md. */
@@ -75,10 +77,7 @@ describe('will this speaker play it?', () => {
   });
 
   it('says the whole sound plays when it does', () => {
-    const sentence = reachSentence(
-      findSystemProfile('sys_pigeon_18k')!,
-      'pigeonx_emitter'
-    );
+    const sentence = reachSentence(findSystemProfile('sys_pigeon_18k')!, 'pigeonx_emitter');
     expect(sentence).toBe('This speaker plays the whole sound.');
   });
 });
@@ -112,12 +111,37 @@ describe('labels people read', () => {
   });
 });
 
+describe('what a person reads when something goes wrong', () => {
+  it('says what happened and what to do next', () => {
+    expect(plainMessage({ message: 'Network request failed' })).toBe(
+      'Your phone is not online. Try again in a minute.',
+    );
+    expect(plainMessage({ code: 'PGRST202' })).toBe('This part is not ready yet. Try again later.');
+    expect(plainMessage({ message: 'new row violates row-level security' })).toBe(
+      'You do not have permission to do that.',
+    );
+    expect(plainMessage(null)).toBe("That didn't work. Try again.");
+  });
+
+  it('keeps every line clean', () => {
+    for (const line of [
+      plainMessage({ message: 'Network request failed' }),
+      plainMessage({ code: 'PGRST202' }),
+      plainMessage({ message: 'duplicate key value' }),
+      plainMessage({ message: 'rate limit exceeded' }),
+      plainMessage(null),
+      describeLinkProblem('Token has expired'),
+      describeLinkProblem('boom'),
+    ]) {
+      checkString(line);
+    }
+  });
+});
+
 describe('what an area row says', () => {
   it('reads as words, not as a state', () => {
     expect(liveLabel(undefined)).toBe('Off');
-    expect(
-      liveLabel({ playing: true, startedAt: 0 }, 12 * 60_000 + 40_000)
-    ).toBe('Playing 12:40');
+    expect(liveLabel({ playing: true, startedAt: 0 }, 12 * 60_000 + 40_000)).toBe('Playing 12:40');
   });
 
   it('names each teammate in plain words', () => {
@@ -134,7 +158,7 @@ describe('describeSchedule()', () => {
         startMinutes: 18 * 60,
         endMinutes: 22 * 60,
         profileName: 'Pigeon sound',
-      })
+      }),
     ).toBe('Weekdays, 6:00 PM to 10:00 PM, Pigeon sound');
   });
 

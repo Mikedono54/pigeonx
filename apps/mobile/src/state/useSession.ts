@@ -3,15 +3,8 @@ import { persist } from 'zustand/middleware';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { getEngine, type EngineState } from '../audio';
 import { limit } from '../core/entitlements';
-import {
-  SPEAKER_LABEL,
-  type AudioProfile,
-  type OutputKind,
-} from '../core/profiles';
-import {
-  dismissRunningNotification,
-  presentRunningNotification,
-} from '../services/notifications';
+import { SPEAKER_LABEL, type AudioProfile, type OutputKind } from '../core/profiles';
+import { dismissRunningNotification, presentRunningNotification } from '../services/notifications';
 import { sessionRecorder } from '../services/sessionRecorder';
 import { persistStorage, STORAGE_KEYS } from './storage';
 import { useAccount } from './useAccount';
@@ -48,10 +41,7 @@ interface SessionState {
   setDuration: (d: DurationChoice) => void;
   setArea: (zoneId: string | null, zoneName?: string | null) => void;
   setParam: (key: string, value: number) => void;
-  start: (opts?: {
-    profileId?: string;
-    source?: SessionSource;
-  }) => Promise<void>;
+  start: (opts?: { profileId?: string; source?: SessionSource }) => Promise<void>;
   stop: () => Promise<void>;
   clearError: () => void;
   /** time limit in ms for this plan and choice. null means no limit. */
@@ -85,10 +75,7 @@ export const useSession = create<SessionState>()(
         const off = engine.onStateChange((e) => {
           set({
             engineState: e.state,
-            error:
-              e.state === 'error'
-                ? (e.error ?? "That didn't work. Try again.")
-                : null,
+            error: e.state === 'error' ? (e.error ?? "That didn't work. Try again.") : null,
           });
           if (e.state === 'idle' && get().currentEntryId) {
             // the engine ended the run itself (duration cap or interruption)
@@ -109,15 +96,13 @@ export const useSession = create<SessionState>()(
         set({ profileId: id });
         useProfiles.getState().setLastUsed(id);
       },
-      setOutput: (output, deviceId) =>
-        set({ output, deviceId: deviceId ?? null }),
+      setOutput: (output, deviceId) => set({ output, deviceId: deviceId ?? null }),
       setVolume: (v) => {
         set({ volume: v });
         getEngine().setVolume(v);
       },
       setDuration: (d) => set({ duration: d }),
-      setArea: (zoneId, zoneName) =>
-        set({ zoneId, zoneName: zoneName ?? null }),
+      setArea: (zoneId, zoneName) => set({ zoneId, zoneName: zoneName ?? null }),
       setParam: (key, value) => {
         getEngine().setParam(key, value);
       },
@@ -205,14 +190,14 @@ export const useSession = create<SessionState>()(
         zoneId: s.zoneId,
         zoneName: s.zoneName,
       }),
-    }
-  )
+    },
+  ),
 );
 
 async function finalise(
   set: (patch: Partial<SessionState>) => void,
   get: () => SessionState,
-  hitCap: boolean
+  hitCap: boolean,
 ): Promise<void> {
   const { currentEntryId, notificationId } = get();
   set({

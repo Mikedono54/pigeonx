@@ -30,9 +30,7 @@ export interface PurchaseProvider {
   refresh(): Promise<Plan | null>;
 }
 
-export function createSandboxPurchases(
-  setPlan: (plan: Plan) => void
-): PurchaseProvider {
+export function createSandboxPurchases(setPlan: (plan: Plan) => void): PurchaseProvider {
   return {
     isLive: () => false,
     async prices() {
@@ -71,10 +69,7 @@ export const PRIVACY_URL = 'https://pigeonx.org/privacy';
 export function createPurchases(
   setPlan: (plan: Plan) => void,
   platform: string = Platform.OS,
-  env: Record<string, unknown> = process.env as unknown as Record<
-    string,
-    unknown
-  >
+  env: Record<string, unknown> = process.env as unknown as Record<string, unknown>,
 ): PurchaseProvider {
   // Loaded here, not at the top, so a build with no keys never pulls the store
   // in at all.

@@ -83,9 +83,7 @@ export default function SettingsScreen() {
       <Card style={styles.planCard}>
         <Text style={type.heading}>PigeonX {PLAN_LABEL[ent.plan]}</Text>
         <Text style={styles.meta} numberOfLines={1}>
-          {guest
-            ? 'On this phone only'
-            : `Signed in as ${email ?? 'your account'}`}
+          {guest ? 'On this phone only' : `Signed in as ${email ?? 'your account'}`}
         </Text>
       </Card>
       <View style={styles.upgrade}>
@@ -122,9 +120,7 @@ export default function SettingsScreen() {
             title="For businesses"
             meta="Run a roof, a patio and a dock from one phone."
             onPress={() =>
-              ent.can('zones')
-                ? router.navigate('/places')
-                : router.push('/for-businesses')
+              ent.can('zones') ? router.navigate('/places') : router.push('/for-businesses')
             }
           />
         </View>
@@ -160,9 +156,7 @@ export default function SettingsScreen() {
                 onPress={() => void signOut()}
               />
               <ListRow
-                icon={
-                  <Trash2 size={18} color={color.danger} strokeWidth={1.75} />
-                }
+                icon={<Trash2 size={18} color={color.danger} strokeWidth={1.75} />}
                 title="Delete my account"
                 meta="This takes away your account and everything in it."
                 chevron={false}

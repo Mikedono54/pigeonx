@@ -55,13 +55,8 @@ export function describeDays(days: number[]): string {
   if (days.length === 7) return 'Every day';
   if (days.length === 0) return 'No days picked';
   const weekdays = [1, 2, 3, 4, 5];
-  if (
-    days.length === 5 &&
-    weekdays.every((d) => days.includes(d))
-  )
-    return 'Weekdays';
-  if (days.length === 2 && days.includes(0) && days.includes(6))
-    return 'Weekends';
+  if (days.length === 5 && weekdays.every((d) => days.includes(d))) return 'Weekdays';
+  if (days.length === 2 && days.includes(0) && days.includes(6)) return 'Weekends';
   return days
     .slice()
     .sort((a, b) => a - b)
@@ -124,9 +119,7 @@ export const useSchedules = create<SchedulesState>()(
       schedules: [],
 
       upsert: async (input) => {
-        const existing = input.id
-          ? get().schedules.find((s) => s.id === input.id)
-          : undefined;
+        const existing = input.id ? get().schedules.find((s) => s.id === input.id) : undefined;
         const draft: Schedule = {
           ...input,
           id: existing?.id ?? uid('sch'),
@@ -152,9 +145,7 @@ export const useSchedules = create<SchedulesState>()(
         const next = { ...s, enabled: !s.enabled, updatedAt: Date.now() };
         const notificationIds = await refreshReminders(next);
         set({
-          schedules: get().schedules.map((x) =>
-            x.id === id ? { ...next, notificationIds } : x
-          ),
+          schedules: get().schedules.map((x) => (x.id === id ? { ...next, notificationIds } : x)),
         });
         somethingChanged('schedule');
       },
@@ -187,9 +178,7 @@ export const useSchedules = create<SchedulesState>()(
       setAll: (schedules) => set({ schedules }),
       markSaved: (id, remoteId) =>
         set({
-          schedules: get().schedules.map((s) =>
-            s.id === id ? { ...s, remoteId } : s
-          ),
+          schedules: get().schedules.map((s) => (s.id === id ? { ...s, remoteId } : s)),
         }),
     }),
     {
@@ -209,6 +198,6 @@ export const useSchedules = create<SchedulesState>()(
           })),
         } as never;
       },
-    }
-  )
+    },
+  ),
 );

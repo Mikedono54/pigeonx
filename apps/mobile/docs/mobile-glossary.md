@@ -112,6 +112,26 @@ Three things a teammate can be:
 - Manager. Can add places, areas, speakers and times.
 - Teammate. Can play a sound and see what played.
 
+## When something goes wrong
+
+Every line says what happened and what to do next. No codes, no names of
+things inside the app.
+
+| What happened | What a person reads |
+| --- | --- |
+| the phone is not online | Your phone is not online. Try again in a minute. |
+| the server has not shipped this yet | This part is not ready yet. Try again later. |
+| the account is not allowed | You do not have permission to do that. |
+| the name is taken | That name is already taken. Pick another one. |
+| too many tries | Too many tries. Wait a minute and try again. |
+| the email link ran out | That link ran out. Ask for a new one. |
+| the email link was used | That link was already used. Ask for a new one. |
+| a wrong email address | Check the email address and try again. |
+| the store is not up | The store is not ready. Try again. |
+| anything else | That didn't work. Try again. |
+
+A person backing out on purpose is never an error. Nothing is said at all.
+
 ## The three honest facts
 
 They live on Settings, under Help, and on the third welcome screen.

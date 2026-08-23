@@ -41,10 +41,7 @@ export function localSoundId(remoteId: string | null): string | null {
 
 /** Reads the built-in sounds the account knows about. Safe to call often. */
 export async function loadBuiltInSoundIds(sb: SupabaseClient): Promise<void> {
-  const { data, error } = await sb
-    .from('audio_profiles')
-    .select('id, slug')
-    .eq('is_system', true);
+  const { data, error } = await sb.from('audio_profiles').select('id, slug').eq('is_system', true);
   if (error || !Array.isArray(data)) return;
 
   const pairs: [string, string][] = [];

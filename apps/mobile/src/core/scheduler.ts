@@ -66,10 +66,7 @@ export function isPlayingAt(w: TimeWindow, at: Date): boolean {
  * wins, because that is the one a person just set going. A tie goes to the
  * shorter window, then to the id, so the answer never wobbles.
  */
-export function playingAt<T extends TimeWindow>(
-  windows: T[],
-  at: Date
-): T | null {
+export function playingAt<T extends TimeWindow>(windows: T[], at: Date): T | null {
   const live = windows.filter((w) => isPlayingAt(w, at));
   if (live.length === 0) return null;
 
@@ -94,10 +91,7 @@ export interface NextRun<T> {
 }
 
 /** The next time a window starts, after the moment you hand it. */
-export function nextRun<T extends TimeWindow>(
-  windows: T[],
-  from: Date
-): NextRun<T> | null {
+export function nextRun<T extends TimeWindow>(windows: T[], from: Date): NextRun<T> | null {
   let best: NextRun<T> | null = null;
 
   for (const w of windows) {
@@ -106,12 +100,7 @@ export function nextRun<T extends TimeWindow>(
       const day = new Date(from);
       day.setDate(from.getDate() + ahead);
       if (!w.days.includes(day.getDay())) continue;
-      day.setHours(
-        Math.floor(w.startMinutes / 60),
-        w.startMinutes % 60,
-        0,
-        0
-      );
+      day.setHours(Math.floor(w.startMinutes / 60), w.startMinutes % 60, 0, 0);
       if (day.getTime() <= from.getTime()) continue;
       if (!best || day.getTime() < best.at.getTime()) {
         best = { window: w, at: day };
@@ -162,9 +151,7 @@ function spansOf(w: TimeWindow, day: number): Span[] {
 }
 
 /** Every pair of times that would fight over the same minute. */
-export function overlappingPairs<T extends TimeWindow>(
-  windows: T[]
-): [T, T][] {
+export function overlappingPairs<T extends TimeWindow>(windows: T[]): [T, T][] {
   const usableOnes = windows.filter(usable);
   const pairs: [T, T][] = [];
   for (let i = 0; i < usableOnes.length; i++) {
@@ -181,7 +168,6 @@ export function overlappingPairs<T extends TimeWindow>(
 export function msUntilEnd(w: TimeWindow, at: Date): number {
   if (!isPlayingAt(w, at)) return 0;
   const mins = minutesOfDay(at);
-  const left =
-    w.endMinutes > mins ? w.endMinutes - mins : DAY_MINUTES - mins + w.endMinutes;
+  const left = w.endMinutes > mins ? w.endMinutes - mins : DAY_MINUTES - mins + w.endMinutes;
   return left * 60_000 - at.getSeconds() * 1000 - at.getMilliseconds();
 }

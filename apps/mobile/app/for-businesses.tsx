@@ -57,11 +57,7 @@ export default function ForBusinesses() {
     <Screen
       header={
         <View style={styles.headRow}>
-          <Touchable
-            onPress={() => router.back()}
-            accessibilityLabel="Go back"
-            style={styles.back}
-          >
+          <Touchable onPress={() => router.back()} accessibilityLabel="Go back" style={styles.back}>
             <ChevronLeft size={22} color={color.ink} strokeWidth={1.75} />
           </Touchable>
           <Text style={type.title}>For businesses</Text>
@@ -69,18 +65,14 @@ export default function ForBusinesses() {
       }
     >
       <Text style={styles.lede}>
-        Run a roof, a dock and a patio at once. Each one gets its own sound and
-        its own times.
+        Run a roof, a dock and a patio at once. Each one gets its own sound and its own times.
       </Text>
 
       <View style={styles.section}>
         <SectionHeader title="What it looks like" />
         <View style={styles.sample}>
           {SAMPLE_AREAS.map((a, i) => (
-            <View
-              key={a.name}
-              style={[styles.sampleRow, i > 0 ? styles.sampleDivider : null]}
-            >
+            <View key={a.name} style={[styles.sampleRow, i > 0 ? styles.sampleDivider : null]}>
               <LayoutGrid size={16} color={color.fgSubtle} strokeWidth={1.75} />
               <Text style={styles.areaName} numberOfLines={1}>
                 {a.name}
@@ -117,9 +109,7 @@ export default function ForBusinesses() {
         <Button
           label="See the Business plan"
           variant="secondary"
-          onPress={() =>
-            router.push({ pathname: '/paywall', params: { tab: 'business' } })
-          }
+          onPress={() => router.push({ pathname: '/paywall', params: { tab: 'business' } })}
         />
       </View>
 
@@ -138,9 +128,7 @@ export default function ForBusinesses() {
         }
       >
         <View style={styles.field}>
-          <Text style={styles.hint}>
-            The name your team knows. Like Main Street Property.
-          </Text>
+          <Text style={styles.hint}>The name your team knows. Like Main Street Property.</Text>
           <TextInput
             value={name}
             onChangeText={setName}

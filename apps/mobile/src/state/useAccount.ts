@@ -36,9 +36,7 @@ interface AccountState {
   setPlan: (plan: Plan) => void;
   continueAsGuest: () => void;
   setSession: (session: { userId: string; email: string | null } | null) => void;
-  setBusiness: (
-    org: { id: string; name: string; role: TeamRole } | null
-  ) => void;
+  setBusiness: (org: { id: string; name: string; role: TeamRole } | null) => void;
   completeOnboarding: () => void;
   resetOnboarding: () => void;
   addSimulatedDevice: (name?: string, kind?: SpeakerKind) => SimulatedDevice;
@@ -75,7 +73,7 @@ export const useAccount = create<AccountState>()(
                 activeOrgId: null,
                 activeOrgName: null,
                 activeOrgRole: null,
-              }
+              },
         ),
       setBusiness: (org) =>
         set(
@@ -85,7 +83,7 @@ export const useAccount = create<AccountState>()(
                 activeOrgName: org.name,
                 activeOrgRole: org.role,
               }
-            : { activeOrgId: null, activeOrgName: null, activeOrgRole: null }
+            : { activeOrgId: null, activeOrgName: null, activeOrgRole: null },
         ),
       completeOnboarding: () => set({ onboarded: true }),
       resetOnboarding: () => set({ onboarded: false }),
@@ -107,7 +105,7 @@ export const useAccount = create<AccountState>()(
       renameDevice: (id, name) => {
         set({
           devices: get().devices.map((d) =>
-            d.id === id ? { ...d, name, updatedAt: Date.now() } : d
+            d.id === id ? { ...d, name, updatedAt: Date.now() } : d,
           ),
         });
         somethingChanged('speaker');
@@ -119,9 +117,7 @@ export const useAccount = create<AccountState>()(
       setDevices: (devices) => set({ devices }),
       markDeviceSynced: (id, remoteId) =>
         set({
-          devices: get().devices.map((d) =>
-            d.id === id ? { ...d, remoteId } : d
-          ),
+          devices: get().devices.map((d) => (d.id === id ? { ...d, remoteId } : d)),
         }),
       isSignedIn: () => get().userId !== null,
     }),
@@ -141,6 +137,6 @@ export const useAccount = create<AccountState>()(
           })),
         } as AccountState;
       },
-    }
-  )
+    },
+  ),
 );

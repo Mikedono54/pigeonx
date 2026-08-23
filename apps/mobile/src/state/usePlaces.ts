@@ -1,11 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import {
-  speakerCount,
-  type Area,
-  type LiveByArea,
-  type Place,
-} from '../core/places';
+import { speakerCount, type Area, type LiveByArea, type Place } from '../core/places';
 import * as remote from '../services/placesRemote';
 import { somethingChanged } from '../services/syncSignal';
 import { persistStorage, STORAGE_KEYS, uid } from './storage';
@@ -49,22 +44,10 @@ interface PlacesState {
   renamePlace: (id: string, name: string) => Promise<PlacesResult>;
   removePlace: (id: string) => Promise<PlacesResult>;
   addArea: (placeId: string, name: string) => Promise<PlacesResult>;
-  renameArea: (
-    placeId: string,
-    areaId: string,
-    name: string
-  ) => Promise<PlacesResult>;
+  renameArea: (placeId: string, areaId: string, name: string) => Promise<PlacesResult>;
   removeArea: (placeId: string, areaId: string) => Promise<PlacesResult>;
-  addSpeaker: (
-    placeId: string,
-    areaId: string,
-    name?: string
-  ) => Promise<PlacesResult>;
-  removeSpeaker: (
-    placeId: string,
-    areaId: string,
-    speakerId: string
-  ) => Promise<PlacesResult>;
+  addSpeaker: (placeId: string, areaId: string, name?: string) => Promise<PlacesResult>;
+  removeSpeaker: (placeId: string, areaId: string, speakerId: string) => Promise<PlacesResult>;
   speakerCount: (place: Place) => number;
   areaById: (areaId: string) => { place: Place; area: Area } | null;
 }
@@ -148,7 +131,7 @@ export const usePlaces = create<PlacesState>()(
         const area: Area = { id: uid('ara'), name, speakerIds: [] };
         set({
           places: get().places.map((p) =>
-            p.id === placeId ? { ...p, areas: [...p.areas, area] } : p
+            p.id === placeId ? { ...p, areas: [...p.areas, area] } : p,
           ),
         });
         somethingChanged('place');
@@ -167,10 +150,8 @@ export const usePlaces = create<PlacesState>()(
               ? p
               : {
                   ...p,
-                  areas: p.areas.map((a) =>
-                    a.id === areaId ? { ...a, name } : a
-                  ),
-                }
+                  areas: p.areas.map((a) => (a.id === areaId ? { ...a, name } : a)),
+                },
           ),
         });
         somethingChanged('place');
@@ -185,9 +166,7 @@ export const usePlaces = create<PlacesState>()(
         }
         set({
           places: get().places.map((p) =>
-            p.id === placeId
-              ? { ...p, areas: p.areas.filter((a) => a.id !== areaId) }
-              : p
+            p.id === placeId ? { ...p, areas: p.areas.filter((a) => a.id !== areaId) } : p,
           ),
         });
         somethingChanged('place');
@@ -196,10 +175,7 @@ export const usePlaces = create<PlacesState>()(
 
       addSpeaker: async (placeId, areaId, name) => {
         if (get().mode === 'business') {
-          const result = await remote.addSpeaker(
-            areaId,
-            name ?? 'Test speaker'
-          );
+          const result = await remote.addSpeaker(areaId, name ?? 'Test speaker');
           if (result.ok) await get().refresh();
           return { ok: result.ok, message: result.message };
         }
@@ -211,11 +187,9 @@ export const usePlaces = create<PlacesState>()(
               : {
                   ...p,
                   areas: p.areas.map((a) =>
-                    a.id !== areaId
-                      ? a
-                      : { ...a, speakerIds: [...a.speakerIds, speaker.id] }
+                    a.id !== areaId ? a : { ...a, speakerIds: [...a.speakerIds, speaker.id] },
                   ),
-                }
+                },
           ),
         });
         somethingChanged('place');
@@ -258,6 +232,6 @@ export const usePlaces = create<PlacesState>()(
       // Only what one phone keeps is worth saving. A business reads its own
       // list from the account every time.
       partialize: (s) => ({ places: s.mode === 'phone' ? s.places : [] }),
-    }
-  )
+    },
+  ),
 );

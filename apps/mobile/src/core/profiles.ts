@@ -40,17 +40,9 @@ export interface SampleParams {
   randomizePct: number;
 }
 
-export type ProfileParams =
-  | ToneParams
-  | SweepParams
-  | PulseParams
-  | SampleParams;
+export type ProfileParams = ToneParams | SweepParams | PulseParams | SampleParams;
 
-export type SampleAsset =
-  | 'distress_pigeon'
-  | 'predator_hawk'
-  | 'predator_falcon'
-  | 'alarm_generic';
+export type SampleAsset = 'distress_pigeon' | 'predator_hawk' | 'predator_falcon' | 'alarm_generic';
 
 export interface AudioProfile {
   id: string;
@@ -211,11 +203,7 @@ export function guestsMayHear(p: AudioProfile): boolean {
 /** The tag shown next to a sound people can hear. */
 export const AUDIBLE_TAG = 'Some people can hear this';
 
-export type OutputKind =
-  | 'phone'
-  | 'bt_speaker'
-  | 'pigeonx_emitter'
-  | 'simulated';
+export type OutputKind = 'phone' | 'bt_speaker' | 'pigeonx_emitter' | 'simulated';
 
 export const OUTPUT_CEILING_HZ: Record<OutputKind, number> = {
   phone: 18000,
@@ -246,10 +234,7 @@ export type Effectiveness = 'full' | 'partial' | 'none';
  * How much of a sound this speaker can really play.
  * Bird calls are ordinary audible audio, so every speaker plays them whole.
  */
-export function effectiveForOutput(
-  p: AudioProfile,
-  output: OutputKind
-): Effectiveness {
+export function effectiveForOutput(p: AudioProfile, output: OutputKind): Effectiveness {
   if (p.kind === 'sample') return 'full';
   const ceiling = OUTPUT_CEILING_HZ[output];
   const peak = peakFreqHz(p);
@@ -268,10 +253,7 @@ export const EFFECTIVENESS_COPY: Record<Effectiveness, { title: string }> = {
 };
 
 /** One sentence saying why the answer is what it is. */
-export function reachSentence(
-  p: AudioProfile,
-  output: OutputKind
-): string {
+export function reachSentence(p: AudioProfile, output: OutputKind): string {
   const level = effectiveForOutput(p, output);
   if (level === 'full') return 'This speaker plays the whole sound.';
   if (level === 'partial') {

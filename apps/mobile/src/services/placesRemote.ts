@@ -40,11 +40,7 @@ export function areaFromRow(row: Row, speakers: Speaker[]): Area {
 }
 
 /** Builds the whole tree out of three flat lists. */
-export function buildPlaces(
-  locations: Row[],
-  zones: Row[],
-  devices: Row[]
-): Place[] {
+export function buildPlaces(locations: Row[], zones: Row[], devices: Row[]): Place[] {
   const speakersByZone = new Map<string, Speaker[]>();
   for (const device of devices) {
     const zoneId = str(device, 'zone_id');
@@ -72,23 +68,15 @@ export function buildPlaces(
 
 /* ── reading ──────────────────────────────────────────────────────────────── */
 
-export async function fetchPlaces(
-  orgId: string
-): Promise<RemoteOutcome<Place[]>> {
+export async function fetchPlaces(orgId: string): Promise<RemoteOutcome<Place[]>> {
   const sb = getSupabase();
   if (!sb) return { ok: false, message: NO_ACCOUNT };
 
-  const locations = await sb
-    .from('locations')
-    .select('id, name')
-    .eq('org_id', orgId)
-    .order('name');
+  const locations = await sb.from('locations').select('id, name').eq('org_id', orgId).order('name');
   if (locations.error) {
     return {
       ok: false,
-      message: isMissingOnServer(locations.error)
-        ? NOT_READY
-        : plainMessage(locations.error),
+      message: isMissingOnServer(locations.error) ? NOT_READY : plainMessage(locations.error),
     };
   }
 
@@ -116,7 +104,7 @@ export async function fetchPlaces(
     value: buildPlaces(
       (locations.data ?? []) as Row[],
       (zones.data ?? []) as Row[],
-      ((devices.data ?? []) as Row[]) ?? []
+      ((devices.data ?? []) as Row[]) ?? [],
     ),
   };
 }
@@ -126,7 +114,7 @@ export async function fetchPlaces(
 async function run<T>(
   work: (sb: SupabaseClient) => PromiseLike<{ data: unknown; error: unknown }>,
   read: (data: unknown) => T,
-  done: string
+  done: string,
 ): Promise<RemoteOutcome<T>> {
   const sb = getSupabase();
   if (!sb) return { ok: false, message: NO_ACCOUNT };
@@ -143,19 +131,17 @@ async function run<T>(
 
 export function addPlace(orgId: string, name: string) {
   return run(
-    (sb) =>
-      sb.from('locations').insert({ org_id: orgId, name }).select('id').single(),
+    (sb) => sb.from('locations').insert({ org_id: orgId, name }).select('id').single(),
     (data) => ((data ?? {}) as Row).id as string,
-    `${name} added.`
+    `${name} added.`,
   );
 }
 
 export function renamePlace(placeId: string, name: string) {
   return run(
-    (sb) =>
-      sb.from('locations').update({ name }).eq('id', placeId).select('id').single(),
+    (sb) => sb.from('locations').update({ name }).eq('id', placeId).select('id').single(),
     () => undefined,
-    'Saved.'
+    'Saved.',
   );
 }
 
@@ -163,29 +149,23 @@ export function removePlace(placeId: string) {
   return run(
     async (sb) => await sb.from('locations').delete().eq('id', placeId),
     () => undefined,
-    'Deleted.'
+    'Deleted.',
   );
 }
 
 export function addArea(placeId: string, name: string) {
   return run(
-    (sb) =>
-      sb
-        .from('zones')
-        .insert({ location_id: placeId, name })
-        .select('id')
-        .single(),
+    (sb) => sb.from('zones').insert({ location_id: placeId, name }).select('id').single(),
     (data) => ((data ?? {}) as Row).id as string,
-    `${name} added.`
+    `${name} added.`,
   );
 }
 
 export function renameArea(areaId: string, name: string) {
   return run(
-    (sb) =>
-      sb.from('zones').update({ name }).eq('id', areaId).select('id').single(),
+    (sb) => sb.from('zones').update({ name }).eq('id', areaId).select('id').single(),
     () => undefined,
-    'Saved.'
+    'Saved.',
   );
 }
 
@@ -193,20 +173,15 @@ export function removeArea(areaId: string) {
   return run(
     async (sb) => await sb.from('zones').delete().eq('id', areaId),
     () => undefined,
-    'Deleted.'
+    'Deleted.',
   );
 }
 
 export function addSpeaker(areaId: string, name: string, kind = 'simulated') {
   return run(
-    (sb) =>
-      sb
-        .from('devices')
-        .insert({ zone_id: areaId, name, kind })
-        .select('id')
-        .single(),
+    (sb) => sb.from('devices').insert({ zone_id: areaId, name, kind }).select('id').single(),
     (data) => ((data ?? {}) as Row).id as string,
-    `${name} added.`
+    `${name} added.`,
   );
 }
 
@@ -214,6 +189,6 @@ export function removeSpeaker(speakerId: string) {
   return run(
     async (sb) => await sb.from('devices').delete().eq('id', speakerId),
     () => undefined,
-    'Deleted.'
+    'Deleted.',
   );
 }

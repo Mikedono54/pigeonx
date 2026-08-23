@@ -15,7 +15,7 @@ interface Row extends LocalRow {
 
 const fromRemote = (
   row: { id: string; name?: string | null; updated_at?: string | null },
-  match: Row | undefined
+  match: Row | undefined,
 ): Row => ({
   id: match?.id ?? `local_${row.id}`,
   name: row.name ?? 'unnamed',
@@ -28,13 +28,13 @@ const AT = (iso: string) => Date.parse(iso);
 describe('remoteTime()', () => {
   it('reads when a row last changed', () => {
     expect(remoteTime({ id: 'a', updated_at: '2026-08-20T10:00:00Z' })).toBe(
-      AT('2026-08-20T10:00:00Z')
+      AT('2026-08-20T10:00:00Z'),
     );
   });
 
   it('falls back to when it was made', () => {
     expect(remoteTime({ id: 'a', created_at: '2026-08-20T10:00:00Z' })).toBe(
-      AT('2026-08-20T10:00:00Z')
+      AT('2026-08-20T10:00:00Z'),
     );
   });
 
@@ -49,9 +49,7 @@ describe('mergeCollections()', () => {
     const local: Row[] = [
       { id: 'l1', name: 'Roof at night', remoteId: 'r1', updatedAt: AT('2026-08-21T12:00:00Z') },
     ];
-    const remote = [
-      { id: 'r1', name: 'Roof', updated_at: '2026-08-20T12:00:00Z' },
-    ];
+    const remote = [{ id: 'r1', name: 'Roof', updated_at: '2026-08-20T12:00:00Z' }];
 
     const result = mergeCollections(local, remote, fromRemote);
     expect(result.keep).toHaveLength(1);
@@ -63,9 +61,7 @@ describe('mergeCollections()', () => {
     const local: Row[] = [
       { id: 'l1', name: 'Roof', remoteId: 'r1', updatedAt: AT('2026-08-19T12:00:00Z') },
     ];
-    const remote = [
-      { id: 'r1', name: 'Roof at night', updated_at: '2026-08-21T12:00:00Z' },
-    ];
+    const remote = [{ id: 'r1', name: 'Roof at night', updated_at: '2026-08-21T12:00:00Z' }];
 
     const result = mergeCollections(local, remote, fromRemote);
     expect(result.keep[0].name).toBe('Roof at night');
@@ -77,25 +73,21 @@ describe('mergeCollections()', () => {
     const result = mergeCollections(
       [],
       [{ id: 'r9', name: 'Patio', updated_at: '2026-08-21T12:00:00Z' }],
-      fromRemote
+      fromRemote,
     );
     expect(result.keep.map((r) => r.name)).toEqual(['Patio']);
     expect(result.push).toHaveLength(0);
   });
 
   it('sends up what only the phone has', () => {
-    const local: Row[] = [
-      { id: 'l7', name: 'Dock', remoteId: null, updatedAt: 5 },
-    ];
+    const local: Row[] = [{ id: 'l7', name: 'Dock', remoteId: null, updatedAt: 5 }];
     const result = mergeCollections(local, [], fromRemote);
     expect(result.keep).toEqual(local);
     expect(result.push).toEqual(local);
   });
 
   it('sends a row up again when the account lost it', () => {
-    const local: Row[] = [
-      { id: 'l3', name: 'Gone', remoteId: 'r3', updatedAt: 10 },
-    ];
+    const local: Row[] = [{ id: 'l3', name: 'Gone', remoteId: 'r3', updatedAt: 10 }];
     const result = mergeCollections(local, [], fromRemote);
     expect(result.keep[0].remoteId).toBeNull();
     expect(result.push[0].name).toBe('Gone');
@@ -116,12 +108,8 @@ describe('mergeCollections()', () => {
   });
 
   it('does the same thing when it runs twice', () => {
-    const local: Row[] = [
-      { id: 'l1', name: 'One', remoteId: 'r1', updatedAt: 10 },
-    ];
-    const remote = [
-      { id: 'r1', name: 'One', updated_at: '2026-08-21T12:00:00Z' },
-    ];
+    const local: Row[] = [{ id: 'l1', name: 'One', remoteId: 'r1', updatedAt: 10 }];
+    const remote = [{ id: 'r1', name: 'One', updated_at: '2026-08-21T12:00:00Z' }];
     const first = mergeCollections(local, remote, fromRemote);
     const second = mergeCollections(first.keep, remote, fromRemote);
     expect(second.keep).toEqual(first.keep);
@@ -178,7 +166,7 @@ describe('what played, from both sides', () => {
         source: 'schedule',
         profile_id: 'p1',
       },
-      () => 'My sound'
+      () => 'My sound',
     );
     expect(entry.profileName).toBe('My sound');
     expect(entry.outputKind).toBe('bt_speaker');
@@ -189,7 +177,7 @@ describe('what played, from both sides', () => {
   it('falls back to a speaker it understands', () => {
     const entry = historyRowToEntry(
       { id: 'r3', started_at: '2026-08-21T10:00:00Z', output_kind: 'moon' },
-      () => 'A sound'
+      () => 'A sound',
     );
     expect(entry.outputKind).toBe('phone');
     expect(entry.endedAt).toBeNull();
@@ -197,14 +185,8 @@ describe('what played, from both sides', () => {
 
   it('shows nothing twice', () => {
     const remote = [
-      historyRowToEntry(
-        { id: 'r1', started_at: '2026-08-21T09:00:00Z' },
-        () => 'Pigeon sound'
-      ),
-      historyRowToEntry(
-        { id: 'r2', started_at: '2026-08-21T11:00:00Z' },
-        () => 'Pigeon sound'
-      ),
+      historyRowToEntry({ id: 'r1', started_at: '2026-08-21T09:00:00Z' }, () => 'Pigeon sound'),
+      historyRowToEntry({ id: 'r2', started_at: '2026-08-21T11:00:00Z' }, () => 'Pigeon sound'),
     ];
     const merged = mergeHistory(local, remote);
     expect(merged).toHaveLength(2);
@@ -213,10 +195,7 @@ describe('what played, from both sides', () => {
 
   it('puts the newest first', () => {
     const remote = [
-      historyRowToEntry(
-        { id: 'r7', started_at: '2026-08-22T09:00:00Z' },
-        () => 'A sound'
-      ),
+      historyRowToEntry({ id: 'r7', started_at: '2026-08-22T09:00:00Z' }, () => 'A sound'),
     ];
     expect(mergeHistory(local, remote)[0].remoteId).toBe('r7');
   });

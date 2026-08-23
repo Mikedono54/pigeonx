@@ -54,12 +54,12 @@ describe('picking a store', () => {
     expect(
       createPurchases(setPlan, 'android', {
         EXPO_PUBLIC_REVENUECAT_IOS_KEY: 'appl_key',
-      }).isLive()
+      }).isLive(),
     ).toBe(false);
     expect(
       createPurchases(setPlan, 'android', {
         EXPO_PUBLIC_REVENUECAT_ANDROID_KEY: 'goog_key',
-      }).isLive()
+      }).isLive(),
     ).toBe(true);
   });
 
@@ -72,16 +72,16 @@ describe('picking a store', () => {
 
 describe('what plan the store says you have', () => {
   it('reads Pro', () => {
-    expect(
-      planFromCustomerInfo({ entitlements: { active: { pro: { isActive: true } } } })
-    ).toBe('pro');
+    expect(planFromCustomerInfo({ entitlements: { active: { pro: { isActive: true } } } })).toBe(
+      'pro',
+    );
   });
 
   it('reads Business, which beats Pro', () => {
     expect(
       planFromCustomerInfo({
         entitlements: { active: { pro: {}, business: {} } },
-      })
+      }),
     ).toBe('business');
   });
 
@@ -143,9 +143,7 @@ describe('buying', () => {
       getCustomerInfo: jest.fn(async () => ({})),
     });
 
-    const result = await createRevenueCatPurchases(setPlan, 'k').purchase(
-      'pro_monthly'
-    );
+    const result = await createRevenueCatPurchases(setPlan, 'k').purchase('pro_monthly');
     expect(result.canceled).toBe(true);
     expect(result.message).toBe('');
     expect(setPlan).not.toHaveBeenCalled();

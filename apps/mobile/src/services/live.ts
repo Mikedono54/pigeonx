@@ -57,9 +57,7 @@ export async function fetchLive(placeId: string): Promise<LiveByArea> {
 }
 
 /** Asks about every place at once. */
-export async function fetchLiveForPlaces(
-  placeIds: string[]
-): Promise<LiveByArea> {
+export async function fetchLiveForPlaces(placeIds: string[]): Promise<LiveByArea> {
   const all: LiveByArea = {};
   for (const placeId of placeIds) {
     Object.assign(all, await fetchLive(placeId));
@@ -71,10 +69,7 @@ export async function fetchLiveForPlaces(
  * Listens for a sound starting or stopping anywhere in the business, then
  * asks again. Returns the function that stops listening.
  */
-export function watchLive(
-  placeIds: string[],
-  onChange: (live: LiveByArea) => void
-): () => void {
+export function watchLive(placeIds: string[], onChange: (live: LiveByArea) => void): () => void {
   const sb = getSupabase();
   if (!sb || placeIds.length === 0) return () => {};
 

@@ -1,22 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  AppState,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 
 import { StatusPill } from '../src/components';
-import {
-  msUntilEnd,
-  nextRun,
-  playingAt,
-  type TimeWindow,
-} from '../src/core/scheduler';
+import { msUntilEnd, nextRun, playingAt, type TimeWindow } from '../src/core/scheduler';
 import { useAccount } from '../src/state/useAccount';
 import { formatMinutes, useSchedules } from '../src/state/useSchedules';
 import { useSession } from '../src/state/useSession';
@@ -60,7 +49,7 @@ export default function SpeakerMode() {
         profileId: s.profileId,
         profileName: s.profileName,
       })),
-    [schedules]
+    [schedules],
   );
 
   const playing = useMemo(() => playingAt(windows, now), [now, windows]);
@@ -179,10 +168,7 @@ export default function SpeakerMode() {
     >
       <View style={styles.head}>
         <Text style={styles.kicker}>Speaker mode</Text>
-        <StatusPill
-          label={playing ? 'Playing' : 'Waiting'}
-          tone={playing ? 'running' : 'idle'}
-        />
+        <StatusPill label={playing ? 'Playing' : 'Waiting'} tone={playing ? 'running' : 'idle'} />
       </View>
 
       <View style={styles.middle}>
@@ -194,13 +180,9 @@ export default function SpeakerMode() {
         </Text>
         <Text style={styles.line} numberOfLines={2}>
           {playing
-            ? `Playing ${playing.profileName} until ${formatMinutes(
-                playing.endMinutes
-              )}`
+            ? `Playing ${playing.profileName} until ${formatMinutes(playing.endMinutes)}`
             : upNext
-              ? `Next at ${formatMinutes(upNext.window.startMinutes)}, ${
-                  upNext.window.profileName
-                }`
+              ? `Next at ${formatMinutes(upNext.window.startMinutes)}, ${upNext.window.profileName}`
               : 'No times set yet. Add one on the Schedule screen.'}
         </Text>
       </View>
@@ -218,9 +200,7 @@ export default function SpeakerMode() {
           style={styles.leave}
         >
           <View style={[styles.leaveFill, { width: `${held * 100}%` }]} />
-          <Text style={styles.leaveText}>
-            {held > 0 ? 'Keep holding' : 'Hold to leave'}
-          </Text>
+          <Text style={styles.leaveText}>{held > 0 ? 'Keep holding' : 'Hold to leave'}</Text>
         </Pressable>
       </View>
     </View>

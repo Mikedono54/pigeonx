@@ -92,34 +92,26 @@ export default function Paywall() {
         setBusy(false);
       }
     },
-    [purchases, toast]
+    [purchases, toast],
   );
 
   return (
     <View style={[styles.root, { paddingTop: insets.top + space.sm }]}>
       <View style={styles.head}>
         <Text style={styles.kicker}>Plans</Text>
-        <Touchable
-          onPress={() => router.back()}
-          accessibilityLabel="Close"
-          style={styles.close}
-        >
+        <Touchable onPress={() => router.back()} accessibilityLabel="Close" style={styles.close}>
           <X size={20} color={color.ink} strokeWidth={1.75} />
         </Touchable>
       </View>
 
       <ScrollView
-        contentContainerStyle={[
-          styles.body,
-          { paddingBottom: insets.bottom + space.lg },
-        ]}
+        contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + space.lg }]}
         showsVerticalScrollIndicator={false}
       >
         <Text style={type.title}>Get more sounds and schedules</Text>
         {feature ? (
           <Text style={styles.why}>
-            {FEATURE_LABEL[feature]} comes with{' '}
-            {PLAN_LABEL[requiredPlan(feature)]}.
+            {FEATURE_LABEL[feature]} comes with {PLAN_LABEL[requiredPlan(feature)]}.
           </Text>
         ) : null}
 
@@ -180,7 +172,7 @@ export default function Paywall() {
             variant="secondary"
             onPress={() =>
               void Linking.openURL(
-                'mailto:hello@pigeonx.org?subject=PigeonX%20for%20my%20buildings'
+                'mailto:hello@pigeonx.org?subject=PigeonX%20for%20my%20buildings',
               )
             }
           />
@@ -218,9 +210,7 @@ export default function Paywall() {
             You pay through your phone's store. It renews until you stop it.
           </Text>
         ) : (
-          <Text style={styles.fine}>
-            Test mode. No money moves and no store is connected yet.
-          </Text>
+          <Text style={styles.fine}>Test mode. No money moves and no store is connected yet.</Text>
         )}
       </ScrollView>
     </View>

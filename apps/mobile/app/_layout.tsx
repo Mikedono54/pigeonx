@@ -11,11 +11,7 @@ import {
   InterTight_600SemiBold,
   InterTight_700Bold,
 } from '@expo-google-fonts/inter-tight';
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-} from '@expo-google-fonts/inter';
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { JetBrainsMono_500Medium } from '@expo-google-fonts/jetbrains-mono';
 
 import * as Linking from 'expo-linking';
@@ -55,15 +51,11 @@ export default function RootLayout() {
     JetBrainsMono_500Medium,
   });
 
-  const [hydrated, setHydrated] = useState(
-    () => useAccount.persist.hasHydrated?.() ?? false
-  );
+  const [hydrated, setHydrated] = useState(() => useAccount.persist.hasHydrated?.() ?? false);
 
   useEffect(() => {
     if (hydrated) return;
-    const unsub = useAccount.persist.onFinishHydration?.(() =>
-      setHydrated(true)
-    );
+    const unsub = useAccount.persist.onFinishHydration?.(() => setHydrated(true));
     if (useAccount.persist.hasHydrated?.()) setHydrated(true);
     return unsub;
   }, [hydrated]);
@@ -117,14 +109,8 @@ export default function RootLayout() {
             <Stack.Screen name="history" />
             <Stack.Screen name="for-businesses" />
             <Stack.Screen name="team" />
-            <Stack.Screen
-              name="speaker"
-              options={{ animation: 'fade', gestureEnabled: false }}
-            />
-            <Stack.Screen
-              name="make-a-sound"
-              options={{ presentation: 'modal' }}
-            />
+            <Stack.Screen name="speaker" options={{ animation: 'fade', gestureEnabled: false }} />
+            <Stack.Screen name="make-a-sound" options={{ presentation: 'modal' }} />
             <Stack.Screen name="deterrent" options={{ animation: 'none' }} />
             <Stack.Screen name="profiles" options={{ animation: 'none' }} />
           </Stack>
@@ -246,27 +232,25 @@ function useOnboardingGate(ready: boolean) {
 /** Wires the reminder Stop and Play now buttons to the sound. */
 function useNotificationActions() {
   useEffect(() => {
-    const sub = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        const action = response.actionIdentifier;
-        const data = response.notification.request.content.data as {
-          kind?: string;
-          profileId?: string;
-        };
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const action = response.actionIdentifier;
+      const data = response.notification.request.content.data as {
+        kind?: string;
+        profileId?: string;
+      };
 
-        if (action === ACTION_STOP || data?.kind === 'running') {
-          void useSession.getState().stop();
-          return;
-        }
-        if (action === ACTION_START_NOW || data?.kind === 'schedule') {
-          router.navigate('/');
-          void useSession.getState().start({
-            profileId: data?.profileId,
-            source: 'schedule',
-          });
-        }
+      if (action === ACTION_STOP || data?.kind === 'running') {
+        void useSession.getState().stop();
+        return;
       }
-    );
+      if (action === ACTION_START_NOW || data?.kind === 'schedule') {
+        router.navigate('/');
+        void useSession.getState().start({
+          profileId: data?.profileId,
+          source: 'schedule',
+        });
+      }
+    });
     return () => sub.remove();
   }, []);
 }

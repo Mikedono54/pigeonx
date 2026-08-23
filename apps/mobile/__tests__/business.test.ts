@@ -6,24 +6,17 @@ import {
   teammateFromRow,
   tokenFromInvite,
 } from '../src/services/business';
-import {
-  buildPlaces,
-  speakerFromRow,
-} from '../src/services/placesRemote';
+import { buildPlaces, speakerFromRow } from '../src/services/placesRemote';
 import { liveFromRows } from '../src/services/live';
-import {
-  describePlace,
-  elapsedClock,
-  liveLabel,
-  liveTone,
-  speakerCount,
-} from '../src/core/places';
+import { describePlace, elapsedClock, liveLabel, liveTone, speakerCount } from '../src/core/places';
 
 describe('reading a business off the server', () => {
   it('takes the plain shape', () => {
-    expect(
-      membershipFromRow({ org_id: 'o1', org_name: 'Main Street', role: 'owner' })
-    ).toEqual({ orgId: 'o1', name: 'Main Street', role: 'owner' });
+    expect(membershipFromRow({ org_id: 'o1', org_name: 'Main Street', role: 'owner' })).toEqual({
+      orgId: 'o1',
+      name: 'Main Street',
+      role: 'owner',
+    });
   });
 
   it('takes a shape with the business tucked inside', () => {
@@ -31,7 +24,7 @@ describe('reading a business off the server', () => {
       membershipFromRow({
         organizations: { id: 'o2', name: 'Dock Co' },
         role: 'manager',
-      })
+      }),
     ).toEqual({ orgId: 'o2', name: 'Dock Co', role: 'manager' });
   });
 
@@ -54,7 +47,7 @@ describe('reading a teammate', () => {
   it('knows which row is you', () => {
     const mate = teammateFromRow(
       { id: 'm1', user_id: 'u1', role: 'owner', created_at: '2026-08-01T00:00:00Z' },
-      'u1'
+      'u1',
     );
     expect(mate.you).toBe(true);
     expect(mate.label).toBe('You');
@@ -64,7 +57,7 @@ describe('reading a teammate', () => {
   it('names someone by their email when the server sends one', () => {
     const mate = teammateFromRow(
       { id: 'm2', user_id: 'u2', role: 'staff', email: 'them@example.com' },
-      'u1'
+      'u1',
     );
     expect(mate.label).toBe('them@example.com');
     expect(mate.you).toBe(false);
@@ -81,9 +74,7 @@ describe('the link you send someone', () => {
   });
 
   it('keeps an odd token safe to paste', () => {
-    expect(joinLink('a b&c')).toBe(
-      'https://pigeonx.org/app/join?token=a%20b%26c'
-    );
+    expect(joinLink('a b&c')).toBe('https://pigeonx.org/app/join?token=a%20b%26c');
   });
 
   it('reads the token back out of whatever the server sends', () => {
@@ -114,7 +105,7 @@ describe('building places out of flat lists', () => {
     [
       { id: 'd1', name: 'Roof corner', zone_id: 'z1' },
       { id: 'd2', name: 'Roof edge', zone_id: 'z1' },
-    ]
+    ],
   );
 
   it('puts every area under its building', () => {
@@ -123,10 +114,7 @@ describe('building places out of flat lists', () => {
   });
 
   it('puts every speaker in its area', () => {
-    expect(places[0].areas[0].speakers?.map((s) => s.name)).toEqual([
-      'Roof corner',
-      'Roof edge',
-    ]);
+    expect(places[0].areas[0].speakers?.map((s) => s.name)).toEqual(['Roof corner', 'Roof edge']);
     expect(places[0].areas[1].speakers).toEqual([]);
   });
 
@@ -151,9 +139,7 @@ describe('what is playing right now', () => {
   });
 
   it('treats an open run as playing even with no flag', () => {
-    const live = liveFromRows([
-      { zone_id: 'z2', started_at: '2026-08-21T12:00:00Z' },
-    ]);
+    const live = liveFromRows([{ zone_id: 'z2', started_at: '2026-08-21T12:00:00Z' }]);
     expect(live.z2.playing).toBe(true);
   });
 
@@ -179,9 +165,9 @@ describe('the words on an area row', () => {
   const noon = Date.parse('2026-08-21T12:00:00Z');
 
   it('counts up while a sound plays', () => {
-    expect(
-      liveLabel({ playing: true, startedAt: noon }, noon + 12 * 60_000 + 40_000)
-    ).toBe('Playing 12:40');
+    expect(liveLabel({ playing: true, startedAt: noon }, noon + 12 * 60_000 + 40_000)).toBe(
+      'Playing 12:40',
+    );
   });
 
   it('says Off when nothing is playing', () => {

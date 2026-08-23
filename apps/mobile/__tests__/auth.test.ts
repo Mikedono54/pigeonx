@@ -23,15 +23,13 @@ describe('parseAuthUrl()', () => {
 
   it('finds a pair of tokens behind the hash', () => {
     expect(
-      parseAuthUrl(
-        'pigeonx://auth#access_token=aaa&refresh_token=bbb&token_type=bearer'
-      )
+      parseAuthUrl('pigeonx://auth#access_token=aaa&refresh_token=bbb&token_type=bearer'),
     ).toEqual({ kind: 'tokens', accessToken: 'aaa', refreshToken: 'bbb' });
   });
 
   it('reads a problem before it reads anything else', () => {
     const link = parseAuthUrl(
-      'pigeonx://auth#error=access_denied&error_description=Email+link+is+invalid+or+has+expired&code=zzz'
+      'pigeonx://auth#error=access_denied&error_description=Email+link+is+invalid+or+has+expired&code=zzz',
     );
     expect(link).toEqual({
       kind: 'error',
@@ -48,15 +46,11 @@ describe('parseAuthUrl()', () => {
 
 describe('describeLinkProblem()', () => {
   it('says what happened in words', () => {
-    expect(describeLinkProblem('Token has expired')).toBe(
-      'That link ran out. Ask for a new one.'
-    );
+    expect(describeLinkProblem('Token has expired')).toBe('That link ran out. Ask for a new one.');
     expect(describeLinkProblem('Link was already used')).toBe(
-      'That link was already used. Ask for a new one.'
+      'That link was already used. Ask for a new one.',
     );
-    expect(describeLinkProblem('boom')).toBe(
-      "That didn't work. Ask for a new link."
-    );
+    expect(describeLinkProblem('boom')).toBe("That didn't work. Ask for a new link.");
   });
 });
 
@@ -84,9 +78,7 @@ describe('completeSignInFromUrl()', () => {
     const setSession = jest.fn(async () => ({ error: null }));
     __setSupabase({ auth: { setSession } } as never);
 
-    const result = await completeSignInFromUrl(
-      'pigeonx://auth#access_token=aaa&refresh_token=bbb'
-    );
+    const result = await completeSignInFromUrl('pigeonx://auth#access_token=aaa&refresh_token=bbb');
     expect(setSession).toHaveBeenCalledWith({
       access_token: 'aaa',
       refresh_token: 'bbb',

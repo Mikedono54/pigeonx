@@ -1,11 +1,6 @@
 import { Platform } from 'react-native';
 import type { Plan } from '../core/entitlements';
-import type {
-  ProductId,
-  PurchasePrices,
-  PurchaseProvider,
-  PurchaseResult,
-} from './purchases';
+import type { ProductId, PurchasePrices, PurchaseProvider, PurchaseResult } from './purchases';
 
 /**
  * The real store.
@@ -23,7 +18,7 @@ type Bag = Record<string, unknown>;
 
 export function storeKey(
   platform: string = Platform.OS,
-  env: Bag = process.env as unknown as Bag
+  env: Bag = process.env as unknown as Bag,
 ): string | null {
   const key =
     platform === 'android'
@@ -35,9 +30,7 @@ export function storeKey(
 /** Which plan the store says this person has. */
 export function planFromCustomerInfo(info: unknown): Plan {
   if (!info || typeof info !== 'object') return 'free';
-  const active = ((info as Bag).entitlements as Bag | undefined)?.active as
-    | Bag
-    | undefined;
+  const active = ((info as Bag).entitlements as Bag | undefined)?.active as Bag | undefined;
   if (!active || typeof active !== 'object') return 'free';
   if (active[BUSINESS_ENTITLEMENT]) return 'business';
   if (active[PRO_ENTITLEMENT]) return 'pro';
@@ -62,15 +55,10 @@ const MONTHLY = ['MONTHLY', '$rc_monthly'];
 function matches(pkg: StorePackage, names: string[]): boolean {
   const type = (pkg.packageType ?? '').toUpperCase();
   const id = (pkg.identifier ?? '').toLowerCase();
-  return names.some(
-    (name) => type === name.toUpperCase() || id === name.toLowerCase()
-  );
+  return names.some((name) => type === name.toUpperCase() || id === name.toLowerCase());
 }
 
-export function packageFor(
-  offerings: unknown,
-  product: ProductId
-): StorePackage | null {
+export function packageFor(offerings: unknown, product: ProductId): StorePackage | null {
   const names = product === 'pro_yearly' ? YEARLY : MONTHLY;
   return packagesFrom(offerings).find((pkg) => matches(pkg, names)) ?? null;
 }
@@ -118,7 +106,7 @@ function loadSdk(): PurchasesSdk | null {
 
 export function createRevenueCatPurchases(
   setPlan: (plan: Plan) => void,
-  apiKey: string
+  apiKey: string,
 ): PurchaseProvider {
   const ready = (): PurchasesSdk | null => {
     const store = loadSdk();

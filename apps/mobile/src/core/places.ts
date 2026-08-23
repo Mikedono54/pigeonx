@@ -49,9 +49,7 @@ export function speakerCount(place: Place): number {
 export function describePlace(place: Place): string {
   const areas = place.areas.length;
   const speakers = speakerCount(place);
-  return `${areas} area${areas === 1 ? '' : 's'}, ${speakers} speaker${
-    speakers === 1 ? '' : 's'
-  }`;
+  return `${areas} area${areas === 1 ? '' : 's'}, ${speakers} speaker${speakers === 1 ? '' : 's'}`;
 }
 
 /** mm:ss, the way a running sound reads everywhere else in the app. */

@@ -69,9 +69,7 @@ describe('what should be playing', () => {
   });
 
   it('stays quiet when it is switched off', () => {
-    expect(isPlayingAt(win({ id: 'off', enabled: false }), at(MON, 7))).toBe(
-      false
-    );
+    expect(isPlayingAt(win({ id: 'off', enabled: false }), at(MON, 7))).toBe(false);
   });
 
   it('keeps going past midnight into the next morning', () => {
@@ -129,8 +127,8 @@ describe('finding times that fight', () => {
     expect(
       overlap(
         win({ id: 'a', startMinutes: 6 * 60, endMinutes: 9 * 60 }),
-        win({ id: 'b', startMinutes: 8 * 60, endMinutes: 10 * 60 })
-      )
+        win({ id: 'b', startMinutes: 8 * 60, endMinutes: 10 * 60 }),
+      ),
     ).toBe(true);
   });
 
@@ -138,26 +136,21 @@ describe('finding times that fight', () => {
     expect(
       overlap(
         win({ id: 'a', startMinutes: 6 * 60, endMinutes: 8 * 60 }),
-        win({ id: 'b', startMinutes: 8 * 60, endMinutes: 10 * 60 })
-      )
+        win({ id: 'b', startMinutes: 8 * 60, endMinutes: 10 * 60 }),
+      ),
     ).toBe(false);
   });
 
   it('leaves different days alone', () => {
-    expect(
-      overlap(
-        win({ id: 'a', days: [MON] }),
-        win({ id: 'b', days: [TUE] })
-      )
-    ).toBe(false);
+    expect(overlap(win({ id: 'a', days: [MON] }), win({ id: 'b', days: [TUE] }))).toBe(false);
   });
 
   it('catches a night one running into the next morning', () => {
     expect(
       overlap(
         win({ id: 'night', days: [MON], startMinutes: 22 * 60, endMinutes: 7 * 60 }),
-        win({ id: 'morning', days: [TUE], startMinutes: 6 * 60, endMinutes: 8 * 60 })
-      )
+        win({ id: 'morning', days: [TUE], startMinutes: 6 * 60, endMinutes: 8 * 60 }),
+      ),
     ).toBe(true);
   });
 
@@ -165,8 +158,8 @@ describe('finding times that fight', () => {
     expect(
       overlap(
         win({ id: 'sat', days: [SAT], startMinutes: 23 * 60, endMinutes: 2 * 60 }),
-        win({ id: 'sun', days: [SUN], startMinutes: 60, endMinutes: 3 * 60 })
-      )
+        win({ id: 'sun', days: [SUN], startMinutes: 60, endMinutes: 3 * 60 }),
+      ),
     ).toBe(true);
   });
 
@@ -218,7 +211,7 @@ describe('what is next', () => {
 
   it('skips what is switched off and what has no days', () => {
     expect(
-      nextRun([win({ id: 'off', enabled: false }), win({ id: 'none', days: [] })], at(MON, 5))
+      nextRun([win({ id: 'off', enabled: false }), win({ id: 'none', days: [] })], at(MON, 5)),
     ).toBeNull();
   });
 

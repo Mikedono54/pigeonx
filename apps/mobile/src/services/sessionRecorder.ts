@@ -1,10 +1,6 @@
 import type { AudioProfile, OutputKind } from '../core/profiles';
 import { peakFreqHz } from '../core/profiles';
-import {
-  useHistory,
-  type SessionEntry,
-  type SessionSource,
-} from '../state/useHistory';
+import { useHistory, type SessionEntry, type SessionSource } from '../state/useHistory';
 import { useAccount } from '../state/useAccount';
 import { remoteSoundId } from './soundIds';
 import { getSupabase } from './supabase';
@@ -165,9 +161,7 @@ export class SessionRecorder {
 
     let sent = 0;
     for (const op of [...useHistory.getState().queue]) {
-      const entry = useHistory
-        .getState()
-        .entries.find((e) => e.id === op.sessionId);
+      const entry = useHistory.getState().entries.find((e) => e.id === op.sessionId);
       if (!entry) {
         useHistory.getState().dequeue(op.id);
         continue;

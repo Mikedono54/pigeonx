@@ -1,15 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
-import {
-  Building2,
-  LayoutGrid,
-  Pencil,
-  Plus,
-  Speaker,
-  Trash2,
-  Users,
-} from 'lucide-react-native';
+import { Building2, LayoutGrid, Pencil, Plus, Speaker, Trash2, Users } from 'lucide-react-native';
 
 import {
   Button,
@@ -78,7 +70,7 @@ export default function PlacesScreen() {
 
   const speakerName = useCallback(
     (id: string) => speakers.find((s) => s.id === id)?.name ?? 'Speaker',
-    [speakers]
+    [speakers],
   );
 
   const submitName = useCallback(
@@ -102,7 +94,7 @@ export default function PlacesScreen() {
       setAsking(null);
       if (result.message) toast.show(result.message, result.ok ? 'success' : 'danger');
     },
-    [asking, toast]
+    [asking, toast],
   );
 
   const playHere = useCallback(
@@ -115,7 +107,7 @@ export default function PlacesScreen() {
       setArea(areaId, areaName);
       await session.start();
     },
-    [setArea]
+    [setArea],
   );
 
   return (
@@ -154,10 +146,7 @@ export default function PlacesScreen() {
           />
         </Card>
       ) : (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.list}
-        >
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.list}>
           {places.map((place: Place) => (
             <Card key={place.id}>
               <View style={styles.placeHead}>
@@ -168,8 +157,7 @@ export default function PlacesScreen() {
                   </Text>
                   <Text style={styles.meta}>
                     {place.areas.length} area
-                    {place.areas.length === 1 ? '' : 's'},{' '}
-                    {speakerCount(place)} speaker
+                    {place.areas.length === 1 ? '' : 's'}, {speakerCount(place)} speaker
                     {speakerCount(place) === 1 ? '' : 's'}
                   </Text>
                 </View>
@@ -201,18 +189,11 @@ export default function PlacesScreen() {
                 return (
                   <View key={area.id} style={styles.area}>
                     <View style={styles.areaHead}>
-                      <LayoutGrid
-                        size={16}
-                        color={color.fgMuted}
-                        strokeWidth={1.75}
-                      />
+                      <LayoutGrid size={16} color={color.fgMuted} strokeWidth={1.75} />
                       <Text style={styles.areaName} numberOfLines={1}>
                         {area.name}
                       </Text>
-                      <StatusPill
-                        label={liveLabel(info, now)}
-                        tone={liveTone(info)}
-                      />
+                      <StatusPill label={liveLabel(info, now)} tone={liveTone(info)} />
                       <Touchable
                         onPress={() =>
                           setAsking({
@@ -228,11 +209,7 @@ export default function PlacesScreen() {
                         <Pencil size={14} color={color.ink} strokeWidth={1.75} />
                       </Touchable>
                       <Touchable
-                        onPress={() =>
-                          void usePlaces
-                            .getState()
-                            .removeArea(place.id, area.id)
-                        }
+                        onPress={() => void usePlaces.getState().removeArea(place.id, area.id)}
                         accessibilityLabel={`Delete ${area.name}`}
                         style={styles.iconButton}
                       >
@@ -248,18 +225,12 @@ export default function PlacesScreen() {
                         </Text>
                         <Touchable
                           onPress={() =>
-                            void usePlaces
-                              .getState()
-                              .removeSpeaker(place.id, area.id, s.id)
+                            void usePlaces.getState().removeSpeaker(place.id, area.id, s.id)
                           }
                           accessibilityLabel={`Remove ${s.name}`}
                           style={styles.iconButton}
                         >
-                          <Trash2
-                            size={16}
-                            color={color.danger}
-                            strokeWidth={1.75}
-                          />
+                          <Trash2 size={16} color={color.danger} strokeWidth={1.75} />
                         </Touchable>
                       </View>
                     ))}
@@ -272,18 +243,12 @@ export default function PlacesScreen() {
                         </Text>
                         <Touchable
                           onPress={() =>
-                            void usePlaces
-                              .getState()
-                              .removeSpeaker(place.id, area.id, id)
+                            void usePlaces.getState().removeSpeaker(place.id, area.id, id)
                           }
                           accessibilityLabel={`Remove ${speakerName(id)}`}
                           style={styles.iconButton}
                         >
-                          <Trash2
-                            size={16}
-                            color={color.danger}
-                            strokeWidth={1.75}
-                          />
+                          <Trash2 size={16} color={color.danger} strokeWidth={1.75} />
                         </Touchable>
                       </View>
                     ))}
@@ -337,11 +302,7 @@ export default function PlacesScreen() {
         icon={<Plus size={16} color={color.onAccent} strokeWidth={1.75} />}
       />
 
-      <NameSheet
-        asking={asking}
-        onClose={() => setAsking(null)}
-        onSubmit={submitName}
-      />
+      <NameSheet asking={asking} onClose={() => setAsking(null)} onSubmit={submitName} />
     </Screen>
   );
 }
@@ -399,11 +360,7 @@ function NameSheet({
 
   useEffect(() => {
     if (!asking) return;
-    setName(
-      asking.kind === 'rename-place' || asking.kind === 'rename-area'
-        ? asking.current
-        : ''
-    );
+    setName(asking.kind === 'rename-place' || asking.kind === 'rename-area' ? asking.current : '');
   }, [asking]);
 
   return (

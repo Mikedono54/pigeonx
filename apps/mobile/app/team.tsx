@@ -56,7 +56,7 @@ export default function TeamScreen() {
       toast.show(result.message, result.ok ? 'success' : 'danger');
       if (result.ok) await load();
     },
-    [load, orgId, toast]
+    [load, orgId, toast],
   );
 
   const share = useCallback(async () => {
@@ -72,11 +72,7 @@ export default function TeamScreen() {
     <Screen
       header={
         <View style={styles.headRow}>
-          <Touchable
-            onPress={() => router.back()}
-            accessibilityLabel="Go back"
-            style={styles.back}
-          >
+          <Touchable onPress={() => router.back()} accessibilityLabel="Go back" style={styles.back}>
             <ChevronLeft size={22} color={color.ink} strokeWidth={1.75} />
           </Touchable>
           <Text style={type.title}>Your team</Text>
@@ -209,9 +205,7 @@ function InviteSheet({
       }
     >
       <View style={styles.field}>
-        <Text style={styles.hint}>
-          Type their email. You get a link to send them.
-        </Text>
+        <Text style={styles.hint}>Type their email. You get a link to send them.</Text>
         <TextInput
           value={email}
           onChangeText={setEmail}

@@ -82,7 +82,7 @@ export function teammateFromRow(input: unknown, myUserId: string | null): Teamma
     userId,
     role: roleFrom(row.role),
     label: you ? 'You' : (name ?? 'Teammate'),
-    addedAt: added ? (Date.parse(added) || null) : null,
+    addedAt: added ? Date.parse(added) || null : null,
     you,
   };
 }
@@ -129,14 +129,10 @@ export async function myMemberships(): Promise<Membership[]> {
   if (!sb) return [];
   const { data, error } = await sb.rpc('my_memberships');
   if (error || !Array.isArray(data)) return [];
-  return data
-    .map(membershipFromRow)
-    .filter((m): m is Membership => m !== null);
+  return data.map(membershipFromRow).filter((m): m is Membership => m !== null);
 }
 
-export async function createBusiness(
-  name: string
-): Promise<BusinessOutcome<Membership>> {
+export async function createBusiness(name: string): Promise<BusinessOutcome<Membership>> {
   const sb = getSupabase();
   if (!sb) return { ok: false, message: NOT_READY };
   const trimmed = name.trim();
@@ -162,10 +158,7 @@ export async function createBusiness(
   };
 }
 
-export async function listTeam(
-  orgId: string,
-  myUserId: string | null
-): Promise<Teammate[]> {
+export async function listTeam(orgId: string, myUserId: string | null): Promise<Teammate[]> {
   const sb = getSupabase();
   if (!sb) return [];
   const { data, error } = await sb
@@ -179,7 +172,7 @@ export async function listTeam(
 export async function inviteTeammate(
   orgId: string,
   email: string,
-  role: TeamRole = 'staff'
+  role: TeamRole = 'staff',
 ): Promise<BusinessOutcome<string>> {
   const sb = getSupabase();
   if (!sb) return { ok: false, message: NOT_READY };
@@ -201,10 +194,7 @@ export async function inviteTeammate(
   return { ok: true, message: 'Send them this link.', value: joinLink(token) };
 }
 
-export async function removeTeammate(
-  orgId: string,
-  userId: string
-): Promise<BusinessOutcome> {
+export async function removeTeammate(orgId: string, userId: string): Promise<BusinessOutcome> {
   const sb = getSupabase();
   if (!sb) return { ok: false, message: NOT_READY };
   const { error } = await sb.rpc('remove_member', {
@@ -243,9 +233,7 @@ export async function refreshBusiness(): Promise<Membership | null> {
 
   useAccount
     .getState()
-    .setBusiness(
-      first ? { id: first.orgId, name: first.name, role: first.role } : null
-    );
+    .setBusiness(first ? { id: first.orgId, name: first.name, role: first.role } : null);
   usePlaces.getState().useBusiness(first?.orgId ?? null);
 
   if (first && planRank(useAccount.getState().plan) < planRank('business')) {

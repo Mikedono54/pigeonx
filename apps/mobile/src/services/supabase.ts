@@ -78,7 +78,7 @@ export function isOffline(error: BackendError | null): boolean {
 /** Turns whatever the server said into one short line a person can read. */
 export function plainMessage(
   error: BackendError | null,
-  fallback = "That didn't work. Try again."
+  fallback = "That didn't work. Try again.",
 ): string {
   if (!error) return fallback;
   if (isOffline(error)) return 'Your phone is not online. Try again in a minute.';

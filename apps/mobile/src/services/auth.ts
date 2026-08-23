@@ -84,7 +84,7 @@ export function describeLinkProblem(raw: string): string {
 
 /** Finishes a sign-in from the link the person tapped in their email. */
 export async function completeSignInFromUrl(
-  url: string | null | undefined
+  url: string | null | undefined,
 ): Promise<AuthOutcome | null> {
   const link = parseAuthUrl(url);
   if (!link) return null;
@@ -135,7 +135,7 @@ export async function signInWithApple(): Promise<AuthOutcome> {
     const rawNonce = randomNonce();
     const hashedNonce = await Crypto.digestStringAsync(
       Crypto.CryptoDigestAlgorithm.SHA256,
-      rawNonce
+      rawNonce,
     );
     const credential = await AppleAuthentication.signInAsync({
       requestedScopes: [

@@ -3,21 +3,11 @@ import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { ChevronLeft, History as HistoryIcon } from 'lucide-react-native';
 
-import {
-  Card,
-  EmptyState,
-  Screen,
-  SectionHeader,
-  Touchable,
-} from '../src/components';
+import { Card, EmptyState, Screen, SectionHeader, Touchable } from '../src/components';
 import { SPEAKER_LABEL } from '../src/core/profiles';
 import { useEntitlement } from '../src/hooks/useEntitlement';
 import { fetchRemoteHistory, mergeHistory } from '../src/services/sync';
-import {
-  groupByDay,
-  useHistory,
-  type SessionEntry,
-} from '../src/state/useHistory';
+import { groupByDay, useHistory, type SessionEntry } from '../src/state/useHistory';
 import { color, font, space } from '../src/theme/tokens';
 import { type } from '../src/theme/typography';
 
@@ -31,9 +21,7 @@ export default function HistoryScreen() {
   useEffect(() => {
     let alive = true;
     const to = new Date();
-    const from = new Date(
-      to.getTime() - (historyDays ?? 365) * 24 * 60 * 60 * 1000
-    );
+    const from = new Date(to.getTime() - (historyDays ?? 365) * 24 * 60 * 60 * 1000);
     void fetchRemoteHistory({ from, to }).then((rows) => {
       if (alive) setElsewhere(rows);
     });
@@ -55,11 +43,7 @@ export default function HistoryScreen() {
     <Screen
       header={
         <View style={styles.headRow}>
-          <Touchable
-            onPress={() => router.back()}
-            accessibilityLabel="Go back"
-            style={styles.back}
-          >
+          <Touchable onPress={() => router.back()} accessibilityLabel="Go back" style={styles.back}>
             <ChevronLeft size={22} color={color.ink} strokeWidth={1.75} />
           </Touchable>
           <Text style={type.title}>What played and when</Text>
@@ -77,9 +61,7 @@ export default function HistoryScreen() {
       {days.length === 0 ? (
         <Card padded={false}>
           <EmptyState
-            icon={
-              <HistoryIcon size={20} color={color.fgMuted} strokeWidth={1.75} />
-            }
+            icon={<HistoryIcon size={20} color={color.fgMuted} strokeWidth={1.75} />}
             title="Nothing has played yet"
             body="Every time you press Start, it shows up here with the sound, the speaker and how long it played."
             actionLabel="Go play one"
@@ -93,8 +75,7 @@ export default function HistoryScreen() {
               <View style={styles.dayHead}>
                 <Text style={styles.dayLabel}>{d.label}</Text>
                 <Text style={styles.dayTotal}>
-                  {d.count} time{d.count === 1 ? '' : 's'},{' '}
-                  {Math.round(d.totalMs / 60000)} min
+                  {d.count} time{d.count === 1 ? '' : 's'}, {Math.round(d.totalMs / 60000)} min
                 </Text>
               </View>
               {d.entries.map((e) => (
@@ -113,10 +94,7 @@ export default function HistoryScreen() {
                   </View>
                   <Text style={styles.entryDur}>
                     {e.endedAt
-                      ? `${Math.max(
-                          1,
-                          Math.round((e.endedAt - e.startedAt) / 60000)
-                        )} min`
+                      ? `${Math.max(1, Math.round((e.endedAt - e.startedAt) / 60000))} min`
                       : 'Still going'}
                   </Text>
                 </View>

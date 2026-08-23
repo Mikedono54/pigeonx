@@ -36,12 +36,13 @@ export const useProfiles = create<ProfilesState>()(
       lastUsedId: SYSTEM_PROFILES[0].id,
 
       all: () => [...SYSTEM_PROFILES, ...get().saved],
-      byId: (id) => get().all().find((p) => p.id === id),
+      byId: (id) =>
+        get()
+          .all()
+          .find((p) => p.id === id),
 
       save: (input) => {
-        const existing = input.id
-          ? get().saved.find((p) => p.id === input.id)
-          : undefined;
+        const existing = input.id ? get().saved.find((p) => p.id === input.id) : undefined;
         const profile: AudioProfile = {
           id: existing?.id ?? uid('usr'),
           name: input.name,
@@ -70,15 +71,13 @@ export const useProfiles = create<ProfilesState>()(
       setSaved: (saved) => set({ saved }),
       markSaved: (id, remoteId) =>
         set({
-          saved: get().saved.map((p) =>
-            p.id === id ? { ...p, remoteId } : p
-          ),
+          saved: get().saved.map((p) => (p.id === id ? { ...p, remoteId } : p)),
         }),
     }),
     {
       name: STORAGE_KEYS.profiles,
       storage: persistStorage,
       partialize: (s) => ({ saved: s.saved, lastUsedId: s.lastUsedId }),
-    }
-  )
+    },
+  ),
 );

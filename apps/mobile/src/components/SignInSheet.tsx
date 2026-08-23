@@ -85,12 +85,8 @@ export function SignInSheet({ open, onClose, onSignedIn }: SignInSheetProps) {
           {Platform.OS === 'ios' && appleReady ? (
             <View style={styles.appleWrap}>
               <AppleAuthentication.AppleAuthenticationButton
-                buttonType={
-                  AppleAuthentication.AppleAuthenticationButtonType.CONTINUE
-                }
-                buttonStyle={
-                  AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-                }
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
                 cornerRadius={0}
                 style={styles.appleButton}
                 onPress={() => void withApple()}
@@ -127,22 +123,16 @@ export function SignInSheet({ open, onClose, onSignedIn }: SignInSheetProps) {
           </View>
 
           {problem ? (
-            <Banner
-              title="That didn't work"
-              body={problem}
-              onRetry={() => setProblem(null)}
-            />
+            <Banner title="That didn't work" body={problem} onRetry={() => setProblem(null)} />
           ) : null}
 
-          <Text style={styles.fine}>
-            You can keep using this phone without signing in.
-          </Text>
+          <Text style={styles.fine}>You can keep using this phone without signing in.</Text>
         </>
       ) : (
         <>
           <Text style={styles.body}>
-            Sign in opens later. This phone works now. What you play here moves
-            over when you make an account.
+            Sign in opens later. This phone works now. What you play here moves over when you make
+            an account.
           </Text>
           <Button label="Got it" variant="secondary" onPress={onClose} />
         </>

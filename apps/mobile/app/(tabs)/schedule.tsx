@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
-} from 'react-native';
+import { Platform, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { CalendarClock, Plus, Trash2 } from 'lucide-react-native';
 
@@ -62,9 +55,7 @@ export default function ScheduleScreen() {
       {schedules.length === 0 ? (
         <Card padded={false}>
           <EmptyState
-            icon={
-              <CalendarClock size={20} color={color.fgMuted} strokeWidth={1.75} />
-            }
+            icon={<CalendarClock size={20} color={color.fgMuted} strokeWidth={1.75} />}
             title="Nothing set yet"
             body="Add a schedule. Your phone reminds you, or a PigeonX speaker starts it for you."
             actionLabel="Add a schedule"
@@ -82,9 +73,7 @@ export default function ScheduleScreen() {
               <View style={styles.row}>
                 <View style={styles.rowText}>
                   <Text style={styles.line}>{describeSchedule(s)}</Text>
-                  <Text style={styles.meta}>
-                    {EXECUTOR_LABEL[s.executor]}
-                  </Text>
+                  <Text style={styles.meta}>{EXECUTOR_LABEL[s.executor]}</Text>
                 </View>
                 <Switch
                   value={s.enabled}
@@ -92,9 +81,7 @@ export default function ScheduleScreen() {
                   trackColor={{ false: color.border, true: color.accent }}
                   thumbColor={color.background}
                   ios_backgroundColor={color.border}
-                  accessibilityLabel={`${describeSchedule(s)}. ${
-                    s.enabled ? 'On' : 'Off'
-                  }`}
+                  accessibilityLabel={`${describeSchedule(s)}. ${s.enabled ? 'On' : 'Off'}`}
                 />
               </View>
               <View style={styles.cardFooter}>
@@ -125,8 +112,7 @@ export default function ScheduleScreen() {
 
       {clashes.length > 0 ? (
         <Text style={styles.clash}>
-          Two of your times cover the same minutes. The one that starts later
-          takes over.
+          Two of your times cover the same minutes. The one that starts later takes over.
         </Text>
       ) : null}
 
@@ -139,11 +125,7 @@ export default function ScheduleScreen() {
         icon={<Plus size={16} color={color.onAccent} strokeWidth={1.75} />}
       />
 
-      <ScheduleForm
-        open={open}
-        schedule={editing}
-        onClose={() => setOpen(false)}
-      />
+      <ScheduleForm open={open} schedule={editing} onClose={() => setOpen(false)} />
     </Screen>
   );
 }
@@ -166,14 +148,10 @@ function ScheduleForm({
   const homeSoundId = useSession((s) => s.profileId);
 
   const [days, setDays] = useState<number[]>(schedule?.days ?? [1, 2, 3, 4, 5]);
-  const [startMinutes, setStartMinutes] = useState(
-    schedule?.startMinutes ?? 6 * 60
-  );
+  const [startMinutes, setStartMinutes] = useState(schedule?.startMinutes ?? 6 * 60);
   const [endMinutes, setEndMinutes] = useState(schedule?.endMinutes ?? 8 * 60);
   const [soundId, setSoundId] = useState(schedule?.profileId ?? homeSoundId);
-  const [executor, setExecutor] = useState<Executor>(
-    schedule?.executor ?? 'reminder'
-  );
+  const [executor, setExecutor] = useState<Executor>(schedule?.executor ?? 'reminder');
   const [picking, setPicking] = useState<'start' | 'end' | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -193,9 +171,7 @@ function ScheduleForm({
   const sound = sounds.find((p) => p.id === soundId) ?? sounds[0];
 
   const toggleDay = useCallback((d: number) => {
-    setDays((prev) =>
-      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()
-    );
+    setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()));
   }, []);
 
   const pickWhoRuns = useCallback(
@@ -203,7 +179,7 @@ function ScheduleForm({
       if (next === 'device' && !ent.guard('schedules.device')) return;
       setExecutor(next);
     },
-    [ent]
+    [ent],
   );
 
   const save = useCallback(async () => {
@@ -225,25 +201,12 @@ function ScheduleForm({
         zoneId: null,
         deviceId: null,
       });
-      toast.show(
-        executor === 'reminder' ? 'Your phone will remind you.' : 'Saved.',
-        'success'
-      );
+      toast.show(executor === 'reminder' ? 'Your phone will remind you.' : 'Saved.', 'success');
       onClose();
     } finally {
       setSaving(false);
     }
-  }, [
-    days,
-    endMinutes,
-    executor,
-    onClose,
-    schedule?.id,
-    sound,
-    startMinutes,
-    toast,
-    upsert,
-  ]);
+  }, [days, endMinutes, executor, onClose, schedule?.id, sound, startMinutes, toast, upsert]);
 
   const pickerDate = useMemo(() => {
     const d = new Date();
@@ -258,12 +221,7 @@ function ScheduleForm({
       title={schedule ? 'Change this schedule' : 'Add a schedule'}
       onClose={onClose}
       footer={
-        <Button
-          label={schedule ? 'Save' : 'Add it'}
-          size="lg"
-          loading={saving}
-          onPress={save}
-        />
+        <Button label={schedule ? 'Save' : 'Add it'} size="lg" loading={saving} onPress={save} />
       }
     >
       <View style={styles.field}>
@@ -278,18 +236,8 @@ function ScheduleForm({
               accessibilityState={{ selected: days.includes(i) }}
               style={styles.dayPress}
             >
-              <View
-                style={[
-                  styles.day,
-                  days.includes(i) ? styles.daySelected : null,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.dayText,
-                    days.includes(i) ? styles.dayTextSelected : null,
-                  ]}
-                >
+              <View style={[styles.day, days.includes(i) ? styles.daySelected : null]}>
+                <Text style={[styles.dayText, days.includes(i) ? styles.dayTextSelected : null]}>
                   {label}
                 </Text>
               </View>
@@ -327,12 +275,7 @@ function ScheduleForm({
               }}
             />
             {Platform.OS === 'ios' ? (
-              <Button
-                label="Done"
-                variant="secondary"
-                size="sm"
-                onPress={() => setPicking(null)}
-              />
+              <Button label="Done" variant="secondary" size="sm" onPress={() => setPicking(null)} />
             ) : null}
           </View>
         ) : null}
@@ -395,11 +338,7 @@ function TimeButton({
   onPress: () => void;
 }) {
   return (
-    <Touchable
-      onPress={onPress}
-      accessibilityLabel={`${label} at ${value}`}
-      style={styles.grow}
-    >
+    <Touchable onPress={onPress} accessibilityLabel={`${label} at ${value}`} style={styles.grow}>
       <View style={styles.timeButton}>
         <Text style={styles.timeLabel}>{label}</Text>
         <Text style={styles.timeValue}>{value}</Text>

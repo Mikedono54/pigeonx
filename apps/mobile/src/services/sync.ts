@@ -11,12 +11,7 @@ import { useAccount, type SimulatedDevice, type SpeakerKind } from '../state/use
 import { useHistory, type SessionEntry, type SessionSource } from '../state/useHistory';
 import { useProfiles } from '../state/useProfiles';
 import { useSchedules, type Executor, type Schedule } from '../state/useSchedules';
-import {
-  askForMoveUp,
-  markMoveUpDone,
-  moveUpDone,
-  moveUpPending,
-} from './guestMigration';
+import { askForMoveUp, markMoveUpDone, moveUpDone, moveUpPending } from './guestMigration';
 import { sessionRecorder } from './sessionRecorder';
 import { loadBuiltInSoundIds, localSoundId, remoteSoundId } from './soundIds';
 import { getSupabase, isMissingOnServer } from './supabase';
@@ -71,7 +66,7 @@ export function remoteTime(row: RemoteRow): number {
 export function mergeCollections<L extends LocalRow, R extends RemoteRow>(
   local: L[],
   remote: R[],
-  toLocal: (row: R, match: L | undefined) => L
+  toLocal: (row: R, match: L | undefined) => L,
 ): MergeResult<L> {
   const byRemoteId = new Map<string, L>();
   for (const row of local) {
@@ -127,16 +122,11 @@ export interface HistoryRow extends RemoteRow {
   zone_id?: string | null;
 }
 
-const OUTPUT_KINDS: OutputKind[] = [
-  'phone',
-  'bt_speaker',
-  'pigeonx_emitter',
-  'simulated',
-];
+const OUTPUT_KINDS: OutputKind[] = ['phone', 'bt_speaker', 'pigeonx_emitter', 'simulated'];
 
 export function historyRowToEntry(
   row: HistoryRow,
-  nameFor: (profileId: string | null) => string
+  nameFor: (profileId: string | null) => string,
 ): SessionEntry {
   const startedAt = Date.parse(row.started_at ?? '') || 0;
   const endedAt = row.ended_at ? Date.parse(row.ended_at) : null;
@@ -166,10 +156,7 @@ export function historyRowToEntry(
  * What played on this phone plus what played anywhere else, in one list, with
  * nothing shown twice.
  */
-export function mergeHistory(
-  local: SessionEntry[],
-  remote: SessionEntry[]
-): SessionEntry[] {
+export function mergeHistory(local: SessionEntry[], remote: SessionEntry[]): SessionEntry[] {
   const mine = new Set(local.map((e) => e.remoteId).filter(Boolean));
   const merged = [...local, ...remote.filter((e) => !mine.has(e.remoteId))];
   return merged.sort((a, b) => b.startedAt - a.startedAt);
@@ -202,7 +189,7 @@ export interface ScheduleRow extends RemoteRow {
 export function scheduleFromRow(
   row: ScheduleRow,
   match: Schedule | undefined,
-  nameFor: (remoteProfileId: string | null) => { id: string; name: string }
+  nameFor: (remoteProfileId: string | null) => { id: string; name: string },
 ): Schedule {
   const sound = nameFor(row.profile_id ?? null);
   return {
@@ -231,10 +218,7 @@ export interface DeviceRow extends RemoteRow {
 
 const SPEAKER_KINDS: SpeakerKind[] = ['simulated', 'pigeonx_emitter', 'bt_speaker'];
 
-export function deviceFromRow(
-  row: DeviceRow,
-  match: SimulatedDevice | undefined
-): SimulatedDevice {
+export function deviceFromRow(row: DeviceRow, match: SimulatedDevice | undefined): SimulatedDevice {
   const kind = SPEAKER_KINDS.includes(row.kind as SpeakerKind)
     ? (row.kind as SpeakerKind)
     : 'simulated';
@@ -258,13 +242,8 @@ export interface SoundRow extends RemoteRow {
 
 const PROFILE_KINDS: ProfileKind[] = ['tone', 'sweep', 'pulse', 'sample'];
 
-export function soundFromRow(
-  row: SoundRow,
-  match: AudioProfile | undefined
-): AudioProfile {
-  const kind = PROFILE_KINDS.includes(row.kind as ProfileKind)
-    ? (row.kind as ProfileKind)
-    : 'tone';
+export function soundFromRow(row: SoundRow, match: AudioProfile | undefined): AudioProfile {
+  const kind = PROFILE_KINDS.includes(row.kind as ProfileKind) ? (row.kind as ProfileKind) : 'tone';
   return {
     id: match?.id ?? `usr_${row.id}`,
     name: row.name ?? match?.name ?? 'My sound',
@@ -315,10 +294,13 @@ export async function syncNow(): Promise<SyncReport> {
 /** Sends everything up in a moment, once the taps stop. */
 export function syncSoon(reason: ChangeReason = 'manual'): void {
   if (timer) clearTimeout(timer);
-  timer = setTimeout(() => {
-    timer = null;
-    void syncNow();
-  }, reason === 'sign-in' ? 0 : DEBOUNCE_MS);
+  timer = setTimeout(
+    () => {
+      timer = null;
+      void syncNow();
+    },
+    reason === 'sign-in' ? 0 : DEBOUNCE_MS,
+  );
 }
 
 /** Starts listening for changes and for the app coming back to the front. */
@@ -371,11 +353,7 @@ async function refreshSoundIds(sb: SupabaseClient): Promise<void> {
   await loadBuiltInSoundIds(sb);
 }
 
-async function syncSounds(
-  sb: SupabaseClient,
-  userId: string,
-  report: SyncReport
-): Promise<void> {
+async function syncSounds(sb: SupabaseClient, userId: string, report: SyncReport): Promise<void> {
   const local = useProfiles
     .getState()
     .saved.map((p) => ({ ...p, remoteId: p.remoteId ?? null, updatedAt: p.updatedAt ?? 0 }));
@@ -394,7 +372,7 @@ async function syncSounds(
   const merged = mergeCollections(
     local as (AudioProfile & LocalRow)[],
     (data ?? []) as SoundRow[],
-    (row, match) => soundFromRow(row, match) as AudioProfile & LocalRow
+    (row, match) => soundFromRow(row, match) as AudioProfile & LocalRow,
   );
 
   useProfiles.getState().setSaved(merged.keep);
@@ -411,10 +389,7 @@ async function syncSounds(
       min_plan: 'pro',
     };
     if (sound.remoteId) {
-      const { error: e } = await sb
-        .from('audio_profiles')
-        .update(payload)
-        .eq('id', sound.remoteId);
+      const { error: e } = await sb.from('audio_profiles').update(payload).eq('id', sound.remoteId);
       if (!e) report.pushed += 1;
     } else {
       const { data: created, error: e } = await sb
@@ -435,14 +410,14 @@ async function syncSounds(
 async function syncSchedules(
   sb: SupabaseClient,
   userId: string,
-  report: SyncReport
+  report: SyncReport,
 ): Promise<void> {
   const local = useSchedules.getState().schedules;
 
   const { data, error } = await sb
     .from('user_schedules')
     .select(
-      'id, zone_id, profile_id, days, start_time, end_time, enabled, executor, updated_at, created_at'
+      'id, zone_id, profile_id, days, start_time, end_time, enabled, executor, updated_at, created_at',
     )
     .eq('user_id', userId);
 
@@ -458,10 +433,8 @@ async function syncSchedules(
       : { id: SYSTEM_PROFILES[0].id, name: SYSTEM_PROFILES[0].name };
   };
 
-  const merged = mergeCollections(
-    local,
-    (data ?? []) as ScheduleRow[],
-    (row, match) => scheduleFromRow(row, match, nameFor)
+  const merged = mergeCollections(local, (data ?? []) as ScheduleRow[], (row, match) =>
+    scheduleFromRow(row, match, nameFor),
   );
 
   useSchedules.getState().setAll(merged.keep);
@@ -502,11 +475,7 @@ async function syncSchedules(
 
 /* ── speakers ─────────────────────────────────────────────────────────────── */
 
-async function syncSpeakers(
-  sb: SupabaseClient,
-  userId: string,
-  report: SyncReport
-): Promise<void> {
+async function syncSpeakers(sb: SupabaseClient, userId: string, report: SyncReport): Promise<void> {
   const local = useAccount.getState().devices;
 
   const { data, error } = await sb
@@ -519,10 +488,8 @@ async function syncSpeakers(
     return;
   }
 
-  const merged = mergeCollections(
-    local,
-    (data ?? []) as DeviceRow[],
-    (row, match) => deviceFromRow(row, match)
+  const merged = mergeCollections(local, (data ?? []) as DeviceRow[], (row, match) =>
+    deviceFromRow(row, match),
   );
 
   useAccount.getState().setDevices(merged.keep);
@@ -531,10 +498,7 @@ async function syncSpeakers(
   for (const speaker of merged.push) {
     const payload = { user_id: userId, kind: speaker.kind, name: speaker.name };
     if (speaker.remoteId) {
-      const { error: e } = await sb
-        .from('user_devices')
-        .update(payload)
-        .eq('id', speaker.remoteId);
+      const { error: e } = await sb.from('user_devices').update(payload).eq('id', speaker.remoteId);
       if (!e) report.pushed += 1;
     } else {
       const { data: created, error: e } = await sb
@@ -552,16 +516,10 @@ async function syncSpeakers(
 
 /* ── what played ──────────────────────────────────────────────────────────── */
 
-async function pushPlays(
-  sb: SupabaseClient,
-  userId: string,
-  report: SyncReport
-): Promise<void> {
+async function pushPlays(sb: SupabaseClient, userId: string, report: SyncReport): Promise<void> {
   const waiting = useHistory
     .getState()
-    .entries.filter(
-      (e) => !e.synced && !e.remoteId && e.zoneId === null && e.endedAt !== null
-    );
+    .entries.filter((e) => !e.synced && !e.remoteId && e.zoneId === null && e.endedAt !== null);
 
   for (const entry of waiting.slice(0, 50)) {
     const profileId = remoteSoundId(entry.profileId);
@@ -603,9 +561,7 @@ export interface HistoryWindow {
 }
 
 /** What played anywhere else, for the History screen. Empty when offline. */
-export async function fetchRemoteHistory(
-  window: HistoryWindow
-): Promise<SessionEntry[]> {
+export async function fetchRemoteHistory(window: HistoryWindow): Promise<SessionEntry[]> {
   const sb = getSupabase();
   if (!sb) return [];
 
@@ -620,9 +576,7 @@ export async function fetchRemoteHistory(
 
   const nameFor = (profileId: string | null) => {
     if (!profileId) return 'A sound';
-    const mine = useProfiles
-      .getState()
-      .saved.find((p) => p.remoteId === profileId);
+    const mine = useProfiles.getState().saved.find((p) => p.remoteId === profileId);
     return mine?.name ?? 'A sound';
   };
 
