@@ -6,6 +6,7 @@ import {
   type SessionSource,
 } from '../state/useHistory';
 import { getSupabase } from './supabase';
+import { somethingChanged } from './syncSignal';
 
 /**
  * Everything the recorder needs from the backend. Swapping this out is how the
@@ -88,6 +89,7 @@ export class SessionRecorder {
     } catch {
       useHistory.getState().enqueue('start', entry.id);
     }
+    somethingChanged('play');
     return entry;
   }
 
@@ -105,6 +107,7 @@ export class SessionRecorder {
     } catch {
       useHistory.getState().enqueue('end', entry.id);
     }
+    somethingChanged('play');
     return entry;
   }
 

@@ -31,6 +31,7 @@ import {
 } from '../src/services/notifications';
 import { sessionRecorder } from '../src/services/sessionRecorder';
 import { getSupabase } from '../src/services/supabase';
+import { attachSync } from '../src/services/sync';
 import { color } from '../src/theme/tokens';
 import { useAccount } from '../src/state/useAccount';
 import { useSession } from '../src/state/useSession';
@@ -74,8 +75,12 @@ export default function RootLayout() {
   useEffect(() => {
     void configureAudioSession();
     void configureNotifications();
-    const detach = useSession.getState().attach();
-    return detach;
+    const detachEngine = useSession.getState().attach();
+    const detachSync = attachSync();
+    return () => {
+      detachEngine();
+      detachSync();
+    };
   }, []);
 
   useNotificationActions();

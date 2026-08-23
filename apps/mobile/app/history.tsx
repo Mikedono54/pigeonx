@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { ChevronLeft, History as HistoryIcon } from 'lucide-react-native';
@@ -12,7 +12,12 @@ import {
 } from '../src/components';
 import { SPEAKER_LABEL } from '../src/core/profiles';
 import { useEntitlement } from '../src/hooks/useEntitlement';
-import { groupByDay, useHistory } from '../src/state/useHistory';
+import { fetchRemoteHistory, mergeHistory } from '../src/services/sync';
+import {
+  groupByDay,
+  useHistory,
+  type SessionEntry,
+} from '../src/state/useHistory';
 import { color, font, space } from '../src/theme/tokens';
 import { type } from '../src/theme/typography';
 
@@ -20,12 +25,29 @@ export default function HistoryScreen() {
   const ent = useEntitlement();
   const entries = useHistory((s) => s.entries);
   const historyDays = ent.limit('historyDays');
+  const [elsewhere, setElsewhere] = useState<SessionEntry[]>([]);
+
+  // What played on other phones and in your places, if you are signed in.
+  useEffect(() => {
+    let alive = true;
+    const to = new Date();
+    const from = new Date(
+      to.getTime() - (historyDays ?? 365) * 24 * 60 * 60 * 1000
+    );
+    void fetchRemoteHistory({ from, to }).then((rows) => {
+      if (alive) setElsewhere(rows);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [historyDays]);
 
   const visible = useMemo(() => {
-    if (historyDays == null) return entries;
+    const all = mergeHistory(entries, elsewhere);
+    if (historyDays == null) return all;
     const cutoff = Date.now() - historyDays * 24 * 60 * 60 * 1000;
-    return entries.filter((e) => e.startedAt >= cutoff);
-  }, [entries, historyDays]);
+    return all.filter((e) => e.startedAt >= cutoff);
+  }, [elsewhere, entries, historyDays]);
 
   const days = useMemo(() => groupByDay(visible), [visible]);
 

@@ -6,6 +6,7 @@ import {
   type ProfileKind,
   type ProfileParams,
 } from '../core/profiles';
+import { somethingChanged } from '../services/syncSignal';
 import { persistStorage, STORAGE_KEYS, uid } from './storage';
 
 interface ProfilesState {
@@ -23,6 +24,9 @@ interface ProfilesState {
   }) => AudioProfile;
   remove: (id: string) => void;
   setLastUsed: (id: string) => void;
+  /** replaces the saved list after a look at the account */
+  setSaved: (saved: AudioProfile[]) => void;
+  markSaved: (id: string, remoteId: string | null) => void;
 }
 
 export const useProfiles = create<ProfilesState>()(
@@ -46,17 +50,30 @@ export const useProfiles = create<ProfilesState>()(
           params: input.params,
           minPlan: 'pro',
           isSystem: false,
+          updatedAt: Date.now(),
+          remoteId: existing?.remoteId ?? null,
         };
         set({
           saved: existing
             ? get().saved.map((p) => (p.id === profile.id ? profile : p))
             : [...get().saved, profile],
         });
+        somethingChanged('sound');
         return profile;
       },
 
-      remove: (id) => set({ saved: get().saved.filter((p) => p.id !== id) }),
+      remove: (id) => {
+        set({ saved: get().saved.filter((p) => p.id !== id) });
+        somethingChanged('sound');
+      },
       setLastUsed: (id) => set({ lastUsedId: id }),
+      setSaved: (saved) => set({ saved }),
+      markSaved: (id, remoteId) =>
+        set({
+          saved: get().saved.map((p) =>
+            p.id === id ? { ...p, remoteId } : p
+          ),
+        }),
     }),
     {
       name: STORAGE_KEYS.profiles,

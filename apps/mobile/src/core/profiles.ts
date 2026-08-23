@@ -60,6 +60,10 @@ export interface AudioProfile {
   params: ProfileParams;
   minPlan: Plan;
   isSystem: boolean;
+  /** when this sound last changed on this phone. Built-in sounds never do. */
+  updatedAt?: number;
+  /** the id the account gave this sound, once it has one */
+  remoteId?: string | null;
 }
 
 export const SYSTEM_PROFILES: AudioProfile[] = [

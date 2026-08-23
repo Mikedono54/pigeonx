@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Plan } from '../core/entitlements';
+import { somethingChanged } from '../services/syncSignal';
 import { persistStorage, STORAGE_KEYS, uid } from './storage';
 
 export type SpeakerKind = 'simulated' | 'pigeonx_emitter' | 'bt_speaker';
@@ -100,16 +101,21 @@ export const useAccount = create<AccountState>()(
           remoteId: null,
         };
         set({ devices: [...get().devices, device] });
+        somethingChanged('speaker');
         return device;
       },
-      renameDevice: (id, name) =>
+      renameDevice: (id, name) => {
         set({
           devices: get().devices.map((d) =>
             d.id === id ? { ...d, name, updatedAt: Date.now() } : d
           ),
-        }),
-      removeDevice: (id) =>
-        set({ devices: get().devices.filter((d) => d.id !== id) }),
+        });
+        somethingChanged('speaker');
+      },
+      removeDevice: (id) => {
+        set({ devices: get().devices.filter((d) => d.id !== id) });
+        somethingChanged('speaker');
+      },
       setDevices: (devices) => set({ devices }),
       markDeviceSynced: (id, remoteId) =>
         set({
