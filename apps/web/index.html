@@ -66,6 +66,16 @@
     </script>
   </head>
   <body>
+    <script>
+      // Fallback config, used only if the build did not inline VITE_SUPABASE_*.
+      // The anon key is public by design: row level security guards the data.
+      window.__PIGEONX_ENV__ = {
+        SUPABASE_URL: 'https://wnmrcngjsdlyddrdiqtj.supabase.co',
+        SUPABASE_ANON_KEY:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndubXJjbmdqc2RseWRkcmRpcXRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczMzM0NjUsImV4cCI6MjEwMjkwOTQ2NX0.WuYOPKdVRR8hxWP2rJj1NJQ7VGBCET5AS4qlrSepdyw',
+        APPLE_WEB_AUTH: '0',
+      };
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
 
