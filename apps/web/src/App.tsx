@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { Suspense, lazy, useEffect, type ReactNode } from 'react';
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router';
 import { Nav } from './components/Nav';
 import { Footer } from './components/Footer';
@@ -6,8 +6,9 @@ import Home from './routes/Home';
 import Platform from './routes/Platform';
 import PricingPage from './routes/PricingPage';
 import Pilot from './routes/Pilot';
-import AppShell from './routes/AppShell';
 import { Privacy, Terms } from './routes/Legal';
+
+const AppRoot = lazy(() => import('./app/AppRoot'));
 
 const META: Record<string, { title: string; description: string }> = {
   '/': {
@@ -105,7 +106,14 @@ export default function App() {
         Skip to content
       </a>
       <Routes>
-        <Route path="/app" element={<AppShell />} />
+        <Route
+          path="/app/*"
+          element={
+            <Suspense fallback={<div className="min-h-dvh bg-bg" />}>
+              <AppRoot />
+            </Suspense>
+          }
+        />
         {PAGES.map((p) => (
           <Route key={p.path} path={p.path} element={<SiteChrome>{p.element}</SiteChrome>} />
         ))}
