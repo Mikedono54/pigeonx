@@ -36,8 +36,8 @@ export interface BlockButtonProps {
 /**
  * The tactile block.
  *
- * A square face with a solid slab of ink sitting four points down and right of
- * it. Press it and the face steps into the slab, so it reads like a real
+ * A square face with a solid slab of shadow sitting four points down and right
+ * of it. Press it and the face steps into the slab, so it reads like a real
  * button going down. Nothing around it moves. No blur, no glow, no corner.
  */
 export function BlockButton({
@@ -70,7 +70,7 @@ export function BlockButton({
   const fg = tone === 'plain' ? c.ink : tone === 'ink' ? c.inkOn : c.accentOn;
 
   return (
-    <View style={[styles.slot, tall ? styles.slotTall : null, style]}>
+    <View style={[styles.slot, style]}>
       <View style={styles.shadow} />
       <Touchable
         onPress={busy ? undefined : onPress}
@@ -83,7 +83,7 @@ export function BlockButton({
         testID={testID}
         style={styles.press}
       >
-        <View style={[styles.face, face]}>
+        <View style={[styles.face, tall ? styles.faceTall : null, face]}>
           {loading ? (
             <ActivityIndicator color={fg} size="small" />
           ) : (
@@ -117,30 +117,34 @@ export function BlockButton({
   );
 }
 
+/**
+ * The face carries the height. The slot is only the room the shadow needs,
+ * and the shadow is pinned to the slot behind it. Nothing in the middle has
+ * to stretch, so the block cannot collapse into its own shadow.
+ */
 const sheet = themed((c) => ({
   slot: {
-    height: 56 + offset.rest,
     paddingRight: offset.rest,
     paddingBottom: offset.rest,
   },
-  slotTall: { height: 64 + offset.rest },
   shadow: {
     position: 'absolute',
     left: offset.rest,
     top: offset.rest,
     right: 0,
     bottom: 0,
-    backgroundColor: c.ink,
+    backgroundColor: c.shadow,
   },
-  press: { flex: 1, minHeight: 0 },
+  press: { minHeight: 0 },
   face: {
-    flex: 1,
+    height: 56,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: space.md,
     gap: 2,
   },
+  faceTall: { height: 64 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

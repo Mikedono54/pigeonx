@@ -18,7 +18,8 @@ export interface SegmentedProps<T extends string> {
   accessibilityLabel?: string;
 }
 
-/** Two or three choices in one bar. The one you picked fills with ink. */
+/** Two or three choices in one bar, each the same width. The one you picked
+ *  fills with the accent. */
 export function Segmented<T extends string>({
   options,
   value,
@@ -44,7 +45,7 @@ export function Segmented<T extends string>({
           >
             <View style={styles.row}>
               {o.locked ? (
-                <Lock size={12} color={selected ? c.inkOn : c.warning} strokeWidth={2} />
+                <Lock size={12} color={selected ? c.accentOn : c.warning} strokeWidth={2} />
               ) : null}
               <Text
                 numberOfLines={1}
@@ -75,7 +76,7 @@ const sheet = themed((c) => ({
     paddingHorizontal: 6,
   },
   divider: { borderLeftWidth: 1, borderLeftColor: c.ink },
-  itemOn: { backgroundColor: c.ink },
+  itemOn: { backgroundColor: c.accent },
   row: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   label: {
     fontFamily: font.body.semibold,
@@ -83,5 +84,5 @@ const sheet = themed((c) => ({
     letterSpacing: -0.2,
     color: c.text,
   },
-  labelOn: { color: c.inkOn },
+  labelOn: { color: c.accentOn },
 }));

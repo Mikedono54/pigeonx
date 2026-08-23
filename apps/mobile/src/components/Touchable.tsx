@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -28,19 +28,30 @@ export interface TouchableProps extends Omit<PressableProps, 'style'> {
 /**
  * The single press primitive: 44pt minimum target, a haptic on the way down
  * and one of two looks. Nothing around a pressed thing ever moves.
+ *
+ * Pressable takes a style written as a function, `({ pressed }) => ...`, and
+ * hands it the finger. We cannot use it. NativeWind swaps every Pressable for
+ * a wrapper of its own, and that wrapper flattens the style prop: a function
+ * comes out the far side as an empty object, so the whole thing loses its
+ * size, its fill and its border on a real phone. So we keep the finger here
+ * and hand Pressable a plain list of styles instead.
  */
 export function Touchable({
   style,
   haptic = 'light',
   feel = 'fade',
   onPressIn,
+  onPressOut,
   onPress,
   disabled,
   children,
   ...rest
 }: TouchableProps) {
+  const [pressed, setPressed] = useState(false);
+
   const handlePressIn = useCallback<NonNullable<PressableProps['onPressIn']>>(
     (e) => {
+      setPressed(true);
       if (haptic === 'selection') void Haptics.selectionAsync();
       else if (haptic === 'success')
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -55,18 +66,29 @@ export function Touchable({
     [haptic, onPressIn]
   );
 
+  const handlePressOut = useCallback<NonNullable<PressableProps['onPressOut']>>(
+    (e) => {
+      setPressed(false);
+      onPressOut?.(e);
+    },
+    [onPressOut]
+  );
+
+  const down = pressed && !disabled;
+
   return (
     <Pressable
       accessibilityRole="button"
       disabled={disabled}
       onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       onPress={onPress}
       hitSlop={6}
-      style={({ pressed }) => [
+      style={[
         styles.base,
         style,
-        pressed && !disabled && feel === 'fade' ? styles.faded : null,
-        pressed && !disabled && feel === 'offset' ? styles.stepped : null,
+        down && feel === 'fade' ? styles.faded : null,
+        down && feel === 'offset' ? styles.stepped : null,
         disabled ? styles.disabled : null,
       ]}
       {...rest}

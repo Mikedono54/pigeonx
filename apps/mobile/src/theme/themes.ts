@@ -49,6 +49,13 @@ export interface Palette {
   danger: string;
   /** what sits behind a sheet */
   scrim: string;
+  /**
+   * The hard slab behind a block button, a chip or a card.
+   *
+   * It is dark in both palettes on purpose. `ink` flips to near white at
+   * night, so a shadow painted in ink turns into a white slab.
+   */
+  shadow: string;
 }
 
 export const lightPalette: Palette = {
@@ -70,6 +77,7 @@ export const lightPalette: Palette = {
   warning: '#B26A00',
   danger: '#C62828',
   scrim: 'rgba(10,10,10,0.55)',
+  shadow: '#0A0A0A',
 };
 
 export const darkPalette: Palette = {
@@ -91,6 +99,7 @@ export const darkPalette: Palette = {
   warning: '#FBBF24',
   danger: '#F87171',
   scrim: 'rgba(0,0,0,0.66)',
+  shadow: '#000000',
 };
 
 /** What a person picked in Settings. */

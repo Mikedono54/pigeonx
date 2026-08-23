@@ -1,3 +1,8 @@
+// Jest only transforms .js, .ts and .tsx. The icon set's react-native entry is
+// an .mjs bundle, so a test that renders an icon cannot parse it. Node's own
+// resolver picks the CommonJS build of the same icons, which tests can read.
+const lucideCjs = require.resolve('lucide-react-native');
+
 /** @type {import('jest').Config} */
 module.exports = {
   preset: 'jest-expo',
@@ -7,6 +12,7 @@ module.exports = {
   ],
   moduleNameMapper: {
     '\\.(wav|mp3|m4a)$': '<rootDir>/__mocks__/assetMock.js',
+    '^lucide-react-native$': lucideCjs,
   },
   collectCoverageFrom: ['src/**/*.{ts,tsx}'],
   testMatch: ['<rootDir>/__tests__/**/*.test.{ts,tsx}'],

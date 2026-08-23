@@ -34,7 +34,7 @@ const ICON: Record<ButtonSize, number> = {
 };
 
 /**
- * Square, flat, one accent, and a hard slab of ink behind it.
+ * Square, flat, one accent, and a hard slab of shadow behind it.
  *
  * Primary is a solid accent block. Secondary is the page with an ink edge.
  * Both sit on their shadow and step into it when a finger lands. Ghost is a
@@ -82,7 +82,6 @@ export function Button({
     <View
       style={[
         solid ? styles.slot : styles.slotFlat,
-        { height: height + (solid ? offset.small : 0) },
         full ? styles.full : styles.hug,
         style,
       ]}
@@ -99,7 +98,7 @@ export function Button({
         testID={testID}
         style={styles.press}
       >
-        <View style={[styles.face, solid ? styles.bordered : null, face]}>
+        <View style={[styles.face, { height }, solid ? styles.bordered : null, face]}>
           {loading ? (
             <ActivityIndicator color={fg} size="small" />
           ) : (
@@ -125,6 +124,11 @@ export function Button({
   );
 }
 
+/**
+ * The face carries the height. The slot is only the room the shadow needs,
+ * and the shadow is pinned to the slot behind it. Nothing in the middle has
+ * to stretch, so the button cannot collapse into its own shadow.
+ */
 const sheet = themed((c) => ({
   slot: { paddingRight: offset.small, paddingBottom: offset.small },
   slotFlat: {},
@@ -136,11 +140,10 @@ const sheet = themed((c) => ({
     top: offset.small,
     right: 0,
     bottom: 0,
-    backgroundColor: c.ink,
+    backgroundColor: c.shadow,
   },
-  press: { flex: 1, minHeight: 0 },
+  press: { minHeight: 0 },
   face: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: space.md,

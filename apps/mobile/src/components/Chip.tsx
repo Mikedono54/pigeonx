@@ -76,7 +76,7 @@ const sheet = themed((c) => ({
     bottom: 0,
     backgroundColor: c.border,
   },
-  shadowOn: { backgroundColor: c.ink },
+  shadowOn: { backgroundColor: c.shadow },
   press: { minHeight: 0 },
   chip: {
     flexDirection: 'row',
