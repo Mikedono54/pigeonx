@@ -28,8 +28,8 @@ export interface StateBlockProps {
   headline: string;
   /** true when the headline is a clock and should be set in the mono face */
   clock?: boolean;
-  /** one sentence under it */
-  line: string;
+  /** one short line under it, when there is anything worth saying */
+  line?: string;
   /** the bars, drawn along the floor of the block while a sound plays */
   children?: React.ReactNode;
   /** room for the status bar, so the block can run to the top of the phone */
@@ -157,9 +157,11 @@ export function StateBlock({
         {headline}
       </Text>
 
-      <Text style={[styles.line, { color: under }]} numberOfLines={2}>
-        {line}
-      </Text>
+      {line ? (
+        <Text style={[styles.line, { color: under }]} numberOfLines={2}>
+          {line}
+        </Text>
+      ) : null}
 
       {soon ? <View style={styles.soonRule} /> : null}
 

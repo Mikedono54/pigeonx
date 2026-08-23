@@ -62,7 +62,7 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   {
     id: 'sys_pigeon_18k',
     name: 'Pigeon sound',
-    description: 'A steady high sound. Pigeons leave the ledge.',
+    description: 'Steady high sound',
     kind: 'tone',
     params: { freqHz: 18000 },
     minPlan: 'free',
@@ -71,7 +71,7 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   {
     id: 'sys_pulse_16k',
     name: 'Beeping sound',
-    description: 'Beeps on and off. Birds do not get used to it.',
+    description: 'Beeps birds cannot predict',
     kind: 'pulse',
     params: { freqHz: 16000, onMs: 400, offMs: 600, randomizePct: 20 },
     minPlan: 'free',
@@ -80,7 +80,7 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   {
     id: 'sys_sweep_15_19k',
     name: 'Rising and falling sound',
-    description: 'Slides up and down. No one pitch gets ignored.',
+    description: 'Slides up and down',
     kind: 'sweep',
     params: { startHz: 15000, endHz: 19000, rateHz: 0.5 },
     minPlan: 'free',
@@ -89,7 +89,7 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   {
     id: 'sys_gull_17k',
     name: 'Gull sound',
-    description: 'A steady high sound. Made for roofs and docks.',
+    description: 'For roofs and docks',
     kind: 'tone',
     params: { freqHz: 17000 },
     minPlan: 'pro',
@@ -98,7 +98,7 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   {
     id: 'sys_random_pulse',
     name: 'Mixed up beeping',
-    description: 'Beeps at times birds cannot guess. Good for long plays.',
+    description: 'Beeps at random times',
     kind: 'pulse',
     params: { freqHz: 17500, onMs: 250, offMs: 900, randomizePct: 60 },
     minPlan: 'pro',
@@ -107,7 +107,7 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   {
     id: 'sys_distress_pigeon',
     name: 'Pigeon alarm call',
-    description: 'The call pigeons make when they are scared. Works best.',
+    description: 'Scared pigeon call',
     kind: 'sample',
     params: { asset: 'distress_pigeon', gapMs: 8000, randomizePct: 40 },
     minPlan: 'pro',
@@ -116,7 +116,7 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   {
     id: 'sys_predator_hawk',
     name: 'Hawk call',
-    description: 'A hawk cry. Birds think a hunter is above.',
+    description: 'Hawk cry',
     kind: 'sample',
     params: { asset: 'predator_hawk', gapMs: 15000, randomizePct: 50 },
     minPlan: 'pro',
@@ -125,7 +125,7 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   {
     id: 'sys_predator_falcon',
     name: 'Falcon call',
-    description: 'A falcon cry. Use it with the hawk call.',
+    description: 'Falcon cry',
     kind: 'sample',
     params: { asset: 'predator_falcon', gapMs: 15000, randomizePct: 50 },
     minPlan: 'pro',
@@ -134,7 +134,7 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   {
     id: 'sys_max_22k',
     name: 'Very high sound',
-    description: 'Only a PigeonX speaker can play this one.',
+    description: 'Needs a PigeonX speaker',
     kind: 'tone',
     params: { freqHz: 22000 },
     minPlan: 'pro',
@@ -201,7 +201,7 @@ export function guestsMayHear(p: AudioProfile): boolean {
 }
 
 /** The tag shown next to a sound people can hear. */
-export const AUDIBLE_TAG = 'Some people can hear this';
+export const AUDIBLE_TAG = 'People can hear it';
 
 export type OutputKind = 'phone' | 'bt_speaker' | 'pigeonx_emitter' | 'simulated';
 
@@ -222,7 +222,7 @@ export const SPEAKER_LABEL: Record<OutputKind, string> = {
 
 /** One line telling you what each speaker is good for. */
 export const SPEAKER_HINT: Record<OutputKind, string> = {
-  phone: 'Plays out of the phone in your hand.',
+  phone: '',
   bt_speaker: 'Plays out of a speaker you already paired.',
   pigeonx_emitter: 'Plays the highest sounds. Not out yet.',
   simulated: 'Pretend speaker. Lets you try the whole app.',

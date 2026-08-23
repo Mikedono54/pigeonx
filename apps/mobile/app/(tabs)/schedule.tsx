@@ -58,15 +58,11 @@ export default function ScheduleScreen() {
   }, [ent]);
 
   return (
-    <Screen
-      title="Schedule"
-      subtitle="Pick the days and times you want the sound to play."
-      scroll={false}
-    >
+    <Screen title="Schedule" scroll={false}>
       {schedules.length === 0 ? (
         <EmptyState
           title="Nothing set yet"
-          body="Add a schedule. Your phone reminds you, or a PigeonX speaker starts it for you."
+          body="Your phone or a PigeonX speaker starts it."
           actionLabel="Add a schedule"
           onAction={openNew}
         />

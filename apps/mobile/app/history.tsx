@@ -63,7 +63,7 @@ export default function HistoryScreen() {
       {days.length === 0 ? (
         <EmptyState
           title="Nothing has played yet"
-          body="Every time you press Start, it shows up here with the sound, the speaker and how long it played."
+          body="Every play shows up here."
           actionLabel="Go play one"
           onAction={() => router.navigate('/')}
         />

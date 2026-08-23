@@ -17,6 +17,7 @@ import { liveLabel } from '../src/core/places';
 import { plainMessage } from '../src/services/supabase';
 import { describeLinkProblem } from '../src/services/auth';
 import { describeDays, describeSchedule } from '../src/state/useSchedules';
+import { PLACEHOLDER_NOTICE } from '../src/audio/samples';
 
 /** Words a person should never have to read. See docs/mobile-glossary.md. */
 const BANNED =
@@ -37,10 +38,25 @@ describe('sound names and descriptions', () => {
     }
   });
 
-  it('describes every sound in one short line', () => {
+  it('describes every sound in six words or fewer', () => {
     for (const p of SYSTEM_PROFILES) {
-      expect(p.description.length).toBeLessThanOrEqual(70);
+      expect(p.description.split(' ').length).toBeLessThanOrEqual(6);
     }
+  });
+
+  it('names the sounds we have not recorded yet in one word', () => {
+    expect(PLACEHOLDER_NOTICE).toBe('Stand-in');
+    checkString(PLACEHOLDER_NOTICE);
+  });
+
+  it('reads the way the sounds screen shows them', () => {
+    const said = Object.fromEntries(SYSTEM_PROFILES.map((p) => [p.id, p.description]));
+    expect(said.sys_pigeon_18k).toBe('Steady high sound');
+    expect(said.sys_pulse_16k).toBe('Beeps birds cannot predict');
+    expect(said.sys_sweep_15_19k).toBe('Slides up and down');
+    expect(said.sys_distress_pigeon).toBe('Scared pigeon call');
+    expect(said.sys_predator_hawk).toBe('Hawk cry');
+    expect(said.sys_predator_falcon).toBe('Falcon cry');
   });
 });
 
@@ -83,6 +99,10 @@ describe('will this speaker play it?', () => {
 });
 
 describe('labels people read', () => {
+  it('says nothing under This phone, because the name says it', () => {
+    expect(SPEAKER_HINT.phone).toBe('');
+  });
+
   it('names each speaker in plain words', () => {
     expect(SPEAKER_LABEL.phone).toBe('This phone');
     expect(SPEAKER_LABEL.bt_speaker).toBe('Bluetooth speaker');
@@ -107,7 +127,7 @@ describe('labels people read', () => {
   });
 
   it('warns about sounds people can hear', () => {
-    expect(AUDIBLE_TAG).toBe('Some people can hear this');
+    expect(AUDIBLE_TAG).toBe('People can hear it');
   });
 });
 

@@ -124,11 +124,7 @@ export default function PlacesScreen() {
   return (
     <Screen
       title="Places"
-      subtitle={
-        businessName
-          ? `${businessName}. A place is a building. An area is one part of it.`
-          : 'A place is a building. An area is one part of it.'
-      }
+      subtitle={businessName ?? 'A place is a building. An area is one part of it.'}
       scroll={false}
     >
       {mode === 'business' ? (

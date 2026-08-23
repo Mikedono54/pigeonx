@@ -43,8 +43,8 @@ import {
 /** The three things we always say out loud. */
 const HONEST_FACTS = [
   'Phones cannot play the highest sounds. A PigeonX speaker can.',
-  'Some sounds are very high. Some people can hear them. We mark those.',
-  'Bird alarm calls work best. They are not quiet. Everyone nearby hears them.',
+  'We mark sounds people can hear.',
+  'Alarm calls work best. People hear them too.',
 ];
 
 export default function SettingsScreen() {
@@ -123,17 +123,13 @@ export default function SettingsScreen() {
           <ListRow
             icon={History}
             title="History"
-            meta={
-              entries.length === 0
-                ? 'What played and when'
-                : `What played and when. ${entries.length} so far.`
-            }
+            meta={entries.length === 0 ? 'Nothing yet' : `${entries.length} plays`}
             onPress={() => router.push('/history')}
           />
           <ListRow
             icon={RadioTower}
             title="Use this phone as a speaker"
-            meta="The phone stays on this screen and plays your times on its own."
+            meta="It plays your schedule on its own"
             onPress={() => {
               if (!ent.guard('schedules.reminder')) return;
               router.push('/speaker');
@@ -142,7 +138,7 @@ export default function SettingsScreen() {
           <ListRow
             icon={Building2}
             title="For businesses"
-            meta="Run a roof, a patio and a dock from one phone."
+            meta="Places, areas and a team"
             onPress={() =>
               ent.can('zones') ? router.navigate('/places') : router.push('/for-businesses')
             }
@@ -168,7 +164,7 @@ export default function SettingsScreen() {
             <ListRow
               icon={LogIn}
               title="Sign in"
-              meta="Keep your sounds when you change phones."
+              meta="Keep your sounds"
               onPress={() => setSignInOpen(true)}
             />
           ) : (
@@ -184,7 +180,7 @@ export default function SettingsScreen() {
                 icon={Trash2}
                 iconColor={c.danger}
                 title="Delete my account"
-                meta="This takes away your account and everything in it."
+                meta="Gone for good"
                 chevron={false}
                 onPress={() => setDeleteOpen(true)}
               />
@@ -244,7 +240,7 @@ export default function SettingsScreen() {
         accessibilityLabel="See the plans"
         style={styles.footerLink}
       >
-        <Text style={styles.footerLinkText}>See what each plan gives you</Text>
+        <Text style={styles.footerLinkText}>See the plans</Text>
       </Touchable>
 
       <SignInSheet

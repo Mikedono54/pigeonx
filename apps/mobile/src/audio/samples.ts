@@ -21,4 +21,4 @@ export const SAMPLE_LABEL: Record<SampleAsset, string> = {
   alarm_generic: 'Plain alarm call',
 };
 
-export const PLACEHOLDER_NOTICE = 'Stand-in sound';
+export const PLACEHOLDER_NOTICE = 'Stand-in';

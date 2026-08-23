@@ -57,11 +57,7 @@ export default function SoundsScreen() {
   );
 
   return (
-    <Screen
-      title="Sounds"
-      subtitle="Tap one. It goes back to Home ready to play."
-      scroll={false}
-    >
+    <Screen title="Sounds" scroll={false}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.body}>
         <View style={styles.list}>
           {SYSTEM_PROFILES.map((p) => (

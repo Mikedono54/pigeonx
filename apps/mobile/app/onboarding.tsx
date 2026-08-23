@@ -43,7 +43,7 @@ const PAGES: {
     pose: 'lean',
     index: '03',
     title: 'Some people can hear it',
-    lines: ['Some sounds are very high.', 'Some people can hear them.', 'We mark those.'],
+    lines: ['Some sounds are very high.', 'We mark sounds people can hear.'],
   },
 ];
 

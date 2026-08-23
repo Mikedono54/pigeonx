@@ -10,6 +10,10 @@ The test that keeps this honest lives in `__tests__/copy.test.ts`.
 Write for a ten year old holding the phone.
 
 - Short sentences. One idea per line.
+- One line of helper text per screen, and never two.
+- A row gets a name and at most three words under it. If the name or the
+  drawing already says it, say nothing.
+- A sound is described in six words or fewer.
 - Active voice. Say "you".
 - No adverbs. No marketing words.
 - No em dashes or en dashes. A period works.
@@ -38,7 +42,7 @@ Write for a ten year old holding the phone.
 | frequency, Hz, kHz | pitch, shown as Low / High / Very high |
 | volume | loudness |
 | effective range, ceiling | Will this speaker play it? Yes / Partly / No |
-| guests may hear | Some people can hear this |
+| guests may hear | People can hear it |
 | entitlement, gate, tier | plan |
 | org, organization, account (the company) | business |
 | member, org member, seat | teammate |
@@ -137,8 +141,8 @@ A person backing out on purpose is never an error. Nothing is said at all.
 They live on Settings, under Help, and on the third welcome screen.
 
 1. Phones cannot play the highest sounds. A PigeonX speaker can.
-2. Some sounds are very high. Some people can hear them. We mark those.
-3. Bird alarm calls work best. They are not quiet. Everyone nearby hears them.
+2. We mark sounds people can hear.
+3. Alarm calls work best. People hear them too.
 
 ## Code names that stay
 

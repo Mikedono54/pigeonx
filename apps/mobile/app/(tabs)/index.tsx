@@ -52,8 +52,7 @@ const SPEAKERS: OutputKind[] = ['phone', 'bt_speaker', 'pigeonx_emitter', 'simul
 /** Ninety minutes. Any further off and the block stays plain paper. */
 const SOON_MS = 90 * 60 * 1000;
 
-const BLUETOOTH_NOTE =
-  "Connect a Bluetooth speaker in your phone's settings first, then it plays there.";
+const BLUETOOTH_NOTE = 'Pair it in your phone settings first.';
 
 export default function HomeScreen() {
   const styles = useThemedStyles(sheet);
@@ -139,11 +138,7 @@ export default function HomeScreen() {
         label={playing ? 'Playing' : upNext ? `Starts ${upNext}` : '01  State'}
         headline={playing ? formatElapsed(elapsed) : 'Off'}
         clock={playing}
-        line={
-          playing
-            ? 'You can lock the phone. The sound keeps going.'
-            : 'Press Start. Birds leave.'
-        }
+        line={playing ? 'You can lock the phone. The sound keeps going.' : undefined}
         topInset={insets.top}
       >
         {playing ? (
@@ -166,7 +161,7 @@ export default function HomeScreen() {
             <Banner
               tone="info"
               title="Stopped after 15 minutes"
-              body="Free stops the sound after 15 minutes. Pro plays as long as you like."
+              body="Pro plays as long as you like."
               retryLabel="See Pro"
               onRetry={() => router.push('/paywall')}
             />
@@ -177,7 +172,7 @@ export default function HomeScreen() {
           <ListRow
             icon={Music}
             title={sound ? sound.name : 'No sound picked yet'}
-            meta={sound ? `${soundPitch(sound)} pitch. Tap to change.` : 'Tap to pick one'}
+            meta={sound ? `${soundPitch(sound)} pitch` : undefined}
             onPress={() => router.navigate('/sounds')}
             accessibilityLabel={`Sound, ${sound?.name ?? 'none picked yet'}. Tap to change.`}
           />
@@ -222,7 +217,7 @@ export default function HomeScreen() {
           accessibilityLabel="Adjust the pitch and the loudness"
           style={styles.adjust}
         >
-          <Text style={styles.adjustText}>Adjust the pitch and the loudness</Text>
+          <Text style={styles.adjustText}>Adjust</Text>
         </Touchable>
 
         <BlockButton
