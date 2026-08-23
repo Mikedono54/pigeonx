@@ -1,14 +1,15 @@
 import React from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import { color, space } from '../theme/tokens';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
+
+import { space, themed, useThemedStyles } from '../theme';
 import { Touchable } from './Touchable';
 
 export interface CardProps {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
-  /** swaps white for the grey surface */
+  /** swaps the page for the quiet grey block */
   elevated?: boolean;
-  /** marks the one thing that is live right now: ink border, accent rule */
+  /** marks the one thing that is live right now: an ink edge and a blue rule */
   active?: boolean;
   padded?: boolean;
   onPress?: () => void;
@@ -16,6 +17,7 @@ export interface CardProps {
   testID?: string;
 }
 
+/** A square block with a hairline round it. Nothing floats. */
 export function Card({
   children,
   style,
@@ -26,17 +28,20 @@ export function Card({
   accessibilityLabel,
   testID,
 }: CardProps) {
+  const styles = useThemedStyles(sheet);
+
   const body = (
     <View
       style={[
         styles.card,
-        elevated ? { backgroundColor: color.surface } : null,
-        padded ? { padding: space.md } : null,
+        elevated ? styles.elevated : null,
+        padded ? styles.padded : null,
         active ? styles.active : null,
         style,
       ]}
       testID={testID}
     >
+      {active ? <View style={styles.rule} /> : null}
       {children}
     </View>
   );
@@ -53,13 +58,22 @@ export function Card({
   );
 }
 
-const styles = StyleSheet.create({
+const sheet = themed((c) => ({
   card: {
-    backgroundColor: color.card,
-    borderRadius: 0,
+    backgroundColor: c.card,
     borderWidth: 1,
-    borderColor: color.border,
+    borderColor: c.border,
   },
-  active: { borderColor: color.ink },
+  elevated: { backgroundColor: c.surface },
+  padded: { padding: space.md },
+  active: { borderColor: c.ink },
+  rule: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    backgroundColor: c.accent,
+  },
   press: { minHeight: 0 },
-});
+}));

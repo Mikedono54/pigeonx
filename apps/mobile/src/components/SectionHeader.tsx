@@ -1,12 +1,12 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { color, font, space } from '../theme/tokens';
-import { type } from '../theme/typography';
+import { Text, View } from 'react-native';
+
+import { font, space, themed, useThemedStyles } from '../theme';
 import { Touchable } from './Touchable';
 
 export interface SectionHeaderProps {
   title: string;
-  /** two digit index, drawn ahead of the title: "01 SOUND" */
+  /** two digits, drawn ahead of the title: "01 SOUND" */
   index?: string;
   subtitle?: string;
   actionLabel?: string;
@@ -14,7 +14,7 @@ export interface SectionHeaderProps {
   style?: object;
 }
 
-/** A small label over a hairline rule. */
+/** A small mono label over a hairline rule, with a blue tick at the start. */
 export function SectionHeader({
   title,
   index,
@@ -22,9 +22,11 @@ export function SectionHeader({
   actionLabel,
   onAction,
 }: SectionHeaderProps) {
+  const styles = useThemedStyles(sheet);
   return (
     <View style={styles.wrap}>
       <View style={styles.row}>
+        <View style={styles.mark} />
         <Text style={styles.title} numberOfLines={1}>
           {index ? `${index}  ${title}` : title}
         </Text>
@@ -38,41 +40,31 @@ export function SectionHeader({
           </Touchable>
         ) : null}
       </View>
-      {subtitle ? (
-        <Text style={[type.caption, styles.subtitle]}>{subtitle}</Text>
-      ) : null}
+      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const sheet = themed((c, t) => ({
   wrap: {
     marginBottom: space.sm,
     borderBottomWidth: 1,
-    borderBottomColor: color.border,
+    borderBottomColor: c.border,
     paddingBottom: 6,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: space.sm,
   },
-  title: {
-    flex: 1,
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.fgSubtle,
-  },
-  action: { minHeight: 28, justifyContent: 'center' },
+  mark: { width: 10, height: 3, backgroundColor: c.accent },
+  title: { ...t.index, flex: 1, color: c.text },
+  action: { minHeight: 32, justifyContent: 'center' },
   actionText: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.accent,
+    fontFamily: font.body.semibold,
+    fontSize: 14,
+    letterSpacing: -0.2,
+    color: c.link,
   },
-  subtitle: { marginTop: 4 },
-});
+  subtitle: { ...t.caption, marginTop: 4 },
+}));

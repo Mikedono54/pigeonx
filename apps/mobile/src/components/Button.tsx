@@ -1,7 +1,9 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { color, font, space } from '../theme/tokens';
+
+import { font, icon as iconToken, offset, space, themed, useTheme, useThemedStyles } from '../theme';
+import type { IconType } from './icon';
 import { Touchable } from './Touchable';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -14,8 +16,8 @@ export interface ButtonProps {
   size?: ButtonSize;
   loading?: boolean;
   disabled?: boolean;
-  icon?: React.ReactNode;
-  trailingIcon?: React.ReactNode;
+  /** the drawing itself, for example `Plus`. Never a finished element. */
+  icon?: IconType;
   full?: boolean;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
@@ -24,18 +26,19 @@ export interface ButtonProps {
 }
 
 const HEIGHT: Record<ButtonSize, number> = { sm: 40, md: 48, lg: 56 };
-const FONT_SIZE: Record<ButtonSize, number> = { sm: 11, md: 13, lg: 14 };
-
-/** The label colour each variant paints its text and icons in. */
-export function buttonForeground(variant: ButtonVariant = 'primary'): string {
-  if (variant === 'primary') return color.onAccent;
-  if (variant === 'danger') return color.danger;
-  return color.ink;
-}
+const FONT_SIZE: Record<ButtonSize, number> = { sm: 15, md: 17, lg: 19 };
+const ICON: Record<ButtonSize, number> = {
+  sm: iconToken.sm,
+  md: iconToken.md,
+  lg: iconToken.md,
+};
 
 /**
- * Square, flat, one accent. Primary is a solid accent block, secondary is a
- * hairline ink outline, ghost is text on its own.
+ * Square, flat, one accent, and a hard slab of ink behind it.
+ *
+ * Primary is a solid accent block. Secondary is the page with an ink edge.
+ * Both sit on their shadow and step into it when a finger lands. Ghost is a
+ * word on its own, for the thing you probably do not want.
  */
 export function Button({
   label,
@@ -44,85 +47,113 @@ export function Button({
   size = 'md',
   loading = false,
   disabled = false,
-  icon,
-  trailingIcon,
+  icon: Icon,
   full = true,
   style,
   accessibilityLabel,
   accessibilityHint,
   testID,
 }: ButtonProps) {
-  const isBusy = loading || disabled;
+  const styles = useThemedStyles(sheet);
+  const { c } = useTheme();
+  const busy = loading || disabled;
   const height = HEIGHT[size];
-  const fg = buttonForeground(variant);
+  const solid = variant !== 'ghost';
+
+  const face =
+    variant === 'primary'
+      ? { backgroundColor: c.accent, borderColor: c.accent }
+      : variant === 'danger'
+        ? { backgroundColor: c.bg, borderColor: c.danger }
+        : variant === 'secondary'
+          ? { backgroundColor: c.bg, borderColor: c.ink }
+          : null;
+
+  const fg =
+    variant === 'primary'
+      ? c.accentOn
+      : variant === 'danger'
+        ? c.danger
+        : variant === 'ghost'
+          ? c.link
+          : c.ink;
 
   return (
-    <Touchable
-      onPress={isBusy ? undefined : onPress}
-      disabled={isBusy}
-      haptic={variant === 'primary' ? 'medium' : 'light'}
-      accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityHint={accessibilityHint}
-      accessibilityState={{ disabled: isBusy, busy: loading }}
-      testID={testID}
-      style={full ? styles.full : undefined}
+    <View
+      style={[
+        solid ? styles.slot : styles.slotFlat,
+        { height: height + (solid ? offset.small : 0) },
+        full ? styles.full : styles.hug,
+        style,
+      ]}
     >
-      <View
-        style={[
-          styles.shell,
-          { height },
-          full ? styles.full : null,
-          variant === 'primary' ? { backgroundColor: color.accent } : null,
-          variant === 'secondary'
-            ? { borderWidth: 1, borderColor: color.ink }
-            : null,
-          variant === 'danger'
-            ? { borderWidth: 1, borderColor: color.danger }
-            : null,
-          style,
-        ]}
+      {solid ? <View style={styles.shadow} /> : null}
+      <Touchable
+        onPress={busy ? undefined : onPress}
+        disabled={busy}
+        haptic={variant === 'primary' ? 'medium' : 'light'}
+        feel={solid ? 'offset' : 'fade'}
+        accessibilityLabel={accessibilityLabel ?? label}
+        accessibilityHint={accessibilityHint}
+        accessibilityState={{ disabled: busy, busy: loading }}
+        testID={testID}
+        style={styles.press}
       >
-        {loading ? (
-          <ActivityIndicator color={fg} size="small" />
-        ) : (
-          <View style={styles.row}>
-            {icon}
-            <Text
-              numberOfLines={1}
-              style={[
-                styles.label,
-                { color: fg, fontSize: FONT_SIZE[size] },
-                icon ? { marginLeft: space.sm } : null,
-              ]}
-            >
-              {label}
-            </Text>
-            {trailingIcon ? (
-              <View style={{ marginLeft: space.sm }}>{trailingIcon}</View>
-            ) : null}
-          </View>
-        )}
-      </View>
-    </Touchable>
+        <View style={[styles.face, solid ? styles.bordered : null, face]}>
+          {loading ? (
+            <ActivityIndicator color={fg} size="small" />
+          ) : (
+            <View style={styles.row}>
+              {Icon ? (
+                <Icon size={ICON[size]} color={fg} strokeWidth={iconToken.stroke} />
+              ) : null}
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.label,
+                  { color: fg, fontSize: FONT_SIZE[size] },
+                  Icon ? styles.afterIcon : null,
+                ]}
+              >
+                {label}
+              </Text>
+            </View>
+          )}
+        </View>
+      </Touchable>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  shell: {
-    borderRadius: 0,
+const sheet = themed((c) => ({
+  slot: { paddingRight: offset.small, paddingBottom: offset.small },
+  slotFlat: {},
+  full: { width: '100%' },
+  hug: { alignSelf: 'flex-start' },
+  shadow: {
+    position: 'absolute',
+    left: offset.small,
+    top: offset.small,
+    right: 0,
+    bottom: 0,
+    backgroundColor: c.ink,
+  },
+  press: { flex: 1, minHeight: 0 },
+  face: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: space.md,
   },
-  full: { width: '100%' },
+  bordered: { borderWidth: 1 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   label: {
-    fontFamily: font.mono.medium,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+    fontFamily: font.heading.bold,
+    letterSpacing: -0.4,
   },
-});
+  afterIcon: { marginLeft: space.sm },
+}));

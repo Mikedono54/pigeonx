@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
-import { color, font } from '../theme/tokens';
+import { Text } from 'react-native';
+
+import { themed, useThemedStyles } from '../theme';
 import { Button } from './Button';
 import { Sheet } from './Sheet';
 
@@ -28,6 +29,7 @@ export function ConfirmSheet({
   onConfirm,
   onClose,
 }: ConfirmSheetProps) {
+  const styles = useThemedStyles(sheet);
   return (
     <Sheet
       open={open}
@@ -51,11 +53,6 @@ export function ConfirmSheet({
   );
 }
 
-const styles = StyleSheet.create({
-  body: {
-    fontFamily: font.body.regular,
-    fontSize: 15,
-    lineHeight: 21,
-    color: color.fg,
-  },
-});
+const sheet = themed((c, t) => ({
+  body: { ...t.body, color: c.text },
+}));

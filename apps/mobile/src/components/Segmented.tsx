@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Lock } from 'lucide-react-native';
-import { color, font } from '../theme/tokens';
+
+import { font, themed, useTheme, useThemedStyles } from '../theme';
 import { Touchable } from './Touchable';
 
 export interface SegmentedOption<T extends string> {
@@ -17,18 +18,18 @@ export interface SegmentedProps<T extends string> {
   accessibilityLabel?: string;
 }
 
+/** Two or three choices in one bar. The one you picked fills with ink. */
 export function Segmented<T extends string>({
   options,
   value,
   onChange,
   accessibilityLabel,
 }: SegmentedProps<T>) {
+  const styles = useThemedStyles(sheet);
+  const { c } = useTheme();
+
   return (
-    <View
-      style={styles.wrap}
-      accessibilityRole="tablist"
-      accessibilityLabel={accessibilityLabel}
-    >
+    <View style={styles.wrap} accessibilityRole="tablist" accessibilityLabel={accessibilityLabel}>
       {options.map((o, i) => {
         const selected = o.value === value;
         return (
@@ -39,21 +40,16 @@ export function Segmented<T extends string>({
             accessibilityRole="tab"
             accessibilityState={{ selected }}
             accessibilityLabel={o.locked ? `${o.label}, locked` : o.label}
-            style={[
-              styles.item,
-              i > 0 ? styles.divider : null,
-              selected ? styles.itemSelected : null,
-            ]}
+            style={[styles.item, i > 0 ? styles.divider : null, selected ? styles.itemOn : null]}
           >
             <View style={styles.row}>
               {o.locked ? (
-                <Lock
-                  size={11}
-                  color={selected ? color.onAccent : color.warning}
-                  strokeWidth={1.75}
-                />
+                <Lock size={12} color={selected ? c.inkOn : c.warning} strokeWidth={2} />
               ) : null}
-              <Text style={[styles.label, selected ? styles.labelSelected : null]}>
+              <Text
+                numberOfLines={1}
+                style={[styles.label, selected ? styles.labelOn : null]}
+              >
                 {o.label}
               </Text>
             </View>
@@ -64,30 +60,28 @@ export function Segmented<T extends string>({
   );
 }
 
-const styles = StyleSheet.create({
+const sheet = themed((c) => ({
   wrap: {
     flexDirection: 'row',
-    borderRadius: 0,
     borderWidth: 1,
-    borderColor: color.border,
-    backgroundColor: color.background,
+    borderColor: c.ink,
+    backgroundColor: c.bg,
   },
   item: {
     flex: 1,
-    minHeight: 42,
-    borderRadius: 0,
+    minHeight: 46,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 6,
   },
-  divider: { borderLeftWidth: 1, borderLeftColor: color.border },
-  itemSelected: { backgroundColor: color.ink },
+  divider: { borderLeftWidth: 1, borderLeftColor: c.ink },
+  itemOn: { backgroundColor: c.ink },
   row: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   label: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.fgMuted,
+    fontFamily: font.body.semibold,
+    fontSize: 14,
+    letterSpacing: -0.2,
+    color: c.text,
   },
-  labelSelected: { color: color.onAccent },
-});
+  labelOn: { color: c.inkOn },
+}));

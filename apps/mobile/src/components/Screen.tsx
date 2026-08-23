@@ -1,15 +1,8 @@
 import React from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { ScrollView, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { color, space } from '../theme/tokens';
-import { type } from '../theme/typography';
+
+import { space, themed, useThemedStyles } from '../theme';
 
 export interface ScreenProps {
   title?: string;
@@ -25,6 +18,11 @@ export interface ScreenProps {
   headerRight?: React.ReactNode;
 }
 
+/**
+ * The frame every screen sits in: safe areas top and bottom, one gutter, one
+ * title. Sub-screens scroll. Tab screens do not, so the thing you came to
+ * press is always in the same place.
+ */
 export function Screen({
   title,
   subtitle,
@@ -35,6 +33,7 @@ export function Screen({
   header,
   headerRight,
 }: ScreenProps) {
+  const styles = useThemedStyles(sheet);
   const insets = useSafeAreaInsets();
 
   const head =
@@ -42,13 +41,13 @@ export function Screen({
       <View style={styles.head}>
         {title ? (
           <View style={styles.titleRow}>
-            <Text style={[type.title, styles.title]} numberOfLines={1}>
+            <Text style={styles.title} numberOfLines={1}>
               {title}
             </Text>
             {headerRight}
           </View>
         ) : null}
-        {subtitle ? <Text style={type.body}>{subtitle}</Text> : null}
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         {header}
       </View>
     ) : null;
@@ -71,7 +70,7 @@ export function Screen({
   return (
     <ScrollView
       style={styles.root}
-      contentContainerStyle={[padding, contentStyle]}
+      contentContainerStyle={[styles.measure, padding, contentStyle]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
@@ -81,14 +80,17 @@ export function Screen({
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: color.background },
-  head: { marginBottom: space.md, gap: 6 },
+const sheet = themed((c, t) => ({
+  root: { flex: 1, backgroundColor: c.bg },
+  /** long text stops widening on a tablet, so a line stays readable */
+  measure: { width: '100%', maxWidth: 640, alignSelf: 'center' },
+  head: { marginBottom: space.md, gap: 4 },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: space.sm,
   },
-  title: { flexShrink: 1 },
-});
+  title: { ...t.title, flexShrink: 1 },
+  subtitle: { ...t.bodySmall },
+}));

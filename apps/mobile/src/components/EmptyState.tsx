@@ -1,29 +1,30 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { color, space } from '../theme/tokens';
-import { type } from '../theme/typography';
+import { Text, View } from 'react-native';
+
+import { space, themed, useThemedStyles } from '../theme';
 import { Button } from './Button';
+import { Pigeon } from './Pigeon';
 
 export interface EmptyStateProps {
-  icon?: React.ReactNode;
   title: string;
   body: string;
   actionLabel?: string;
   onAction?: () => void;
 }
 
+/** The bird, one line and one button. Nothing else belongs on an empty page. */
 export function EmptyState({
-  icon,
   title,
   body,
   actionLabel,
   onAction,
 }: EmptyStateProps) {
+  const styles = useThemedStyles(sheet);
   return (
     <View style={styles.wrap}>
-      {icon ? <View style={styles.icon}>{icon}</View> : null}
-      <Text style={[type.subheading, styles.title]}>{title}</Text>
-      <Text style={[type.body, styles.body]}>{body}</Text>
+      <Pigeon size={52} pose="sit" />
+      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.body}>{body}</Text>
       {actionLabel && onAction ? (
         <Button
           label={actionLabel}
@@ -38,25 +39,15 @@ export function EmptyState({
   );
 }
 
-const styles = StyleSheet.create({
+const sheet = themed((c, t) => ({
   wrap: {
     alignItems: 'center',
     paddingVertical: space.lg,
     paddingHorizontal: space.md,
     gap: space.xs,
+    backgroundColor: c.surface,
   },
-  icon: {
-    width: 48,
-    height: 48,
-    borderRadius: 0,
-    backgroundColor: color.surface,
-    borderWidth: 1,
-    borderColor: color.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: space.sm,
-  },
-  title: { textAlign: 'center' },
-  body: { textAlign: 'center', maxWidth: 300 },
-  action: { marginTop: space.md, paddingHorizontal: space.lg },
-});
+  title: { ...t.heading, textAlign: 'center', marginTop: space.sm },
+  body: { ...t.bodySmall, textAlign: 'center', maxWidth: 300 },
+  action: { marginTop: space.md },
+}));

@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
-import { color, font, space } from '../theme/tokens';
+
+import { font, icon, space, themed, useTheme, useThemedStyles } from '../theme';
 import { Touchable } from './Touchable';
 
 export interface DisclosureProps {
@@ -14,14 +15,11 @@ export interface DisclosureProps {
 }
 
 /** A square row that opens a panel in place. Keeps fine controls out of the way. */
-export function Disclosure({
-  label,
-  open,
-  onToggle,
-  summary,
-  children,
-}: DisclosureProps) {
+export function Disclosure({ label, open, onToggle, summary, children }: DisclosureProps) {
+  const styles = useThemedStyles(sheet);
+  const { c } = useTheme();
   const Icon = open ? ChevronUp : ChevronDown;
+
   return (
     <View style={styles.wrap}>
       <Touchable
@@ -34,45 +32,38 @@ export function Disclosure({
       >
         <Text style={styles.label}>{label}</Text>
         {summary && !open ? <Text style={styles.summary}>{summary}</Text> : null}
-        <Icon size={16} color={color.ink} strokeWidth={1.75} />
+        <Icon size={icon.md} color={c.ink} strokeWidth={icon.stroke} />
       </Touchable>
       {open ? <View style={styles.panel}>{children}</View> : null}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const sheet = themed((c, t) => ({
   wrap: {
     borderWidth: 1,
-    borderColor: color.border,
-    borderRadius: 0,
-    backgroundColor: color.background,
+    borderColor: c.border,
+    backgroundColor: c.card,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
-    minHeight: 44,
+    minHeight: 48,
     paddingHorizontal: space.sm + 4,
   },
-  label: {
-    flex: 1,
-    fontFamily: font.mono.medium,
+  label: { ...t.subheading, flex: 1 },
+  summary: {
+    fontFamily: font.mono.bold,
     fontSize: 11,
     letterSpacing: 1,
     textTransform: 'uppercase',
-    color: color.ink,
-  },
-  summary: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    letterSpacing: 0.5,
-    color: color.fgSubtle,
+    color: c.muted,
   },
   panel: {
     borderTopWidth: 1,
-    borderTopColor: color.border,
+    borderTopColor: c.border,
     padding: space.md,
     gap: space.md,
   },
-});
+}));

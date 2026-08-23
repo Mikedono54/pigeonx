@@ -1,16 +1,9 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { color, font } from '../theme/tokens';
+import { Text, View } from 'react-native';
+
+import { font, themed, useTheme, useThemedStyles } from '../theme';
 
 export type StatusTone = 'idle' | 'running' | 'scheduled' | 'warning' | 'danger';
-
-const TONE: Record<StatusTone, { fg: string; bg: string; border: string }> = {
-  idle: { fg: color.fgMuted, bg: color.surface, border: color.border },
-  running: { fg: color.onAccent, bg: color.accent, border: color.accent },
-  scheduled: { fg: color.ink, bg: color.background, border: color.ink },
-  warning: { fg: color.warning, bg: color.background, border: color.warning },
-  danger: { fg: color.danger, bg: color.background, border: color.danger },
-};
 
 export interface StatusPillProps {
   label: string;
@@ -21,41 +14,51 @@ export interface StatusPillProps {
   mono?: boolean;
 }
 
-/**
- * A square tag with a small label: OFF, PLAYING 12:40, STARTS 6:00 PM.
- */
+/** A square tag with a small label: OFF, PLAYING 12:40, STARTS 6:00 PM. */
 export function StatusPill({ label, tone = 'idle', dot = false }: StatusPillProps) {
-  const t = TONE[tone];
+  const styles = useThemedStyles(sheet);
+  const { c } = useTheme();
+
+  const paint: Record<StatusTone, { fg: string; bg: string; border: string }> = {
+    idle: { fg: c.muted, bg: c.surface, border: c.border },
+    running: { fg: c.accentOn, bg: c.accent, border: c.accent },
+    scheduled: { fg: c.ink, bg: c.bg, border: c.ink },
+    warning: { fg: c.text, bg: c.bg, border: c.warning },
+    danger: { fg: c.danger, bg: c.bg, border: c.danger },
+  };
+  const p = paint[tone];
+
   return (
     <View
       accessibilityRole="text"
       accessibilityLabel={label}
-      style={[styles.tag, { backgroundColor: t.bg, borderColor: t.border }]}
+      style={[styles.tag, { backgroundColor: p.bg, borderColor: p.border }]}
     >
-      {dot ? <View style={[styles.dot, { backgroundColor: t.fg }]} /> : null}
-      <Text style={[styles.label, { color: t.fg }]} numberOfLines={1}>
+      {tone === 'warning' ? <View style={styles.warnMark} /> : null}
+      {dot ? <View style={[styles.dot, { backgroundColor: p.fg }]} /> : null}
+      <Text style={[styles.label, { color: p.fg }]} numberOfLines={1}>
         {label}
       </Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const sheet = themed((c) => ({
   tag: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    borderRadius: 0,
     borderWidth: 1,
     paddingHorizontal: 7,
     paddingVertical: 4,
     gap: 5,
   },
-  dot: { width: 5, height: 5, borderRadius: 0 },
+  dot: { width: 5, height: 5 },
+  warnMark: { width: 4, height: 12, backgroundColor: c.warning },
   label: {
-    fontFamily: font.mono.medium,
+    fontFamily: font.mono.bold,
     fontSize: 11,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
-});
+}));

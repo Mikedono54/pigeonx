@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import RNSlider from '@react-native-community/slider';
-import { color, font, space } from '../theme/tokens';
+
+import { font, space, themed, useTheme, useThemedStyles } from '../theme';
 
 export interface SliderProps {
   label: string;
@@ -11,12 +12,13 @@ export interface SliderProps {
   step?: number;
   onChange: (value: number) => void;
   onCommit?: (value: number) => void;
-  /** right-hand readout, for example "17.5 kHz", rendered in the mono face */
+  /** right-hand readout, for example "High", set in the mono face */
   readout?: string;
   disabled?: boolean;
   accessibilityHint?: string;
 }
 
+/** One number, moved by a thumb, with the word for it on the right. */
 export function Slider({
   label,
   value,
@@ -29,6 +31,9 @@ export function Slider({
   disabled,
   accessibilityHint,
 }: SliderProps) {
+  const styles = useThemedStyles(sheet);
+  const { c } = useTheme();
+
   return (
     <View style={styles.wrap}>
       <View style={styles.head}>
@@ -44,9 +49,9 @@ export function Slider({
         disabled={disabled}
         onValueChange={onChange}
         onSlidingComplete={onCommit ?? onChange}
-        minimumTrackTintColor={color.accent}
-        maximumTrackTintColor={color.border}
-        thumbTintColor={color.accent}
+        minimumTrackTintColor={c.accent}
+        maximumTrackTintColor={c.border}
+        thumbTintColor={c.accent}
         accessibilityLabel={label}
         accessibilityHint={accessibilityHint}
       />
@@ -54,25 +59,27 @@ export function Slider({
   );
 }
 
-const styles = StyleSheet.create({
+const sheet = themed((c) => ({
   wrap: { gap: space.xs },
   head: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: space.sm,
   },
   label: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.fgMuted,
+    flex: 1,
+    fontFamily: font.body.semibold,
+    fontSize: 15,
+    letterSpacing: -0.2,
+    color: c.text,
   },
   readout: {
-    fontFamily: font.mono.medium,
+    fontFamily: font.mono.bold,
     fontSize: 13,
     letterSpacing: 0.5,
-    color: color.ink,
+    textTransform: 'uppercase',
+    color: c.ink,
   },
   slider: { width: '100%', height: 40 },
-});
+}));

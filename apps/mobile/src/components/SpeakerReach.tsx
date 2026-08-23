@@ -1,11 +1,12 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { CircleCheck, TriangleAlert, CircleSlash } from 'lucide-react-native';
+import { Text, View } from 'react-native';
+import { CircleCheck, CircleSlash, TriangleAlert } from 'lucide-react-native';
+
 import {
   EFFECTIVENESS_COPY,
   OUTPUT_CEILING_HZ,
-  SPEAKER_LABEL,
   REACH_QUESTION,
+  SPEAKER_LABEL,
   effectiveForOutput,
   formatHz,
   peakFreqHz,
@@ -13,7 +14,7 @@ import {
   type AudioProfile,
   type OutputKind,
 } from '../core/profiles';
-import { color, font, space } from '../theme/tokens';
+import { font, icon, space, themed, useTheme, useThemedStyles } from '../theme';
 
 const MAX_HZ = 25000;
 
@@ -27,6 +28,9 @@ export interface SpeakerReachProps {
  * The app never pretends a phone can play a 25 kHz sound.
  */
 export function SpeakerReach({ profile, output }: SpeakerReachProps) {
+  const styles = useThemedStyles(sheet);
+  const { c } = useTheme();
+
   const level = effectiveForOutput(profile, output);
   const answer = EFFECTIVENESS_COPY[level].title;
   const why = reachSentence(profile, output);
@@ -34,18 +38,9 @@ export function SpeakerReach({ profile, output }: SpeakerReachProps) {
   const peak = peakFreqHz(profile);
 
   const tint =
-    level === 'full'
-      ? color.success
-      : level === 'partial'
-        ? color.warning
-        : color.danger;
-
+    level === 'full' ? c.success : level === 'partial' ? c.warning : c.danger;
   const Icon =
-    level === 'full'
-      ? CircleCheck
-      : level === 'partial'
-        ? TriangleAlert
-        : CircleSlash;
+    level === 'full' ? CircleCheck : level === 'partial' ? TriangleAlert : CircleSlash;
 
   const ceilingPct = Math.min(1, ceiling / MAX_HZ);
   const peakPct = Math.min(1, peak / MAX_HZ);
@@ -53,9 +48,9 @@ export function SpeakerReach({ profile, output }: SpeakerReachProps) {
   return (
     <View style={styles.wrap}>
       <View style={styles.head}>
-        <Icon size={14} color={tint} strokeWidth={1.75} />
+        <Icon size={icon.md} color={tint} strokeWidth={icon.stroke} />
         <Text style={styles.question}>{REACH_QUESTION}</Text>
-        <Text style={[styles.answer, { color: tint }]}>{answer}</Text>
+        <Text style={styles.answer}>{answer}</Text>
       </View>
 
       <View
@@ -64,12 +59,7 @@ export function SpeakerReach({ profile, output }: SpeakerReachProps) {
         accessibilityLabel={`${REACH_QUESTION} ${answer}. ${why}`}
       >
         <View style={[styles.reach, { width: `${ceilingPct * 100}%` }]} />
-        <View
-          style={[
-            styles.marker,
-            { left: `${peakPct * 100}%`, backgroundColor: tint },
-          ]}
-        />
+        <View style={[styles.marker, { left: `${peakPct * 100}%`, backgroundColor: tint }]} />
       </View>
 
       <View style={styles.scale}>
@@ -84,27 +74,22 @@ export function SpeakerReach({ profile, output }: SpeakerReachProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const sheet = themed((c, t) => ({
   wrap: { gap: space.sm },
-  head: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  question: {
-    flex: 1,
-    fontFamily: font.body.medium,
-    fontSize: 14,
-    color: color.ink,
-  },
+  head: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  question: { ...t.bodyStrong, flex: 1, fontSize: 15 },
   answer: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
+    fontFamily: font.mono.bold,
+    fontSize: 13,
     letterSpacing: 1,
     textTransform: 'uppercase',
+    color: c.ink,
   },
   track: {
-    height: 10,
-    borderRadius: 0,
-    backgroundColor: color.surface,
+    height: 12,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: color.border,
+    borderColor: c.border,
     overflow: 'visible',
     justifyContent: 'center',
   },
@@ -113,15 +98,13 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    borderRadius: 0,
-    backgroundColor: color.accent,
-    opacity: 0.25,
+    backgroundColor: c.accent,
+    opacity: 0.3,
   },
   marker: {
     position: 'absolute',
-    width: 2,
-    height: 18,
-    borderRadius: 0,
+    width: 3,
+    height: 22,
     marginLeft: -1,
   },
   scale: {
@@ -131,14 +114,9 @@ const styles = StyleSheet.create({
   },
   scaleText: {
     fontFamily: font.mono.medium,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 0.5,
-    color: color.fgSubtle,
+    color: c.muted,
   },
-  detail: {
-    fontFamily: font.body.regular,
-    fontSize: 13,
-    lineHeight: 18,
-    color: color.fgMuted,
-  },
-});
+  detail: { ...t.bodySmall },
+}));

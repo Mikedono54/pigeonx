@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Lock } from 'lucide-react-native';
-import { color, font, space } from '../theme/tokens';
+
+import { font, offset, space, themed, useTheme, useThemedStyles } from '../theme';
 import { Touchable } from './Touchable';
 
 export interface ChipProps {
@@ -14,6 +15,10 @@ export interface ChipProps {
   compact?: boolean;
 }
 
+/**
+ * One choice out of a few. Square, hairline, and it steps into a small shadow
+ * when a finger lands on it.
+ */
 export function Chip({
   label,
   selected = false,
@@ -22,55 +27,74 @@ export function Chip({
   accessibilityLabel,
   compact = false,
 }: ChipProps) {
+  const styles = useThemedStyles(sheet);
+  const { c } = useTheme();
+
   return (
-    <Touchable
-      onPress={onPress}
-      haptic="selection"
-      accessibilityLabel={
-        accessibilityLabel ?? (locked ? `${label}, locked` : label)
-      }
-      accessibilityState={{ selected }}
-      style={styles.press}
-    >
-      <View
-        style={[
-          styles.chip,
-          compact ? styles.compact : null,
-          selected ? styles.selected : null,
-        ]}
+    <View style={styles.slot}>
+      <View style={[styles.shadow, selected ? styles.shadowOn : null]} />
+      <Touchable
+        onPress={onPress}
+        haptic="selection"
+        feel="offset"
+        accessibilityLabel={
+          accessibilityLabel ?? (locked ? `${label}, locked` : label)
+        }
+        accessibilityState={{ selected }}
+        style={styles.press}
       >
-        {locked ? (
-          <Lock size={11} color={selected ? color.onAccent : color.warning} strokeWidth={1.75} />
-        ) : null}
-        <Text style={[styles.label, selected ? styles.labelSelected : null]}>
-          {label}
-        </Text>
-      </View>
-    </Touchable>
+        <View
+          style={[
+            styles.chip,
+            compact ? styles.compact : null,
+            selected ? styles.selected : null,
+          ]}
+        >
+          {locked ? (
+            <Lock
+              size={12}
+              color={selected ? c.accentOn : c.warning}
+              strokeWidth={2}
+            />
+          ) : null}
+          <Text style={[styles.label, selected ? styles.labelSelected : null]}>
+            {label}
+          </Text>
+        </View>
+      </Touchable>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  press: { minHeight: 44, justifyContent: 'center' },
+const sheet = themed((c) => ({
+  slot: { paddingRight: offset.small, paddingBottom: offset.small },
+  shadow: {
+    position: 'absolute',
+    left: offset.small,
+    top: offset.small,
+    right: 0,
+    bottom: 0,
+    backgroundColor: c.border,
+  },
+  shadowOn: { backgroundColor: c.ink },
+  press: { minHeight: 0 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
     paddingHorizontal: space.sm + 4,
-    height: 34,
-    borderRadius: 0,
+    height: 38,
     borderWidth: 1,
-    borderColor: color.border,
-    backgroundColor: color.background,
+    borderColor: c.ink,
+    backgroundColor: c.bg,
   },
-  compact: { paddingHorizontal: 10, height: 30 },
-  selected: { borderColor: color.accent, backgroundColor: color.accent },
+  compact: { paddingHorizontal: 10, height: 34 },
+  selected: { borderColor: c.accent, backgroundColor: c.accent },
   label: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.fgMuted,
+    fontFamily: font.body.semibold,
+    fontSize: 14,
+    letterSpacing: -0.2,
+    color: c.text,
   },
-  labelSelected: { color: color.onAccent },
-});
+  labelSelected: { color: c.accentOn },
+}));
