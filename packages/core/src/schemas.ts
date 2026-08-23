@@ -16,7 +16,11 @@ export const Uuid = z
   );
 
 export const PlanSchema = z.enum(PLANS);
-export const OrgPlanSchema = z.enum(['business', 'enterprise']);
+/**
+ * `free` is where a lapsed Business org lands: the org and its data stay, the
+ * Business features stop. Nothing is ever *created* free (see `create_org`).
+ */
+export const OrgPlanSchema = z.enum(['free', 'business', 'enterprise']);
 export const MemberRoleSchema = z.enum(['owner', 'manager', 'staff']);
 export const DeviceKindSchema = z.enum(OUTPUT_KINDS);
 export const ProfileKindSchema = z.enum(PROFILE_KINDS);

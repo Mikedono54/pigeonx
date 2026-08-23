@@ -59,12 +59,5 @@ export type HistoryRow = Fns['history']['Returns'][number];
 export type LocationReportResult = Fns['location_report']['Returns'][number];
 export type ZoneActivityRow = Fns['zone_activity']['Returns'][number];
 
-/** What `weekly-report` stores in `location_reports.data`. */
-export interface WeeklyReportData {
-  week_start: string;
-  week_end: string;
-  location_name: string;
-  sessions: number;
-  total_minutes: number;
-  zones_active: number;
-}
+// `location_reports.data` is typed as `WeeklyReportData` in reports.ts, which
+// also owns the wording of the email built from it.

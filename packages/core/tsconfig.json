@@ -2,6 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
+    // edge-parity.test.ts imports the Deno copies in supabase/functions/_shared
+    // by their real .ts paths; Deno has no other way to name them.
+    "allowImportingTsExtensions": true,
     "types": ["vitest/globals"]
   },
   "include": ["src"]

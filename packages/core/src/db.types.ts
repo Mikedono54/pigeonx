@@ -764,7 +764,7 @@ export type Database = {
       device_kind_t: 'phone' | 'bt_speaker' | 'pigeonx_emitter' | 'simulated';
       device_status_t: 'online' | 'offline' | 'unknown';
       member_role_t: 'owner' | 'manager' | 'staff';
-      org_plan_t: 'business' | 'enterprise';
+      org_plan_t: 'free' | 'business' | 'enterprise';
       output_kind_t: 'phone' | 'bt_speaker' | 'pigeonx_emitter' | 'simulated';
       plan_t: 'free' | 'pro' | 'business' | 'enterprise';
       profile_kind_t: 'tone' | 'sweep' | 'pulse' | 'sample';
@@ -898,7 +898,7 @@ export const Constants = {
       device_kind_t: ['phone', 'bt_speaker', 'pigeonx_emitter', 'simulated'],
       device_status_t: ['online', 'offline', 'unknown'],
       member_role_t: ['owner', 'manager', 'staff'],
-      org_plan_t: ['business', 'enterprise'],
+      org_plan_t: ['free', 'business', 'enterprise'],
       output_kind_t: ['phone', 'bt_speaker', 'pigeonx_emitter', 'simulated'],
       plan_t: ['free', 'pro', 'business', 'enterprise'],
       profile_kind_t: ['tone', 'sweep', 'pulse', 'sample'],

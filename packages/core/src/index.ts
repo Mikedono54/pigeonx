@@ -5,4 +5,5 @@ export * from './profiles.js';
 export * from './schemas.js';
 export * from './billing.js';
 export * from './rows.js';
+export * from './reports.js';
 export type { Database, Json } from './db.types.js';

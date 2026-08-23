@@ -371,6 +371,37 @@ authorization_url_path = "/oauth/consent"
 # Allow dynamic client registration
 allow_dynamic_registration = false
 
+# ─── PigeonX edge functions ───────────────────────────────────────────────────
+# Each function's request shape, secrets and errors are in
+# supabase/functions/<name>/README.md; the roster is in supabase/functions/README.md.
+#
+# The two webhooks are deployed with --no-verify-jwt because RevenueCat and
+# Stripe have no Supabase session. They authenticate themselves instead: a
+# bearer secret and a request signature.
+[functions.rc-webhook]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.stripe-checkout]
+verify_jwt = true
+
+[functions.stripe-portal]
+verify_jwt = true
+
+[functions.weekly-report]
+verify_jwt = true
+
+# weekly-report runs Monday 07:00 UTC, reporting the week that just finished.
+# There is no schedule field in config.toml, so this is the cron line to keep in
+# sync with whichever scheduler is in use:
+#
+#   0 7 * * 1
+#
+# Set it in Dashboard -> Edge Functions -> weekly-report -> Schedules, or with
+# pg_cron using the net.http_post recipe in supabase/functions/weekly-report/README.md.
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.
