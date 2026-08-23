@@ -3,13 +3,13 @@
 Deno functions on the `wnmrcngjsdlyddrdiqtj` project. Each has its own README
 with its request shape, its errors and its deploy line.
 
-| function | JWT | what it does |
-| --- | --- | --- |
-| [`rc-webhook`](./rc-webhook) | **off** | RevenueCat → `subscriptions` + `profiles.plan` (free/pro) |
-| [`stripe-webhook`](./stripe-webhook) | **off** | Stripe → `subscriptions` + `organizations.plan` (free/business) |
-| [`stripe-checkout`](./stripe-checkout) | on | owner starts a Business subscription, returns a Checkout url |
-| [`stripe-portal`](./stripe-portal) | on | owner opens Stripe's billing portal |
-| [`weekly-report`](./weekly-report) | on | per-location weekly summary into `location_reports`, sender stubbed |
+| function                               | JWT     | what it does                                                        |
+| -------------------------------------- | ------- | ------------------------------------------------------------------- |
+| [`rc-webhook`](./rc-webhook)           | **off** | RevenueCat → `subscriptions` + `profiles.plan` (free/pro)           |
+| [`stripe-webhook`](./stripe-webhook)   | **off** | Stripe → `subscriptions` + `organizations.plan` (free/business)     |
+| [`stripe-checkout`](./stripe-checkout) | on      | owner starts a Business subscription, returns a Checkout url        |
+| [`stripe-portal`](./stripe-portal)     | on      | owner opens Stripe's billing portal                                 |
+| [`weekly-report`](./weekly-report)     | on      | per-location weekly summary into `location_reports`, sender stubbed |
 
 The two webhooks are deployed `--no-verify-jwt` because RevenueCat and Stripe
 have no Supabase session. They are not unauthenticated: each verifies its own
@@ -25,12 +25,12 @@ Set them with, for each pair:
     SUPABASE_ACCESS_TOKEN=$(cat ~/.supabase/access-token) \
       npx supabase@latest secrets set NAME=value --project-ref wnmrcngjsdlyddrdiqtj
 
-| secret | used by | where it comes from |
-| --- | --- | --- |
-| `RC_WEBHOOK_SECRET` | `rc-webhook` | you invent it; paste the same value into RevenueCat → Project settings → Integrations → Webhooks → Authorization header, as `Bearer <value>` |
-| `STRIPE_SECRET_KEY` | `stripe-webhook`, `stripe-checkout`, `stripe-portal` | Stripe → Developers → API keys → secret key (`sk_live_…` / `sk_test_…`) |
-| `STRIPE_WEBHOOK_SECRET` | `stripe-webhook` | Stripe → Developers → Webhooks → the PigeonX endpoint → signing secret (`whsec_…`) |
-| `STRIPE_PRICE_BUSINESS_LOCATION` | `stripe-checkout` | Stripe → Products → the per-location Business price → price id (`price_…`); must be recurring and per-unit |
+| secret                           | used by                                              | where it comes from                                                                                                                          |
+| -------------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RC_WEBHOOK_SECRET`              | `rc-webhook`                                         | you invent it; paste the same value into RevenueCat → Project settings → Integrations → Webhooks → Authorization header, as `Bearer <value>` |
+| `STRIPE_SECRET_KEY`              | `stripe-webhook`, `stripe-checkout`, `stripe-portal` | Stripe → Developers → API keys → secret key (`sk_live_…` / `sk_test_…`)                                                                      |
+| `STRIPE_WEBHOOK_SECRET`          | `stripe-webhook`                                     | Stripe → Developers → Webhooks → the PigeonX endpoint → signing secret (`whsec_…`)                                                           |
+| `STRIPE_PRICE_BUSINESS_LOCATION` | `stripe-checkout`                                    | Stripe → Products → the per-location Business price → price id (`price_…`); must be recurring and per-unit                                   |
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are injected
 by the platform and must not be set by hand.
