@@ -1,11 +1,12 @@
 import { useCallback } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Plus, Trash2 } from 'lucide-react-native';
 
 import {
   Button,
   LockBadge,
+  Pigeon,
   Screen,
   SectionHeader,
   StatusPill,
@@ -23,9 +24,10 @@ import {
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { useProfiles } from '../../src/state/useProfiles';
 import { useSession } from '../../src/state/useSession';
-import { color, font, space } from '../../src/theme/tokens';
+import { icon, space, themed, useTheme, useThemedStyles } from '../../src/theme';
 
 export default function SoundsScreen() {
+  const styles = useThemedStyles(sheet);
   const ent = useEntitlement();
   const toast = useToast();
   const saved = useProfiles((s) => s.saved);
@@ -60,10 +62,7 @@ export default function SoundsScreen() {
       subtitle="Tap one. It goes back to Home ready to play."
       scroll={false}
     >
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.body}
-      >
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.body}>
         <View style={styles.list}>
           {SYSTEM_PROFILES.map((p) => (
             <SoundRow
@@ -78,7 +77,7 @@ export default function SoundsScreen() {
 
         {saved.length > 0 ? (
           <View style={styles.section}>
-            <SectionHeader title="Your own" />
+            <SectionHeader index="02" title="Your own" />
             <View style={styles.list}>
               {saved.map((p) => (
                 <SoundRow
@@ -101,8 +100,9 @@ export default function SoundsScreen() {
         <Button
           label="Make your own"
           variant="secondary"
+          size="lg"
           onPress={makeYourOwn}
-          icon={<Plus size={16} color={color.ink} strokeWidth={1.75} />}
+          icon={Plus}
           accessibilityHint="Pro plan"
         />
       </View>
@@ -110,6 +110,12 @@ export default function SoundsScreen() {
   );
 }
 
+/**
+ * One sound.
+ *
+ * The bird on the left says what the sound is like without a word: it leans
+ * away from the very high ones, and opens its beak for a call.
+ */
 function SoundRow({
   sound,
   active,
@@ -123,12 +129,18 @@ function SoundRow({
   onPress: () => void;
   onDelete?: () => void;
 }) {
+  const styles = useThemedStyles(sheet);
+  const { c } = useTheme();
   const pitch = soundPitch(sound);
   const heard = guestsMayHear(sound);
+
+  const pose =
+    sound.kind === 'sample' ? 'call' : pitch === 'Very high' ? 'lean' : 'sit';
 
   return (
     <Touchable
       onPress={onPress}
+      feel="offset"
       accessibilityLabel={`${sound.name}. ${sound.description} ${pitch} pitch.${
         heard ? ` ${AUDIBLE_TAG}.` : ''
       }${locked ? ' Needs Pro.' : ''}`}
@@ -136,6 +148,14 @@ function SoundRow({
       style={styles.press}
     >
       <View style={[styles.row, active ? styles.rowActive : null]}>
+        <View style={styles.bird}>
+          <Pigeon
+            size={30}
+            pose={pose}
+            color={active ? c.accent : c.ink}
+            holeColor={active ? c.surface : c.card}
+          />
+        </View>
         <View style={styles.rowText}>
           <View style={styles.rowTop}>
             <Text style={styles.name} numberOfLines={1}>
@@ -160,7 +180,7 @@ function SoundRow({
             accessibilityLabel={`Delete ${sound.name}`}
             style={styles.delete}
           >
-            <Trash2 size={18} color={color.danger} strokeWidth={1.75} />
+            <Trash2 size={icon.md} color={c.danger} strokeWidth={icon.stroke} />
           </Touchable>
         ) : null}
       </View>
@@ -168,36 +188,28 @@ function SoundRow({
   );
 }
 
-const styles = StyleSheet.create({
+const sheet = themed((c, t) => ({
   body: { paddingBottom: space.md },
   section: { marginTop: space.lg },
-  list: { borderWidth: 1, borderColor: color.border },
+  list: { borderWidth: 1, borderColor: c.border },
   press: { minHeight: 0 },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: space.sm,
+    gap: space.sm + 4,
     paddingHorizontal: space.sm + 4,
     paddingVertical: space.sm + 4,
     borderTopWidth: 1,
-    borderTopColor: color.border,
+    borderTopColor: c.border,
+    backgroundColor: c.card,
     marginTop: -1,
   },
-  rowActive: { backgroundColor: color.surface },
+  rowActive: { backgroundColor: c.surface },
+  bird: { width: 44, paddingTop: 2, alignItems: 'center' },
   rowText: { flex: 1, gap: 5 },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  name: {
-    fontFamily: font.heading.semibold,
-    fontSize: 16,
-    letterSpacing: -0.3,
-    color: color.ink,
-  },
-  desc: {
-    fontFamily: font.body.regular,
-    fontSize: 13,
-    lineHeight: 18,
-    color: color.fgMuted,
-  },
+  name: { ...t.heading, flexShrink: 1 },
+  desc: { ...t.bodySmall },
   tags: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginTop: 2 },
   delete: {
     width: 44,
@@ -206,4 +218,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   action: { marginTop: space.md },
-});
+}));

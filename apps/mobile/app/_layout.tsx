@@ -10,9 +10,13 @@ import {
   useFonts,
   InterTight_600SemiBold,
   InterTight_700Bold,
+  InterTight_800ExtraBold,
 } from '@expo-google-fonts/inter-tight';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
-import { JetBrainsMono_500Medium } from '@expo-google-fonts/jetbrains-mono';
+import {
+  JetBrainsMono_500Medium,
+  JetBrainsMono_700Bold,
+} from '@expo-google-fonts/jetbrains-mono';
 
 import * as Linking from 'expo-linking';
 
@@ -30,7 +34,7 @@ import { createPurchases } from '../src/services/purchases';
 import { sessionRecorder } from '../src/services/sessionRecorder';
 import { getSupabase } from '../src/services/supabase';
 import { attachSync } from '../src/services/sync';
-import { color } from '../src/theme/tokens';
+import { ThemeProvider, useTheme } from '../src/theme';
 import { useAccount } from '../src/state/useAccount';
 import { useSession } from '../src/state/useSession';
 
@@ -45,10 +49,12 @@ export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     InterTight_600SemiBold,
     InterTight_700Bold,
+    InterTight_800ExtraBold,
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
     JetBrainsMono_500Medium,
+    JetBrainsMono_700Bold,
   });
 
   const [hydrated, setHydrated] = useState(() => useAccount.persist.hasHydrated?.() ?? false);
@@ -82,41 +88,54 @@ export default function RootLayout() {
   useStorePlan();
   useOnboardingGate(ready);
 
-  if (!ready) return <View style={styles.root} />;
+  if (!ready) return <View style={styles.blank} />;
 
   return (
-    <GestureHandlerRootView style={styles.root} onLayout={onLayout}>
+    <GestureHandlerRootView style={styles.blank} onLayout={onLayout}>
       <SafeAreaProvider>
-        <ToastProvider>
-          <StatusBar style="dark" />
-          <AccountWatch />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: color.background },
-              animation: STACK_ANIMATION,
-            }}
-          >
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen
-              name="onboarding"
-              options={{ animation: 'fade', gestureEnabled: false }}
-            />
-            <Stack.Screen
-              name="paywall"
-              options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-            />
-            <Stack.Screen name="history" />
-            <Stack.Screen name="for-businesses" />
-            <Stack.Screen name="team" />
-            <Stack.Screen name="speaker" options={{ animation: 'fade', gestureEnabled: false }} />
-            <Stack.Screen name="make-a-sound" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="deterrent" options={{ animation: 'none' }} />
-            <Stack.Screen name="profiles" options={{ animation: 'none' }} />
-          </Stack>
-        </ToastProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <AccountWatch />
+            <Painted />
+          </ToastProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+  );
+}
+
+/** Everything that has to know which palette the app is painting in. */
+function Painted() {
+  const { c, dark } = useTheme();
+
+  return (
+    <>
+      <StatusBar style={dark ? 'light' : 'dark'} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: c.bg },
+          animation: STACK_ANIMATION,
+        }}
+      >
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="onboarding"
+          options={{ animation: 'fade', gestureEnabled: false }}
+        />
+        <Stack.Screen
+          name="paywall"
+          options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+        />
+        <Stack.Screen name="history" />
+        <Stack.Screen name="for-businesses" />
+        <Stack.Screen name="team" />
+        <Stack.Screen name="speaker" options={{ animation: 'fade', gestureEnabled: false }} />
+        <Stack.Screen name="make-a-sound" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="deterrent" options={{ animation: 'none' }} />
+        <Stack.Screen name="profiles" options={{ animation: 'none' }} />
+      </Stack>
+    </>
   );
 }
 
@@ -271,5 +290,5 @@ function useQueueFlush() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: color.background },
+  blank: { flex: 1 },
 });

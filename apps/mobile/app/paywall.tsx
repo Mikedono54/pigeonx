@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { X } from 'lucide-react-native';
 
-import { Button, Segmented, Touchable, useToast } from '../src/components';
+import { Button, Pigeon, Segmented, Touchable, useToast } from '../src/components';
 import {
   FEATURE_LABEL,
   PLAN_LABEL,
@@ -22,8 +22,7 @@ import {
   type PurchasePrices,
 } from '../src/services/purchases';
 import { useAccount } from '../src/state/useAccount';
-import { color, font, space } from '../src/theme/tokens';
-import { type } from '../src/theme/typography';
+import { icon, space, themed, useTheme, useThemedStyles } from '../src/theme';
 
 const FREE_LINES = [
   'Three sounds',
@@ -47,6 +46,8 @@ const BUSINESS_LINES = [
 ];
 
 export default function Paywall() {
+  const styles = useThemedStyles(sheet);
+  const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const params = useLocalSearchParams<{ feature?: string }>();
@@ -92,29 +93,37 @@ export default function Paywall() {
         setBusy(false);
       }
     },
-    [purchases, toast],
+    [purchases, toast]
   );
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + space.sm }]}>
-      <View style={styles.head}>
-        <Text style={styles.kicker}>Plans</Text>
-        <Touchable onPress={() => router.back()} accessibilityLabel="Close" style={styles.close}>
-          <X size={20} color={color.ink} strokeWidth={1.75} />
-        </Touchable>
+    <View style={styles.root}>
+      <View style={[styles.hero, { paddingTop: insets.top + space.md }]}>
+        <View style={styles.heroTop}>
+          <Text style={styles.kicker}>Plans</Text>
+          <Touchable
+            onPress={() => router.back()}
+            accessibilityLabel="Close"
+            style={styles.close}
+          >
+            <X size={icon.md} color={c.accentOn} strokeWidth={icon.stroke} />
+          </Touchable>
+        </View>
+        <View style={styles.heroBody}>
+          <Text style={styles.heroTitle}>Get more sounds and schedules</Text>
+          <Pigeon size={56} pose="call" color={c.accentOn} holeColor={c.accent} />
+        </View>
+        {feature ? (
+          <Text style={styles.why}>
+            {FEATURE_LABEL[feature]} comes with {PLAN_LABEL[requiredPlan(feature)]}.
+          </Text>
+        ) : null}
       </View>
 
       <ScrollView
         contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + space.lg }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={type.title}>Get more sounds and schedules</Text>
-        {feature ? (
-          <Text style={styles.why}>
-            {FEATURE_LABEL[feature]} comes with {PLAN_LABEL[requiredPlan(feature)]}.
-          </Text>
-        ) : null}
-
         <PlanCard
           name="Free"
           price="$0"
@@ -172,7 +181,7 @@ export default function Paywall() {
             variant="secondary"
             onPress={() =>
               void Linking.openURL(
-                'mailto:hello@pigeonx.org?subject=PigeonX%20for%20my%20buildings',
+                'mailto:hello@pigeonx.org?subject=PigeonX%20for%20my%20buildings'
               )
             }
           />
@@ -207,10 +216,12 @@ export default function Paywall() {
 
         {live ? (
           <Text style={styles.fine}>
-            You pay through your phone's store. It renews until you stop it.
+            {'You pay through your phone\'s store. It renews until you stop it.'}
           </Text>
         ) : (
-          <Text style={styles.fine}>Test mode. No money moves and no store is connected yet.</Text>
+          <Text style={styles.fine}>
+            Test mode. No money moves and no store is connected yet.
+          </Text>
         )}
       </ScrollView>
     </View>
@@ -232,19 +243,22 @@ function PlanCard({
   current: boolean;
   children?: React.ReactNode;
 }) {
+  const styles = useThemedStyles(sheet);
   return (
     <View style={[styles.card, current ? styles.cardCurrent : null]}>
+      {current ? <View style={styles.cardRule} /> : null}
       <View style={styles.cardHead}>
-        <Text style={type.heading}>{name}</Text>
+        <Text style={styles.cardName}>{name}</Text>
         {current ? <Text style={styles.current}>You have this</Text> : null}
       </View>
       <Text style={styles.price}>{price}</Text>
       <Text style={styles.note}>{note}</Text>
       <View style={styles.lines}>
         {lines.map((t) => (
-          <Text key={t} style={styles.line}>
-            {t}
-          </Text>
+          <View key={t} style={styles.lineRow}>
+            <View style={styles.lineMark} />
+            <Text style={styles.line}>{t}</Text>
+          </View>
         ))}
       </View>
       {children}
@@ -252,103 +266,66 @@ function PlanCard({
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: color.background },
-  head: {
+const sheet = themed((c, t) => ({
+  root: { flex: 1, backgroundColor: c.bg },
+  hero: {
+    backgroundColor: c.accent,
+    paddingHorizontal: space.md,
+    paddingBottom: space.md,
+    gap: space.sm,
+  },
+  heroTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: space.md,
   },
-  kicker: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.fgSubtle,
-  },
-  close: {
-    width: 44,
-    height: 44,
+  heroBody: {
+    flexDirection: 'row',
     alignItems: 'flex-end',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    gap: space.md,
   },
-  body: { paddingHorizontal: space.md, gap: space.md },
-  why: {
-    fontFamily: font.body.regular,
-    fontSize: 15,
-    lineHeight: 21,
-    color: color.fg,
-  },
+  heroTitle: { ...t.title, flex: 1, color: c.accentOn },
+  kicker: { ...t.index, color: c.accentOn },
+  close: { width: 44, height: 44, alignItems: 'flex-end', justifyContent: 'center' },
+  why: { ...t.bodySmall, color: c.accentOn },
+  body: { paddingHorizontal: space.md, paddingTop: space.md, gap: space.md },
   card: {
     borderWidth: 1,
-    borderColor: color.border,
+    borderColor: c.border,
+    backgroundColor: c.card,
     padding: space.md,
     gap: space.sm,
   },
-  cardCurrent: { borderColor: color.ink },
+  cardCurrent: { borderColor: c.ink },
+  cardRule: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: c.accent },
   cardHead: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: space.sm,
   },
-  current: {
-    fontFamily: font.mono.medium,
-    fontSize: 10,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.fgSubtle,
-  },
-  price: {
-    fontFamily: font.heading.bold,
-    fontSize: 24,
-    letterSpacing: -0.8,
-    color: color.ink,
-  },
-  note: {
-    fontFamily: font.body.regular,
-    fontSize: 13,
-    lineHeight: 18,
-    color: color.fgMuted,
-  },
-  lines: { gap: 6, marginVertical: space.xs },
-  line: {
-    fontFamily: font.body.regular,
-    fontSize: 14,
-    lineHeight: 20,
-    color: color.fg,
-  },
+  cardName: { ...t.heading },
+  current: { ...t.index },
+  price: { ...t.title, fontSize: 26, letterSpacing: -1 },
+  note: { ...t.bodySmall },
+  lines: { gap: 8, marginVertical: space.xs },
+  lineRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm },
+  lineMark: { width: 10, height: 3, marginTop: 9, backgroundColor: c.accent },
+  line: { ...t.label, flex: 1, fontSize: 15, lineHeight: 21 },
   talk: {
     borderTopWidth: 1,
-    borderTopColor: color.border,
+    borderTopColor: c.border,
     paddingTop: space.md,
     gap: space.sm,
   },
-  talkText: {
-    fontFamily: font.body.regular,
-    fontSize: 14,
-    lineHeight: 20,
-    color: color.fg,
-  },
-  fine: {
-    fontFamily: font.body.regular,
-    fontSize: 12,
-    lineHeight: 17,
-    color: color.fgSubtle,
-    textAlign: 'center',
-  },
+  talkText: { ...t.label, fontSize: 15, lineHeight: 21 },
+  fine: { ...t.caption, textAlign: 'center' },
   legal: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: space.lg,
   },
   legalLink: { minHeight: 44, justifyContent: 'center' },
-  legalText: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.accent,
-  },
-});
+  legalText: { ...t.bodyStrong, fontSize: 15, color: c.link },
+}));

@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { ChevronLeft, History as HistoryIcon } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
 
 import { Card, EmptyState, Screen, SectionHeader, Touchable } from '../src/components';
 import { SPEAKER_LABEL } from '../src/core/profiles';
 import { useEntitlement } from '../src/hooks/useEntitlement';
 import { fetchRemoteHistory, mergeHistory } from '../src/services/sync';
 import { groupByDay, useHistory, type SessionEntry } from '../src/state/useHistory';
-import { color, font, space } from '../src/theme/tokens';
-import { type } from '../src/theme/typography';
+import { font, icon, space, themed, useTheme, useThemedStyles } from '../src/theme';
 
 export default function HistoryScreen() {
+  const styles = useThemedStyles(sheet);
+  const { c } = useTheme();
   const ent = useEntitlement();
   const entries = useHistory((s) => s.entries);
   const historyDays = ent.limit('historyDays');
@@ -44,13 +45,14 @@ export default function HistoryScreen() {
       header={
         <View style={styles.headRow}>
           <Touchable onPress={() => router.back()} accessibilityLabel="Go back" style={styles.back}>
-            <ChevronLeft size={22} color={color.ink} strokeWidth={1.75} />
+            <ChevronLeft size={icon.lg} color={c.ink} strokeWidth={icon.stroke} />
           </Touchable>
-          <Text style={type.title}>What played and when</Text>
+          <Text style={styles.headTitle}>What played and when</Text>
         </View>
       }
     >
       <SectionHeader
+        index="01"
         title={
           historyDays == null
             ? `${visible.length} time${visible.length === 1 ? '' : 's'} so far`
@@ -59,15 +61,12 @@ export default function HistoryScreen() {
       />
 
       {days.length === 0 ? (
-        <Card padded={false}>
-          <EmptyState
-            icon={<HistoryIcon size={20} color={color.fgMuted} strokeWidth={1.75} />}
-            title="Nothing has played yet"
-            body="Every time you press Start, it shows up here with the sound, the speaker and how long it played."
-            actionLabel="Go play one"
-            onAction={() => router.navigate('/')}
-          />
-        </Card>
+        <EmptyState
+          title="Nothing has played yet"
+          body="Every time you press Start, it shows up here with the sound, the speaker and how long it played."
+          actionLabel="Go play one"
+          onAction={() => router.navigate('/')}
+        />
       ) : (
         <View style={styles.list}>
           {days.map((d) => (
@@ -107,7 +106,7 @@ export default function HistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const sheet = themed((c, t) => ({
   headRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   back: {
     width: 44,
@@ -115,6 +114,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'center',
   },
+  headTitle: { ...t.title, flex: 1 },
   list: { gap: space.sm },
   dayHead: {
     flexDirection: 'row',
@@ -123,40 +123,23 @@ const styles = StyleSheet.create({
     marginBottom: space.sm,
     gap: space.sm,
   },
-  dayLabel: {
-    fontFamily: font.heading.semibold,
-    fontSize: 15,
-    letterSpacing: -0.3,
-    color: color.ink,
-  },
-  dayTotal: {
-    fontFamily: font.body.regular,
-    fontSize: 13,
-    color: color.fgMuted,
-  },
+  dayLabel: { ...t.subheading },
+  dayTotal: { ...t.caption },
   entryRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: color.border,
+    borderTopColor: c.border,
   },
   entryText: { flex: 1, gap: 2 },
-  entryName: {
-    fontFamily: font.body.medium,
-    fontSize: 14,
-    color: color.ink,
-  },
-  entryMeta: {
-    fontFamily: font.body.regular,
-    fontSize: 13,
-    color: color.fgSubtle,
-  },
+  entryName: { ...t.label, fontSize: 15, color: c.ink },
+  entryMeta: { ...t.caption },
   entryDur: {
-    fontFamily: font.mono.medium,
-    fontSize: 12,
+    fontFamily: font.mono.bold,
+    fontSize: 13,
     letterSpacing: -0.3,
-    color: color.ink,
+    color: c.ink,
   },
-});
+}));

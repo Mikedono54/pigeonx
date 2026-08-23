@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Share, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { ChevronLeft, Share2, Trash2, UserPlus, Users } from 'lucide-react-native';
+import { ChevronLeft, Share2, Trash2, UserPlus } from 'lucide-react-native';
 
 import {
   Button,
-  Card,
   EmptyState,
   Screen,
   SectionHeader,
   Segmented,
   Sheet,
+  TextField,
   Touchable,
   useToast,
 } from '../src/components';
@@ -24,10 +24,11 @@ import {
   type Teammate,
 } from '../src/services/business';
 import { useAccount, type TeamRole } from '../src/state/useAccount';
-import { color, font, space } from '../src/theme/tokens';
-import { type } from '../src/theme/typography';
+import { font, icon, space, themed, useTheme, useThemedStyles } from '../src/theme';
 
 export default function TeamScreen() {
+  const styles = useThemedStyles(sheet);
+  const { c } = useTheme();
   const toast = useToast();
   const orgId = useAccount((s) => s.activeOrgId);
   const orgName = useAccount((s) => s.activeOrgName);
@@ -56,7 +57,7 @@ export default function TeamScreen() {
       toast.show(result.message, result.ok ? 'success' : 'danger');
       if (result.ok) await load();
     },
-    [load, orgId, toast],
+    [load, orgId, toast]
   );
 
   const share = useCallback(async () => {
@@ -73,9 +74,9 @@ export default function TeamScreen() {
       header={
         <View style={styles.headRow}>
           <Touchable onPress={() => router.back()} accessibilityLabel="Go back" style={styles.back}>
-            <ChevronLeft size={22} color={color.ink} strokeWidth={1.75} />
+            <ChevronLeft size={icon.lg} color={c.ink} strokeWidth={icon.stroke} />
           </Touchable>
-          <Text style={type.title}>Your team</Text>
+          <Text style={styles.headTitle}>Your team</Text>
         </View>
       }
     >
@@ -86,15 +87,14 @@ export default function TeamScreen() {
       </Text>
 
       {team.length === 0 ? (
-        <Card padded={false}>
+        <View style={styles.empty}>
           <EmptyState
-            icon={<Users size={20} color={color.fgMuted} strokeWidth={1.75} />}
             title="It is just you"
             body="Invite someone by email. They get a link that puts them on your team."
             actionLabel="Invite by email"
             onAction={() => setInviteOpen(true)}
           />
-        </Card>
+        </View>
       ) : (
         <View style={styles.list}>
           {team.map((mate) => (
@@ -111,7 +111,7 @@ export default function TeamScreen() {
                   accessibilityLabel={`Take ${mate.label} off the team`}
                   style={styles.iconButton}
                 >
-                  <Trash2 size={16} color={color.danger} strokeWidth={1.75} />
+                  <Trash2 size={icon.md} color={c.danger} strokeWidth={icon.stroke} />
                 </Touchable>
               ) : null}
             </View>
@@ -121,15 +121,11 @@ export default function TeamScreen() {
 
       {link ? (
         <View style={styles.linkBlock}>
-          <SectionHeader title="Send them this link" />
+          <SectionHeader index="02" title="Send them this link" />
           <Text style={styles.link} numberOfLines={2}>
             {link}
           </Text>
-          <Button
-            label="Send it"
-            onPress={() => void share()}
-            icon={<Share2 size={14} color={color.onAccent} strokeWidth={1.75} />}
-          />
+          <Button label="Send it" onPress={() => void share()} icon={Share2} />
         </View>
       ) : null}
 
@@ -138,7 +134,7 @@ export default function TeamScreen() {
           label="Invite by email"
           size="lg"
           onPress={() => setInviteOpen(true)}
-          icon={<UserPlus size={16} color={color.onAccent} strokeWidth={1.75} />}
+          icon={UserPlus}
         />
       </View>
 
@@ -169,6 +165,7 @@ function InviteSheet({
   onClose: () => void;
   onInvited: (link: string) => void;
 }) {
+  const styles = useThemedStyles(sheet);
   const toast = useToast();
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<TeamRole>('staff');
@@ -204,21 +201,18 @@ function InviteSheet({
         />
       }
     >
-      <View style={styles.field}>
-        <Text style={styles.hint}>Type their email. You get a link to send them.</Text>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          placeholder="them@example.com"
-          placeholderTextColor={color.fgSubtle}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          inputMode="email"
-          style={styles.input}
-          accessibilityLabel="Their email"
-        />
-      </View>
+      <TextField
+        label="Their email"
+        hint="Type their email. You get a link to send them."
+        value={email}
+        onChangeText={setEmail}
+        placeholder="them@example.com"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoCorrect={false}
+        inputMode="email"
+        accessibilityLabel="Their email"
+      />
 
       <View style={styles.field}>
         <Text style={styles.fieldLabel}>What they can do</Text>
@@ -237,7 +231,7 @@ function InviteSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const sheet = themed((c, t) => ({
   headRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   back: {
     width: 44,
@@ -245,34 +239,22 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'center',
   },
-  lede: {
-    fontFamily: font.body.regular,
-    fontSize: 15,
-    lineHeight: 21,
-    color: color.fg,
-  },
-  list: { marginTop: space.md, borderWidth: 1, borderColor: color.border },
+  headTitle: { ...t.title, flex: 1 },
+  lede: { ...t.body, color: c.text },
+  empty: { marginTop: space.md },
+  list: { marginTop: space.md, borderWidth: 1, borderColor: c.border },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
     paddingHorizontal: space.sm + 4,
-    paddingVertical: space.sm + 2,
+    paddingVertical: space.sm + 4,
     borderBottomWidth: 1,
-    borderBottomColor: color.border,
+    borderBottomColor: c.border,
   },
   grow: { flex: 1, gap: 2 },
-  name: {
-    fontFamily: font.heading.semibold,
-    fontSize: 15,
-    letterSpacing: -0.3,
-    color: color.ink,
-  },
-  meta: {
-    fontFamily: font.body.regular,
-    fontSize: 13,
-    color: color.fgMuted,
-  },
+  name: { ...t.subheading },
+  meta: { ...t.bodySmall },
   iconButton: {
     width: 44,
     height: 44,
@@ -281,37 +263,16 @@ const styles = StyleSheet.create({
   },
   linkBlock: { marginTop: space.lg, gap: space.sm },
   link: {
+    ...t.caption,
     fontFamily: font.mono.medium,
-    fontSize: 12,
-    lineHeight: 18,
-    color: color.ink,
+    color: c.ink,
     borderWidth: 1,
-    borderColor: color.border,
+    borderColor: c.border,
+    backgroundColor: c.surface,
     padding: space.sm + 4,
   },
   action: { marginTop: space.xl },
   field: { gap: space.sm },
-  fieldLabel: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.fgSubtle,
-  },
-  hint: {
-    fontFamily: font.body.regular,
-    fontSize: 14,
-    lineHeight: 19,
-    color: color.fgMuted,
-  },
-  input: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: color.border,
-    backgroundColor: color.background,
-    paddingHorizontal: space.sm + 4,
-    color: color.ink,
-    fontFamily: font.body.medium,
-    fontSize: 16,
-  },
-});
+  fieldLabel: { ...t.index },
+  hint: { ...t.bodySmall },
+}));

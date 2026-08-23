@@ -1,20 +1,20 @@
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 import {
-  CalendarClock,
   Building2,
+  CalendarClock,
+  House,
   Music,
   Settings,
-  Home,
 } from 'lucide-react-native';
-import { useEntitlement } from '../../src/hooks/useEntitlement';
-import { color, font } from '../../src/theme/tokens';
 
-const ICON_SIZE = 20;
-const ICON_STROKE = 1.75;
+import { useEntitlement } from '../../src/hooks/useEntitlement';
+import { font, icon, useTheme } from '../../src/theme';
 
 export default function TabsLayout() {
   const ent = useEntitlement();
+  const { c } = useTheme();
+
   // Only a Business plan gets the fifth tab. Everyone else finds the same
   // thing under Settings, "For businesses".
   const showPlaces = ent.can('zones');
@@ -23,31 +23,32 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: color.ink,
-        tabBarInactiveTintColor: color.fgSubtle,
+        tabBarActiveTintColor: c.ink,
+        tabBarInactiveTintColor: c.muted,
         tabBarStyle: {
-          backgroundColor: color.background,
-          borderTopColor: color.border,
+          backgroundColor: c.bg,
+          borderTopColor: c.ink,
           borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 84 : 62,
-          paddingTop: 8,
+          height: Platform.OS === 'ios' ? 86 : 64,
+          paddingTop: 10,
           elevation: 0,
         },
         tabBarLabelStyle: {
-          fontFamily: font.mono.medium,
+          fontFamily: font.mono.bold,
           fontSize: 10,
           letterSpacing: 1,
           textTransform: 'uppercase',
+          marginTop: 2,
         },
-        sceneStyle: { backgroundColor: color.background },
+        sceneStyle: { backgroundColor: c.bg },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color: c }) => (
-            <Home size={ICON_SIZE} color={c} strokeWidth={ICON_STROKE} />
+          tabBarIcon: ({ color: tint }) => (
+            <House size={icon.md} color={tint} strokeWidth={icon.stroke} />
           ),
         }}
       />
@@ -55,8 +56,8 @@ export default function TabsLayout() {
         name="sounds"
         options={{
           title: 'Sounds',
-          tabBarIcon: ({ color: c }) => (
-            <Music size={ICON_SIZE} color={c} strokeWidth={ICON_STROKE} />
+          tabBarIcon: ({ color: tint }) => (
+            <Music size={icon.md} color={tint} strokeWidth={icon.stroke} />
           ),
         }}
       />
@@ -64,8 +65,8 @@ export default function TabsLayout() {
         name="schedule"
         options={{
           title: 'Schedule',
-          tabBarIcon: ({ color: c }) => (
-            <CalendarClock size={ICON_SIZE} color={c} strokeWidth={ICON_STROKE} />
+          tabBarIcon: ({ color: tint }) => (
+            <CalendarClock size={icon.md} color={tint} strokeWidth={icon.stroke} />
           ),
         }}
       />
@@ -74,8 +75,8 @@ export default function TabsLayout() {
         options={{
           title: 'Places',
           href: showPlaces ? undefined : null,
-          tabBarIcon: ({ color: c }) => (
-            <Building2 size={ICON_SIZE} color={c} strokeWidth={ICON_STROKE} />
+          tabBarIcon: ({ color: tint }) => (
+            <Building2 size={icon.md} color={tint} strokeWidth={icon.stroke} />
           ),
         }}
       />
@@ -83,8 +84,8 @@ export default function TabsLayout() {
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color: c }) => (
-            <Settings size={ICON_SIZE} color={c} strokeWidth={ICON_STROKE} />
+          tabBarIcon: ({ color: tint }) => (
+            <Settings size={icon.md} color={tint} strokeWidth={icon.stroke} />
           ),
         }}
       />

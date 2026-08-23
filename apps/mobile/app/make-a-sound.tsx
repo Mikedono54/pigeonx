@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Play, Square, X } from 'lucide-react-native';
@@ -13,6 +13,7 @@ import {
   SpeakerReach,
   SpectrumBars,
   StatusPill,
+  TextField,
   Touchable,
   useToast,
 } from '../src/components';
@@ -35,12 +36,13 @@ import {
 import { useEntitlement } from '../src/hooks/useEntitlement';
 import { useProfiles } from '../src/state/useProfiles';
 import { useSession } from '../src/state/useSession';
-import { color, font, space } from '../src/theme/tokens';
-import { type } from '../src/theme/typography';
+import { icon, space, themed, useTheme, useThemedStyles } from '../src/theme';
 
 const PREVIEW_MS = 5000;
 
 export default function MakeASound() {
+  const styles = useThemedStyles(sheet);
+  const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const ent = useEntitlement();
   const toast = useToast();
@@ -137,7 +139,7 @@ export default function MakeASound() {
   return (
     <View style={[styles.root, { paddingTop: insets.top + space.sm }]}>
       <View style={styles.head}>
-        <Text style={type.heading}>Make your own</Text>
+        <Text style={styles.headTitle}>Make your own</Text>
         <Touchable
           onPress={() => {
             void stopPreview();
@@ -146,72 +148,64 @@ export default function MakeASound() {
           accessibilityLabel="Close"
           style={styles.close}
         >
-          <X size={20} color={color.ink} strokeWidth={1.75} />
+          <X size={icon.md} color={c.ink} strokeWidth={icon.stroke} />
         </Touchable>
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.body, { paddingBottom: space.xl }]}
+        contentContainerStyle={styles.body}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
         {failed ? (
-          <Banner
-            title="Nothing played"
-            body="That didn't work. Try again."
-            onRetry={preview}
-          />
+          <Banner title="Nothing played" body="That didn't work. Try again." onRetry={preview} />
         ) : null}
 
-        <Card style={styles.previewCard}>
-          <SpectrumBars active={previewing} height={92} />
+        <View style={styles.preview}>
+          <SpectrumBars
+            active={previewing}
+            height={88}
+            color={previewing ? c.playOn : c.muted}
+            peakColor={c.energy}
+          />
           <View style={styles.tags}>
             <StatusPill
               label={previewing ? 'Playing' : 'Ready'}
               tone={previewing ? 'running' : 'idle'}
             />
-            {guestsMayHear(draft) ? (
-              <StatusPill label={AUDIBLE_TAG} tone="warning" />
-            ) : null}
+            {guestsMayHear(draft) ? <StatusPill label={AUDIBLE_TAG} tone="warning" /> : null}
           </View>
           <Button
             label={previewing ? 'Stop' : 'Hear 5 seconds'}
             variant="secondary"
+            size="lg"
             onPress={preview}
-            icon={
-              previewing ? (
-                <Square size={16} color={color.ink} strokeWidth={1.75} />
-              ) : (
-                <Play size={16} color={color.ink} strokeWidth={1.75} />
-              )
-            }
+            icon={previewing ? Square : Play}
           />
-        </Card>
+        </View>
 
-        <Field label="Name">
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="My sound"
-            placeholderTextColor={color.fgSubtle}
-            style={styles.input}
-            accessibilityLabel="Name your sound"
-          />
-        </Field>
+        <TextField
+          label="01  Name"
+          value={name}
+          onChangeText={setName}
+          placeholder="My sound"
+          accessibilityLabel="Name your sound"
+        />
 
-        <Field label="What kind of sound">
+        <Field label="02  What kind of sound">
           <Segmented
             value={kind}
             onChange={setKind}
             accessibilityLabel="What kind of sound"
-            options={(['tone', 'pulse', 'sweep', 'sample'] as ProfileKind[]).map(
-              (k) => ({ value: k, label: SHORT_KIND[k] })
-            )}
+            options={(['tone', 'pulse', 'sweep', 'sample'] as ProfileKind[]).map((k) => ({
+              value: k,
+              label: SHORT_KIND[k],
+            }))}
           />
           <Text style={styles.note}>{KIND_HINT[kind]}</Text>
         </Field>
 
-        <Card style={styles.previewCard}>
+        <Card style={styles.controls}>
           {kind === 'tone' || kind === 'pulse' ? (
             <View style={styles.field}>
               <Slider
@@ -297,11 +291,7 @@ export default function MakeASound() {
                   onChange={setAsset}
                   accessibilityLabel="Which call"
                   options={(
-                    [
-                      'distress_pigeon',
-                      'predator_hawk',
-                      'predator_falcon',
-                    ] as SampleAsset[]
+                    ['distress_pigeon', 'predator_hawk', 'predator_falcon'] as SampleAsset[]
                   ).map((a) => ({
                     value: a,
                     label: SAMPLE_LABEL[a].replace(' call', ''),
@@ -364,15 +354,10 @@ const KIND_HINT: Record<ProfileKind, string> = {
   sample: 'A real bird call, played again and again.',
 };
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  const styles = useThemedStyles(sheet);
   return (
-    <View style={{ gap: space.sm }}>
+    <View style={styles.fieldGroup}>
       <Text style={styles.fieldLabel}>{label}</Text>
       {children}
     </View>
@@ -451,8 +436,8 @@ function describeDraft(p: AudioProfile): string {
   }
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: color.background },
+const sheet = themed((c, t) => ({
+  root: { flex: 1, backgroundColor: c.bg },
   head: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -460,50 +445,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
     paddingBottom: space.sm,
   },
+  headTitle: { ...t.title },
   close: {
     width: 44,
     height: 44,
     alignItems: 'flex-end',
     justifyContent: 'center',
   },
-  body: { paddingHorizontal: space.md, gap: space.md },
-  previewCard: { gap: space.md },
+  body: { paddingHorizontal: space.md, paddingBottom: space.xl, gap: space.lg },
+  preview: {
+    backgroundColor: c.play,
+    padding: space.md,
+    gap: space.md,
+  },
   tags: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
+  controls: { gap: space.md },
   field: { gap: space.xs },
-  fieldLabel: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.fgSubtle,
-  },
-  input: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: color.border,
-    backgroundColor: color.background,
-    paddingHorizontal: space.sm + 4,
-    color: color.ink,
-    fontFamily: font.body.medium,
-    fontSize: 16,
-  },
-  note: {
-    fontFamily: font.body.regular,
-    fontSize: 13,
-    lineHeight: 18,
-    color: color.fgMuted,
-  },
-  mono: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    letterSpacing: 0.5,
-    color: color.fgSubtle,
-  },
+  fieldGroup: { gap: space.sm },
+  fieldLabel: { ...t.index },
+  note: { ...t.bodySmall },
+  mono: { ...t.caption, letterSpacing: 0.5 },
   dock: {
     paddingHorizontal: space.md,
     paddingTop: space.md,
     borderTopWidth: 1,
-    borderTopColor: color.border,
-    backgroundColor: color.background,
+    borderTopColor: c.border,
+    backgroundColor: c.bg,
   },
-});
+}));

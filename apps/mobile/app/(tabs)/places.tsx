@@ -1,15 +1,25 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { Building2, LayoutGrid, Pencil, Plus, Speaker, Trash2, Users } from 'lucide-react-native';
+import {
+  Building2,
+  LayoutGrid,
+  Pencil,
+  Plus,
+  Speaker,
+  Trash2,
+  Users,
+} from 'lucide-react-native';
 
 import {
+  Banner,
   Button,
   Card,
   EmptyState,
   Screen,
   Sheet,
   StatusPill,
+  TextField,
   Touchable,
   useToast,
 } from '../../src/components';
@@ -18,8 +28,7 @@ import { watchLive } from '../../src/services/live';
 import { useAccount } from '../../src/state/useAccount';
 import { usePlaces } from '../../src/state/usePlaces';
 import { useSession } from '../../src/state/useSession';
-import { color, font, space } from '../../src/theme/tokens';
-import { type } from '../../src/theme/typography';
+import { icon, space, themed, useTheme, useThemedStyles } from '../../src/theme';
 
 type Asking =
   | { kind: 'place' }
@@ -29,6 +38,8 @@ type Asking =
   | { kind: 'rename-area'; placeId: string; areaId: string; current: string };
 
 export default function PlacesScreen() {
+  const styles = useThemedStyles(sheet);
+  const { c } = useTheme();
   const toast = useToast();
   const places = usePlaces((s) => s.places);
   const mode = usePlaces((s) => s.mode);
@@ -70,7 +81,7 @@ export default function PlacesScreen() {
 
   const speakerName = useCallback(
     (id: string) => speakers.find((s) => s.id === id)?.name ?? 'Speaker',
-    [speakers],
+    [speakers]
   );
 
   const submitName = useCallback(
@@ -94,7 +105,7 @@ export default function PlacesScreen() {
       setAsking(null);
       if (result.message) toast.show(result.message, result.ok ? 'success' : 'danger');
     },
-    [asking, toast],
+    [asking, toast]
   );
 
   const playHere = useCallback(
@@ -107,7 +118,7 @@ export default function PlacesScreen() {
       setArea(areaId, areaName);
       await session.start();
     },
-    [setArea],
+    [setArea]
   );
 
   return (
@@ -128,31 +139,32 @@ export default function PlacesScreen() {
             size="sm"
             full={false}
             onPress={() => router.push('/team')}
-            icon={<Users size={14} color={color.ink} strokeWidth={1.75} />}
+            icon={Users}
           />
         </View>
       ) : null}
 
-      {problem ? <Text style={styles.problem}>{problem}</Text> : null}
+      {problem ? (
+        <View style={styles.problem}>
+          <Banner tone="warning" title="Not everything loaded" body={problem} />
+        </View>
+      ) : null}
 
       {places.length === 0 ? (
-        <Card padded={false}>
-          <EmptyState
-            icon={<Building2 size={20} color={color.fgMuted} strokeWidth={1.75} />}
-            title="No places yet"
-            body="Add a place. Then add the areas inside it, like a roof or a patio."
-            actionLabel="Add a place"
-            onAction={() => setAsking({ kind: 'place' })}
-          />
-        </Card>
+        <EmptyState
+          title="No places yet"
+          body="Add a place. Then add the areas inside it, like a roof or a patio."
+          actionLabel="Add a place"
+          onAction={() => setAsking({ kind: 'place' })}
+        />
       ) : (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.list}>
           {places.map((place: Place) => (
             <Card key={place.id}>
               <View style={styles.placeHead}>
-                <Building2 size={20} color={color.ink} strokeWidth={1.75} />
+                <Building2 size={icon.md} color={c.ink} strokeWidth={icon.stroke} />
                 <View style={styles.grow}>
-                  <Text style={type.subheading} numberOfLines={1}>
+                  <Text style={styles.placeName} numberOfLines={1}>
                     {place.name}
                   </Text>
                   <Text style={styles.meta}>
@@ -172,14 +184,14 @@ export default function PlacesScreen() {
                   accessibilityLabel={`Rename ${place.name}`}
                   style={styles.iconButton}
                 >
-                  <Pencil size={16} color={color.ink} strokeWidth={1.75} />
+                  <Pencil size={icon.sm} color={c.ink} strokeWidth={icon.stroke} />
                 </Touchable>
                 <Touchable
                   onPress={() => void usePlaces.getState().removePlace(place.id)}
                   accessibilityLabel={`Delete ${place.name}`}
                   style={styles.iconButton}
                 >
-                  <Trash2 size={18} color={color.danger} strokeWidth={1.75} />
+                  <Trash2 size={icon.md} color={c.danger} strokeWidth={icon.stroke} />
                 </Touchable>
               </View>
 
@@ -189,7 +201,7 @@ export default function PlacesScreen() {
                 return (
                   <View key={area.id} style={styles.area}>
                     <View style={styles.areaHead}>
-                      <LayoutGrid size={16} color={color.fgMuted} strokeWidth={1.75} />
+                      <LayoutGrid size={icon.sm} color={c.muted} strokeWidth={icon.stroke} />
                       <Text style={styles.areaName} numberOfLines={1}>
                         {area.name}
                       </Text>
@@ -206,20 +218,20 @@ export default function PlacesScreen() {
                         accessibilityLabel={`Rename ${area.name}`}
                         style={styles.iconButton}
                       >
-                        <Pencil size={14} color={color.ink} strokeWidth={1.75} />
+                        <Pencil size={icon.sm} color={c.ink} strokeWidth={icon.stroke} />
                       </Touchable>
                       <Touchable
                         onPress={() => void usePlaces.getState().removeArea(place.id, area.id)}
                         accessibilityLabel={`Delete ${area.name}`}
                         style={styles.iconButton}
                       >
-                        <Trash2 size={16} color={color.danger} strokeWidth={1.75} />
+                        <Trash2 size={icon.sm} color={c.danger} strokeWidth={icon.stroke} />
                       </Touchable>
                     </View>
 
                     {(area.speakers ?? []).map((s) => (
                       <View key={s.id} style={styles.speakerRow}>
-                        <Speaker size={16} color={color.ink} strokeWidth={1.75} />
+                        <Speaker size={icon.sm} color={c.ink} strokeWidth={icon.stroke} />
                         <Text style={styles.speakerName} numberOfLines={1}>
                           {s.name}
                         </Text>
@@ -230,14 +242,14 @@ export default function PlacesScreen() {
                           accessibilityLabel={`Remove ${s.name}`}
                           style={styles.iconButton}
                         >
-                          <Trash2 size={16} color={color.danger} strokeWidth={1.75} />
+                          <Trash2 size={icon.sm} color={c.danger} strokeWidth={icon.stroke} />
                         </Touchable>
                       </View>
                     ))}
 
                     {area.speakerIds.map((id) => (
                       <View key={id} style={styles.speakerRow}>
-                        <Speaker size={16} color={color.ink} strokeWidth={1.75} />
+                        <Speaker size={icon.sm} color={c.ink} strokeWidth={icon.stroke} />
                         <Text style={styles.speakerName} numberOfLines={1}>
                           {speakerName(id)}
                         </Text>
@@ -248,7 +260,7 @@ export default function PlacesScreen() {
                           accessibilityLabel={`Remove ${speakerName(id)}`}
                           style={styles.iconButton}
                         >
-                          <Trash2 size={16} color={color.danger} strokeWidth={1.75} />
+                          <Trash2 size={icon.sm} color={c.danger} strokeWidth={icon.stroke} />
                         </Touchable>
                       </View>
                     ))}
@@ -285,7 +297,7 @@ export default function PlacesScreen() {
                   variant="secondary"
                   size="sm"
                   onPress={() => setAsking({ kind: 'area', placeId: place.id })}
-                  icon={<Plus size={14} color={color.ink} strokeWidth={1.75} />}
+                  icon={Plus}
                 />
               </View>
             </Card>
@@ -299,7 +311,7 @@ export default function PlacesScreen() {
         label="Add a place"
         size="lg"
         onPress={() => setAsking({ kind: 'place' })}
-        icon={<Plus size={16} color={color.onAccent} strokeWidth={1.75} />}
+        icon={Plus}
       />
 
       <NameSheet asking={asking} onClose={() => setAsking(null)} onSubmit={submitName} />
@@ -311,34 +323,39 @@ export default function PlacesScreen() {
 
 const SHEET_COPY: Record<
   Asking['kind'],
-  { title: string; hint: string; placeholder: string; action: string }
+  { title: string; hint: string; placeholder: string; action: string; label: string }
 > = {
   place: {
     title: 'Add a place',
+    label: 'Name',
     hint: 'The name of the building. Like Main Street Hotel.',
     placeholder: 'Main Street Hotel',
     action: 'Add a place',
   },
   area: {
     title: 'Add an area',
+    label: 'Name',
     hint: 'The name of one part of it. Like Roof or Patio.',
     placeholder: 'Roof',
     action: 'Add an area',
   },
   speaker: {
     title: 'Add a speaker',
+    label: 'Name',
     hint: 'Name it after where it sits. Like Roof corner.',
     placeholder: 'Roof corner',
     action: 'Add a speaker',
   },
   'rename-place': {
     title: 'Rename this place',
+    label: 'Name',
     hint: 'The name of the building.',
     placeholder: 'Main Street Hotel',
     action: 'Save',
   },
   'rename-area': {
     title: 'Rename this area',
+    label: 'Name',
     hint: 'The name of one part of the building.',
     placeholder: 'Roof',
     action: 'Save',
@@ -383,66 +400,42 @@ function NameSheet({
         />
       }
     >
-      <View style={styles.field}>
-        <Text style={styles.hint}>{copy.hint}</Text>
-        <TextInput
-          value={name}
-          onChangeText={setName}
-          placeholder={copy.placeholder}
-          placeholderTextColor={color.fgSubtle}
-          style={styles.input}
-          accessibilityLabel="Name"
-        />
-      </View>
+      <TextField
+        label={copy.label}
+        hint={copy.hint}
+        value={name}
+        onChangeText={setName}
+        placeholder={copy.placeholder}
+        accessibilityLabel="Name"
+      />
     </Sheet>
   );
 }
 
-const styles = StyleSheet.create({
+const sheet = themed((c, t) => ({
   list: { gap: space.sm, paddingBottom: space.sm },
   grow: { flex: 1, gap: 2 },
   teamRow: { flexDirection: 'row', marginBottom: space.sm },
-  problem: {
-    fontFamily: font.body.regular,
-    fontSize: 13,
-    lineHeight: 18,
-    color: color.warning,
-    marginBottom: space.sm,
-  },
+  problem: { marginBottom: space.sm },
   placeHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm + 4 },
-  meta: {
-    fontFamily: font.body.regular,
-    fontSize: 13,
-    lineHeight: 17,
-    color: color.fgMuted,
-  },
+  placeName: { ...t.heading },
+  meta: { ...t.bodySmall },
   area: {
     marginTop: space.sm + 4,
     borderTopWidth: 1,
-    borderTopColor: color.border,
+    borderTopColor: c.border,
     paddingTop: space.sm + 4,
     gap: space.sm,
   },
   areaHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  areaName: {
-    flex: 1,
-    fontFamily: font.heading.semibold,
-    fontSize: 15,
-    letterSpacing: -0.3,
-    color: color.ink,
-  },
+  areaName: { ...t.subheading, flex: 1 },
   speakerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
     paddingLeft: space.md,
   },
-  speakerName: {
-    flex: 1,
-    fontFamily: font.body.regular,
-    fontSize: 14,
-    color: color.fg,
-  },
+  speakerName: { ...t.label, flex: 1, fontSize: 15 },
   areaActions: { flexDirection: 'row', gap: space.sm, flexWrap: 'wrap' },
   placeFooter: { marginTop: space.md },
   iconButton: {
@@ -452,21 +445,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   spacer: { flex: 1, minHeight: space.md },
-  field: { gap: space.sm },
-  hint: {
-    fontFamily: font.body.regular,
-    fontSize: 14,
-    lineHeight: 19,
-    color: color.fgMuted,
-  },
-  input: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: color.border,
-    backgroundColor: color.background,
-    paddingHorizontal: space.sm + 4,
-    color: color.ink,
-    fontFamily: font.body.medium,
-    fontSize: 16,
-  },
-});
+}));

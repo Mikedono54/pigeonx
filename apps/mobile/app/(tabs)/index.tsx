@@ -1,18 +1,20 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Linking, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Play, Square } from 'lucide-react-native';
+import { StatusBar } from 'expo-status-bar';
+import { Music, Play, Speaker, Square } from 'lucide-react-native';
 
 import {
   Banner,
-  Button,
+  BlockButton,
   Chip,
   ListRow,
-  Screen,
   Sheet,
   Slider,
   SpeakerReach,
   SpectrumBars,
+  StateBlock,
   Touchable,
   useToast,
 } from '../../src/components';
@@ -30,12 +32,13 @@ import {
   type SweepParams,
   type ToneParams,
 } from '../../src/core/profiles';
+import { nextRun } from '../../src/core/scheduler';
 import { useAccount } from '../../src/state/useAccount';
 import { useProfiles } from '../../src/state/useProfiles';
+import { formatMinutes, useSchedules } from '../../src/state/useSchedules';
 import { formatElapsed, useSession } from '../../src/state/useSession';
 import type { DurationChoice } from '../../src/state/useSession';
-import { color, font, space } from '../../src/theme/tokens';
-import { type } from '../../src/theme/typography';
+import { font, space, themed, useTheme, useThemedStyles } from '../../src/theme';
 
 const HOW_LONG: { value: DurationChoice; label: string }[] = [
   { value: 15, label: '15 min' },
@@ -44,17 +47,18 @@ const HOW_LONG: { value: DurationChoice; label: string }[] = [
   { value: null, label: 'Until I stop' },
 ];
 
-const SPEAKERS: OutputKind[] = [
-  'phone',
-  'bt_speaker',
-  'pigeonx_emitter',
-  'simulated',
-];
+const SPEAKERS: OutputKind[] = ['phone', 'bt_speaker', 'pigeonx_emitter', 'simulated'];
+
+/** Ninety minutes. Any further off and the block stays plain paper. */
+const SOON_MS = 90 * 60 * 1000;
 
 const BLUETOOTH_NOTE =
   "Connect a Bluetooth speaker in your phone's settings first, then it plays there.";
 
 export default function HomeScreen() {
+  const styles = useThemedStyles(sheet);
+  const { c, dark } = useTheme();
+  const insets = useSafeAreaInsets();
   const ent = useEntitlement();
   const toast = useToast();
   const [speakerOpen, setSpeakerOpen] = useState(false);
@@ -77,10 +81,26 @@ export default function HomeScreen() {
 
   const speakers = useAccount((s) => s.devices);
   const addTestSpeaker = useAccount((s) => s.addSimulatedDevice);
+  const schedules = useSchedules((s) => s.schedules);
 
   const elapsed = useElapsed(startedAt);
   const playing = engineState === 'running';
   const busy = engineState === 'loading';
+
+  // A time a person already set, close enough to say out loud.
+  const [minute, setMinute] = useState(() => Date.now());
+  useEffect(() => {
+    if (schedules.length === 0) return;
+    const tick = setInterval(() => setMinute(Date.now()), 60_000);
+    return () => clearInterval(tick);
+  }, [schedules.length]);
+
+  const upNext = useMemo(() => {
+    const from = new Date(minute);
+    const found = nextRun(schedules, from);
+    if (!found || found.at.getTime() - from.getTime() > SOON_MS) return null;
+    return formatMinutes(found.window.startMinutes);
+  }, [minute, schedules]);
 
   const pickSpeaker = useCallback(
     (o: OutputKind) => {
@@ -111,121 +131,110 @@ export default function HomeScreen() {
   }, [playing, start, stop]);
 
   return (
-    <Screen
-      header={
-        <View style={styles.statusBlock}>
-          <Text style={type.display}>
-            {playing ? `Playing ${formatElapsed(elapsed)}` : 'Off'}
-          </Text>
-          <Text style={type.body}>
-            {playing
-              ? 'You can lock the phone. The sound keeps going.'
-              : 'Press Start. Birds leave.'}
-          </Text>
-        </View>
-      }
-      scroll={false}
-    >
-      {error ? (
-        <View style={styles.banner}>
-          <Banner
-            title="That didn't work"
-            body={error}
-            onRetry={() => void start()}
-          />
-        </View>
-      ) : null}
+    <View style={styles.root}>
+      <StatusBar style={playing || dark ? 'light' : 'dark'} />
 
-      {hitPlanCap && !playing ? (
-        <View style={styles.banner}>
-          <Banner
-            tone="info"
-            title="Stopped after 15 minutes"
-            body="Free stops the sound after 15 minutes. Pro plays as long as you like."
-            retryLabel="See Pro"
-            onRetry={() => router.push('/paywall')}
-          />
-        </View>
-      ) : null}
-
-      <View style={styles.list}>
-        <ListRow
-          title={
-            sound
-              ? `Sound: ${sound.name}, ${soundPitch(sound).toLowerCase()} pitch`
-              : 'Sound: none picked yet'
-          }
-          meta="Tap to change"
-          onPress={() => router.navigate('/sounds')}
-          accessibilityLabel={`Sound, ${sound?.name ?? 'none picked yet'}. Tap to change.`}
-        />
-        <ListRow
-          title={`Plays on: ${SPEAKER_LABEL[playsOn]}`}
-          meta={SPEAKER_HINT[playsOn]}
-          onPress={() => setSpeakerOpen(true)}
-          accessibilityLabel={`Plays on ${SPEAKER_LABEL[playsOn]}. Tap to change.`}
-        />
-      </View>
-
-      {playsOn === 'bt_speaker' ? (
-        <Touchable
-          onPress={() => void Linking.openSettings()}
-          accessibilityLabel="Open your phone settings to connect a speaker"
-          style={styles.note}
-        >
-          <Text style={styles.noteText}>{BLUETOOTH_NOTE}</Text>
-        </Touchable>
-      ) : null}
-
-      <View style={styles.howLong}>
-        <Text style={styles.fieldLabel}>How long</Text>
-        <View style={styles.chipRow}>
-          {HOW_LONG.map((d) => (
-            <Chip
-              key={String(d.value)}
-              label={d.label}
-              selected={duration === d.value}
-              locked={d.value === null && !ent.can('session.unlimited')}
-              onPress={() => pickHowLong(d.value)}
-            />
-          ))}
-        </View>
-      </View>
-
-      {playing ? (
-        <View style={styles.meter}>
-          <Text style={styles.fieldLabel}>Sound playing</Text>
-          <SpectrumBars active height={72} />
-        </View>
-      ) : null}
-
-      <View style={styles.spacer} />
-
-      <Touchable
-        onPress={() => setAdjustOpen(true)}
-        accessibilityLabel="Adjust the pitch and the loudness"
-        style={styles.adjust}
+      <StateBlock
+        state={playing ? 'playing' : upNext ? 'soon' : 'off'}
+        label={playing ? 'Playing' : upNext ? `Starts ${upNext}` : '01  State'}
+        headline={playing ? formatElapsed(elapsed) : 'Off'}
+        clock={playing}
+        line={
+          playing
+            ? 'You can lock the phone. The sound keeps going.'
+            : 'Press Start. Birds leave.'
+        }
+        topInset={insets.top}
       >
-        <Text style={styles.adjustText}>Adjust</Text>
-      </Touchable>
+        {playing ? (
+          <SpectrumBars
+            active
+            height={44}
+            color={c.playOn}
+            peakColor={c.energy}
+          />
+        ) : null}
+      </StateBlock>
 
-      <Button
-        label={playing ? 'Stop' : 'Start'}
-        variant={playing ? 'danger' : 'primary'}
-        size="lg"
-        loading={busy}
-        onPress={onBigButton}
-        icon={
-          playing ? (
-            <Square size={16} color={color.danger} strokeWidth={1.75} />
-          ) : (
-            <Play size={16} color={color.onAccent} strokeWidth={1.75} />
-          )
-        }
-        accessibilityHint={
-          playing ? 'Stops the sound' : 'Plays the sound shown above'
-        }
-      />
+      <View style={styles.body}>
+        {error ? (
+          <View style={styles.banner}>
+            <Banner title="That didn't work" body={error} onRetry={() => void start()} />
+          </View>
+        ) : hitPlanCap && !playing ? (
+          <View style={styles.banner}>
+            <Banner
+              tone="info"
+              title="Stopped after 15 minutes"
+              body="Free stops the sound after 15 minutes. Pro plays as long as you like."
+              retryLabel="See Pro"
+              onRetry={() => router.push('/paywall')}
+            />
+          </View>
+        ) : null}
+
+        <View style={styles.list}>
+          <ListRow
+            icon={Music}
+            title={sound ? sound.name : 'No sound picked yet'}
+            meta={sound ? `${soundPitch(sound)} pitch. Tap to change.` : 'Tap to pick one'}
+            onPress={() => router.navigate('/sounds')}
+            accessibilityLabel={`Sound, ${sound?.name ?? 'none picked yet'}. Tap to change.`}
+          />
+          <ListRow
+            icon={Speaker}
+            title={SPEAKER_LABEL[playsOn]}
+            meta={SPEAKER_HINT[playsOn]}
+            onPress={() => setSpeakerOpen(true)}
+            accessibilityLabel={`Plays on ${SPEAKER_LABEL[playsOn]}. Tap to change.`}
+          />
+        </View>
+
+        {playsOn === 'bt_speaker' ? (
+          <Touchable
+            onPress={() => void Linking.openSettings()}
+            accessibilityLabel="Open your phone settings to connect a speaker"
+            style={styles.note}
+          >
+            <Text style={styles.noteText}>{BLUETOOTH_NOTE}</Text>
+          </Touchable>
+        ) : null}
+
+        <View style={styles.howLong}>
+          <Text style={styles.fieldLabel}>02  How long</Text>
+          <View style={styles.chipRow}>
+            {HOW_LONG.map((d) => (
+              <Chip
+                key={String(d.value)}
+                label={d.label}
+                selected={duration === d.value}
+                locked={d.value === null && !ent.can('session.unlimited')}
+                onPress={() => pickHowLong(d.value)}
+              />
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.spacer} />
+
+        <Touchable
+          onPress={() => setAdjustOpen(true)}
+          accessibilityLabel="Adjust the pitch and the loudness"
+          style={styles.adjust}
+        >
+          <Text style={styles.adjustText}>Adjust the pitch and the loudness</Text>
+        </Touchable>
+
+        <BlockButton
+          label={playing ? 'Stop' : 'Start'}
+          tone={playing ? 'danger' : 'accent'}
+          tall
+          loading={busy}
+          onPress={onBigButton}
+          icon={playing ? Square : Play}
+          accessibilityHint={playing ? 'Stops the sound' : 'Plays the sound shown above'}
+        />
+      </View>
 
       <Sheet
         open={speakerOpen}
@@ -248,20 +257,15 @@ export default function HomeScreen() {
       </Sheet>
 
       <AdjustSheet open={adjustOpen} onClose={() => setAdjustOpen(false)} />
-    </Screen>
+    </View>
   );
 }
 
 /* ------------------------------------------------------------------ */
 
 /** Pitch and loudness. Kept behind one link so Home stays simple. */
-function AdjustSheet({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
+function AdjustSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const styles = useThemedStyles(sheet);
   const profileId = useSession((s) => s.profileId);
   const playsOn = useSession((s) => s.output);
   const volume = useSession((s) => s.volume);
@@ -273,9 +277,7 @@ function AdjustSheet({
   const hasPitch = sound?.kind === 'tone' || sound?.kind === 'pulse';
   const isSweep = sound?.kind === 'sweep';
 
-  const [hz, setHz] = useState(() =>
-    sound ? peakFreqHz(sound) : 17000
-  );
+  const [hz, setHz] = useState(() => (sound ? peakFreqHz(sound) : 17000));
   const [rate, setRate] = useState(() =>
     isSweep ? (sound.params as SweepParams).rateHz : 0.5
   );
@@ -356,52 +358,30 @@ function AdjustSheet({
   );
 }
 
-const styles = StyleSheet.create({
-  statusBlock: { gap: 4 },
+const sheet = themed((c, t) => ({
+  root: { flex: 1, backgroundColor: c.bg },
+  body: {
+    flex: 1,
+    paddingHorizontal: space.md,
+    paddingTop: space.md,
+    paddingBottom: space.md,
+  },
   banner: { marginBottom: space.sm },
-  list: { borderWidth: 1, borderColor: color.border },
+  list: { borderWidth: 1, borderColor: c.border },
   note: { minHeight: 40, justifyContent: 'center', marginTop: space.sm },
-  noteText: {
-    fontFamily: font.body.regular,
-    fontSize: 13,
-    lineHeight: 18,
-    color: color.accent,
-  },
+  noteText: { ...t.bodySmall, color: c.link },
   howLong: { marginTop: space.md, gap: space.sm },
-  fieldLabel: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.fgSubtle,
-  },
+  fieldLabel: { ...t.index },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs + 2 },
-  meter: { marginTop: space.md, gap: space.sm },
-  spacer: { flex: 1, minHeight: space.md },
+  spacer: { flex: 1, minHeight: space.sm },
   adjust: {
-    minHeight: 40,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: space.sm,
   },
-  adjustText: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.accent,
-  },
-  sheetNote: {
-    fontFamily: font.body.regular,
-    fontSize: 13,
-    lineHeight: 18,
-    color: color.fgMuted,
-  },
+  adjustText: { ...t.bodyStrong, fontSize: 15, color: c.link },
+  sheetNote: { ...t.bodySmall },
   field: { gap: space.xs },
-  mono: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    letterSpacing: 0.5,
-    color: color.fgSubtle,
-  },
-});
+  mono: { ...t.caption, fontFamily: font.mono.medium, letterSpacing: 0.5 },
+}));

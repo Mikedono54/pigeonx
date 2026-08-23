@@ -1,15 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AppState, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 
-import { StatusPill } from '../src/components';
+import { Pigeon, StatusPill } from '../src/components';
 import { msUntilEnd, nextRun, playingAt, type TimeWindow } from '../src/core/scheduler';
 import { useAccount } from '../src/state/useAccount';
 import { formatMinutes, useSchedules } from '../src/state/useSchedules';
 import { useSession } from '../src/state/useSession';
-import { color, font, space } from '../src/theme/tokens';
+import {
+  darkPalette,
+  font,
+  space,
+  themed,
+  useTheme,
+  useThemedStyles,
+} from '../src/theme';
 
 const KEEP_SCREEN_ON_TAG = 'pigeonx-speaker';
 const CHECK_EVERY_MS = 30_000;
@@ -28,6 +36,8 @@ interface Window extends TimeWindow {
  * only costs half a minute.
  */
 export default function SpeakerMode() {
+  const styles = useThemedStyles(sheet);
+  const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const schedules = useSchedules((s) => s.schedules);
   const areaName = useSession((s) => s.zoneName);
@@ -49,7 +59,7 @@ export default function SpeakerMode() {
         profileId: s.profileId,
         profileName: s.profileName,
       })),
-    [schedules],
+    [schedules]
   );
 
   const playing = useMemo(() => playingAt(windows, now), [now, windows]);
@@ -166,6 +176,8 @@ export default function SpeakerMode() {
         { paddingTop: insets.top + space.lg, paddingBottom: insets.bottom + space.lg },
       ]}
     >
+      <StatusBar style="light" />
+
       <View style={styles.head}>
         <Text style={styles.kicker}>Speaker mode</Text>
         <StatusPill label={playing ? 'Playing' : 'Waiting'} tone={playing ? 'running' : 'idle'} />
@@ -188,9 +200,18 @@ export default function SpeakerMode() {
       </View>
 
       <View style={styles.foot}>
-        <Text style={styles.hint}>
-          Leave this screen open. The phone plays your times on its own.
-        </Text>
+        <View style={styles.hintRow}>
+          <Pigeon
+            size={34}
+            pose={playing ? 'fly' : 'sit'}
+            color={darkPalette.ink}
+            holeColor={night.bg}
+            beakColor={c.energy}
+          />
+          <Text style={styles.hint}>
+            Leave this screen open. The phone plays your times on its own.
+          </Text>
+        </View>
         <Pressable
           onPressIn={startHold}
           onPressOut={endHold}
@@ -207,10 +228,17 @@ export default function SpeakerMode() {
   );
 }
 
-const styles = StyleSheet.create({
+/**
+ * Speaker mode is always the dark face, in both palettes: the phone is
+ * propped on a shelf all evening and a white screen would light the room.
+ */
+const night = { bg: '#0A0A0A', dim: '#B9B9B4', edge: '#5F5F5F' } as const;
+
+/** Painted from `night` and the dark palette, whichever face the app is on. */
+const sheet = themed((c) => ({
   root: {
     flex: 1,
-    backgroundColor: color.ink,
+    backgroundColor: night.bg,
     paddingHorizontal: space.md,
   },
   head: {
@@ -219,42 +247,45 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   kicker: {
-    fontFamily: font.mono.medium,
+    fontFamily: font.mono.bold,
     fontSize: 11,
-    letterSpacing: 1,
+    letterSpacing: 1.4,
     textTransform: 'uppercase',
-    color: color.fgSubtle,
+    color: darkPalette.muted,
   },
   middle: { flex: 1, justifyContent: 'center', gap: space.sm },
   clock: {
-    fontFamily: font.mono.medium,
-    fontSize: 72,
-    letterSpacing: -2,
-    color: color.background,
+    fontFamily: font.mono.bold,
+    fontSize: 76,
+    letterSpacing: -4,
+    color: darkPalette.playOn,
   },
   where: {
-    fontFamily: font.heading.semibold,
-    fontSize: 19,
-    letterSpacing: -0.5,
-    color: color.background,
+    fontFamily: font.heading.extrabold,
+    fontSize: 24,
+    letterSpacing: -0.9,
+    color: darkPalette.playOn,
   },
   line: {
-    fontFamily: font.body.regular,
-    fontSize: 15,
-    lineHeight: 21,
-    color: color.fgSubtle,
+    fontFamily: font.body.medium,
+    fontSize: 17,
+    lineHeight: 24,
+    letterSpacing: -0.2,
+    color: night.dim,
   },
   foot: { gap: space.md },
+  hintRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   hint: {
+    flex: 1,
     fontFamily: font.body.regular,
-    fontSize: 13,
-    lineHeight: 18,
-    color: color.fgSubtle,
+    fontSize: 14,
+    lineHeight: 20,
+    color: night.dim,
   },
   leave: {
-    height: 56,
+    height: 60,
     borderWidth: 1,
-    borderColor: color.fgMuted,
+    borderColor: night.edge,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -264,13 +295,12 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: color.fgMuted,
+    backgroundColor: c.accent,
   },
   leaveText: {
-    fontFamily: font.mono.medium,
-    fontSize: 13,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.background,
+    fontFamily: font.heading.bold,
+    fontSize: 17,
+    letterSpacing: -0.4,
+    color: darkPalette.playOn,
   },
-});
+}));

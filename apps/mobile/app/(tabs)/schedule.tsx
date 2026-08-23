@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Platform, ScrollView, Switch, Text, View } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { CalendarClock, Plus, Trash2 } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
+import { Plus, Trash2 } from 'lucide-react-native';
 
 import {
+  Banner,
   Button,
   Card,
   Chip,
@@ -29,9 +31,18 @@ import {
   type Schedule,
 } from '../../src/state/useSchedules';
 import { useSession } from '../../src/state/useSession';
-import { color, font, space } from '../../src/theme/tokens';
+import {
+  font,
+  icon,
+  space,
+  themed,
+  useTheme,
+  useThemedStyles,
+} from '../../src/theme';
 
 export default function ScheduleScreen() {
+  const styles = useThemedStyles(sheet);
+  const { c } = useTheme();
   const ent = useEntitlement();
   const schedules = useSchedules((s) => s.schedules);
   const clashes = useMemo(() => overlappingPairs(schedules), [schedules]);
@@ -53,15 +64,12 @@ export default function ScheduleScreen() {
       scroll={false}
     >
       {schedules.length === 0 ? (
-        <Card padded={false}>
-          <EmptyState
-            icon={<CalendarClock size={20} color={color.fgMuted} strokeWidth={1.75} />}
-            title="Nothing set yet"
-            body="Add a schedule. Your phone reminds you, or a PigeonX speaker starts it for you."
-            actionLabel="Add a schedule"
-            onAction={openNew}
-          />
-        </Card>
+        <EmptyState
+          title="Nothing set yet"
+          body="Add a schedule. Your phone reminds you, or a PigeonX speaker starts it for you."
+          actionLabel="Add a schedule"
+          onAction={openNew}
+        />
       ) : (
         <ScrollView
           style={styles.list}
@@ -69,7 +77,7 @@ export default function ScheduleScreen() {
           contentContainerStyle={styles.listContent}
         >
           {schedules.map((s) => (
-            <Card key={s.id}>
+            <Card key={s.id} active={s.enabled}>
               <View style={styles.row}>
                 <View style={styles.rowText}>
                   <Text style={styles.line}>{describeSchedule(s)}</Text>
@@ -78,9 +86,9 @@ export default function ScheduleScreen() {
                 <Switch
                   value={s.enabled}
                   onValueChange={() => void toggle(s.id)}
-                  trackColor={{ false: color.border, true: color.accent }}
-                  thumbColor={color.background}
-                  ios_backgroundColor={color.border}
+                  trackColor={{ false: c.border, true: c.accent }}
+                  thumbColor={c.bg}
+                  ios_backgroundColor={c.border}
                   accessibilityLabel={`${describeSchedule(s)}. ${s.enabled ? 'On' : 'Off'}`}
                 />
               </View>
@@ -100,9 +108,9 @@ export default function ScheduleScreen() {
                 <Touchable
                   onPress={() => void remove(s.id)}
                   accessibilityLabel={`Delete ${describeSchedule(s)}`}
-                  style={styles.footerAction}
+                  style={styles.footerIcon}
                 >
-                  <Trash2 size={16} color={color.danger} strokeWidth={1.75} />
+                  <Trash2 size={icon.md} color={c.danger} strokeWidth={icon.stroke} />
                 </Touchable>
               </View>
             </Card>
@@ -111,19 +119,18 @@ export default function ScheduleScreen() {
       )}
 
       {clashes.length > 0 ? (
-        <Text style={styles.clash}>
-          Two of your times cover the same minutes. The one that starts later takes over.
-        </Text>
+        <View style={styles.clash}>
+          <Banner
+            tone="warning"
+            title="Two times cover the same minutes"
+            body="The one that starts later takes over."
+          />
+        </View>
       ) : null}
 
       <View style={styles.spacer} />
 
-      <Button
-        label="Add a schedule"
-        size="lg"
-        onPress={openNew}
-        icon={<Plus size={16} color={color.onAccent} strokeWidth={1.75} />}
-      />
+      <Button label="Add a schedule" size="lg" onPress={openNew} icon={Plus} />
 
       <ScheduleForm open={open} schedule={editing} onClose={() => setOpen(false)} />
     </Screen>
@@ -141,6 +148,8 @@ function ScheduleForm({
   schedule: Schedule | null;
   onClose: () => void;
 }) {
+  const styles = useThemedStyles(sheet);
+  const { dark } = useTheme();
   const ent = useEntitlement();
   const toast = useToast();
   const upsert = useSchedules((s) => s.upsert);
@@ -179,7 +188,7 @@ function ScheduleForm({
       if (next === 'device' && !ent.guard('schedules.device')) return;
       setExecutor(next);
     },
-    [ent],
+    [ent]
   );
 
   const save = useCallback(async () => {
@@ -201,6 +210,7 @@ function ScheduleForm({
         zoneId: null,
         deviceId: null,
       });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       toast.show(executor === 'reminder' ? 'Your phone will remind you.' : 'Saved.', 'success');
       onClose();
     } finally {
@@ -225,7 +235,7 @@ function ScheduleForm({
       }
     >
       <View style={styles.field}>
-        <Text style={styles.fieldLabel}>Days</Text>
+        <Text style={styles.fieldLabel}>01  Days</Text>
         <View style={styles.dayRow}>
           {DAY_LABELS.map((label, i) => (
             <Touchable
@@ -247,15 +257,18 @@ function ScheduleForm({
       </View>
 
       <View style={styles.field}>
+        <Text style={styles.fieldLabel}>02  Times</Text>
         <View style={styles.timeRow}>
           <TimeButton
             label="Starts"
             value={formatMinutes(startMinutes)}
+            open={picking === 'start'}
             onPress={() => setPicking(picking === 'start' ? null : 'start')}
           />
           <TimeButton
             label="Ends"
             value={formatMinutes(endMinutes)}
+            open={picking === 'end'}
             onPress={() => setPicking(picking === 'end' ? null : 'end')}
           />
         </View>
@@ -264,7 +277,7 @@ function ScheduleForm({
             <DateTimePicker
               value={pickerDate}
               mode="time"
-              themeVariant="light"
+              themeVariant={dark ? 'dark' : 'light'}
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               onChange={(_, date) => {
                 if (Platform.OS !== 'ios') setPicking(null);
@@ -282,7 +295,7 @@ function ScheduleForm({
       </View>
 
       <View style={styles.field}>
-        <Text style={styles.fieldLabel}>Which sound</Text>
+        <Text style={styles.fieldLabel}>03  Which sound</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -304,7 +317,7 @@ function ScheduleForm({
       </View>
 
       <View style={styles.field}>
-        <Text style={styles.fieldLabel}>Who runs it</Text>
+        <Text style={styles.fieldLabel}>04  Who runs it</Text>
         <Segmented
           value={executor}
           onChange={pickWhoRuns}
@@ -331,15 +344,25 @@ function ScheduleForm({
 function TimeButton({
   label,
   value,
+  open,
   onPress,
 }: {
   label: string;
   value: string;
+  open: boolean;
   onPress: () => void;
 }) {
+  const styles = useThemedStyles(sheet);
   return (
-    <Touchable onPress={onPress} accessibilityLabel={`${label} at ${value}`} style={styles.grow}>
-      <View style={styles.timeButton}>
+    <Touchable
+      onPress={onPress}
+      haptic="selection"
+      feel="offset"
+      accessibilityLabel={`${label} at ${value}`}
+      accessibilityState={{ expanded: open }}
+      style={styles.grow}
+    >
+      <View style={[styles.timeButton, open ? styles.timeButtonOpen : null]}>
         <Text style={styles.timeLabel}>{label}</Text>
         <Text style={styles.timeValue}>{value}</Text>
       </View>
@@ -347,32 +370,15 @@ function TimeButton({
   );
 }
 
-const styles = StyleSheet.create({
+const sheet = themed((c, t) => ({
   list: { flexGrow: 0 },
   listContent: { gap: space.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   rowText: { flex: 1, gap: 4 },
   grow: { flex: 1 },
-  line: {
-    fontFamily: font.heading.semibold,
-    fontSize: 15,
-    lineHeight: 20,
-    letterSpacing: -0.3,
-    color: color.ink,
-  },
-  meta: {
-    fontFamily: font.body.regular,
-    fontSize: 13,
-    lineHeight: 17,
-    color: color.fgMuted,
-  },
-  state: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.fgSubtle,
-  },
+  line: { ...t.subheading },
+  meta: { ...t.bodySmall },
+  state: { ...t.index },
   cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -380,87 +386,61 @@ const styles = StyleSheet.create({
     marginTop: space.sm + 4,
     paddingTop: space.sm,
     borderTopWidth: 1,
-    borderTopColor: color.border,
+    borderTopColor: c.border,
   },
   footerAction: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  footerIcon: {
     minHeight: 44,
     minWidth: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
   },
-  footerActionText: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.accent,
-  },
+  footerActionText: { ...t.bodyStrong, fontSize: 15, color: c.link },
   spacer: { flex: 1, minHeight: space.md },
-  clash: {
-    fontFamily: font.body.regular,
-    fontSize: 13,
-    lineHeight: 18,
-    color: color.warning,
-    marginTop: space.sm,
-  },
+  clash: { marginTop: space.sm },
   field: { gap: space.sm },
-  fieldLabel: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.fgSubtle,
-  },
+  fieldLabel: { ...t.index },
   dayRow: { flexDirection: 'row' },
-  dayPress: { flex: 1, minHeight: 44, marginLeft: -1 },
+  dayPress: { flex: 1, minHeight: 48, marginLeft: -1 },
   day: {
     flex: 1,
-    minHeight: 44,
-    borderRadius: 0,
+    minHeight: 48,
     borderWidth: 1,
-    borderColor: color.border,
-    backgroundColor: color.background,
+    borderColor: c.ink,
+    backgroundColor: c.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  daySelected: { borderColor: color.ink, backgroundColor: color.ink },
+  daySelected: { backgroundColor: c.ink },
   dayText: {
-    fontFamily: font.mono.medium,
-    fontSize: 12,
+    fontFamily: font.mono.bold,
+    fontSize: 13,
     letterSpacing: 0.5,
-    color: color.fgMuted,
+    color: c.text,
   },
-  dayTextSelected: { color: color.onAccent },
+  dayTextSelected: { color: c.inkOn },
   timeRow: { flexDirection: 'row', gap: space.sm },
   timeButton: {
-    borderRadius: 0,
     borderWidth: 1,
-    borderColor: color.border,
-    backgroundColor: color.background,
-    paddingVertical: space.sm,
+    borderColor: c.ink,
+    backgroundColor: c.bg,
+    paddingVertical: space.sm + 2,
     paddingHorizontal: space.sm + 4,
     gap: 2,
   },
-  timeLabel: {
-    fontFamily: font.mono.medium,
-    fontSize: 10,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.fgSubtle,
-  },
+  timeButtonOpen: { backgroundColor: c.surface },
+  timeLabel: { ...t.index },
   timeValue: {
-    fontFamily: font.mono.medium,
-    fontSize: 17,
-    letterSpacing: -0.5,
-    color: color.ink,
+    fontFamily: font.mono.bold,
+    fontSize: 22,
+    letterSpacing: -1,
+    color: c.ink,
   },
-  chipRail: { gap: space.xs + 2 },
-  hint: {
-    fontFamily: font.body.regular,
-    fontSize: 13,
-    lineHeight: 18,
-    color: color.fgMuted,
-  },
+  chipRail: { gap: space.xs + 2, paddingRight: space.md },
+  hint: { ...t.bodySmall },
   pickerWrap: { gap: space.sm },
-});
+}));

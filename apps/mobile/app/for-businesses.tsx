@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { ChevronLeft, LayoutGrid } from 'lucide-react-native';
 
@@ -9,13 +9,13 @@ import {
   SectionHeader,
   Sheet,
   StatusPill,
+  TextField,
   Touchable,
   useToast,
 } from '../src/components';
 import { createBusiness, refreshBusiness } from '../src/services/business';
 import { useAccount } from '../src/state/useAccount';
-import { color, font, space } from '../src/theme/tokens';
-import { type } from '../src/theme/typography';
+import { icon, space, themed, useTheme, useThemedStyles } from '../src/theme';
 
 const SAMPLE_AREAS = [
   { name: 'Roof', status: 'Playing 12:40', tone: 'running' as const },
@@ -32,6 +32,8 @@ const WHAT_YOU_GET = [
 ];
 
 export default function ForBusinesses() {
+  const styles = useThemedStyles(sheet);
+  const { c } = useTheme();
   const toast = useToast();
   const signedIn = useAccount((s) => s.userId) !== null;
   const [asking, setAsking] = useState(false);
@@ -58,9 +60,9 @@ export default function ForBusinesses() {
       header={
         <View style={styles.headRow}>
           <Touchable onPress={() => router.back()} accessibilityLabel="Go back" style={styles.back}>
-            <ChevronLeft size={22} color={color.ink} strokeWidth={1.75} />
+            <ChevronLeft size={icon.lg} color={c.ink} strokeWidth={icon.stroke} />
           </Touchable>
-          <Text style={type.title}>For businesses</Text>
+          <Text style={styles.headTitle}>For businesses</Text>
         </View>
       }
     >
@@ -69,11 +71,11 @@ export default function ForBusinesses() {
       </Text>
 
       <View style={styles.section}>
-        <SectionHeader title="What it looks like" />
+        <SectionHeader index="01" title="What it looks like" />
         <View style={styles.sample}>
           {SAMPLE_AREAS.map((a, i) => (
             <View key={a.name} style={[styles.sampleRow, i > 0 ? styles.sampleDivider : null]}>
-              <LayoutGrid size={16} color={color.fgSubtle} strokeWidth={1.75} />
+              <LayoutGrid size={icon.sm} color={c.muted} strokeWidth={icon.stroke} />
               <Text style={styles.areaName} numberOfLines={1}>
                 {a.name}
               </Text>
@@ -84,12 +86,13 @@ export default function ForBusinesses() {
       </View>
 
       <View style={styles.section}>
-        <SectionHeader title="What you get" />
+        <SectionHeader index="02" title="What you get" />
         <View style={styles.lines}>
           {WHAT_YOU_GET.map((t) => (
-            <Text key={t} style={styles.line}>
-              {t}
-            </Text>
+            <View key={t} style={styles.lineRow}>
+              <View style={styles.lineMark} />
+              <Text style={styles.line}>{t}</Text>
+            </View>
           ))}
         </View>
       </View>
@@ -109,6 +112,7 @@ export default function ForBusinesses() {
         <Button
           label="See the Business plan"
           variant="secondary"
+          size="lg"
           onPress={() => router.push({ pathname: '/paywall', params: { tab: 'business' } })}
         />
       </View>
@@ -127,23 +131,20 @@ export default function ForBusinesses() {
           />
         }
       >
-        <View style={styles.field}>
-          <Text style={styles.hint}>The name your team knows. Like Main Street Property.</Text>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="Main Street Property"
-            placeholderTextColor={color.fgSubtle}
-            style={styles.input}
-            accessibilityLabel="Business name"
-          />
-        </View>
+        <TextField
+          label="Name"
+          hint="The name your team knows. Like Main Street Property."
+          value={name}
+          onChangeText={setName}
+          placeholder="Main Street Property"
+          accessibilityLabel="Business name"
+        />
       </Sheet>
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({
+const sheet = themed((c, t) => ({
   headRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   back: {
     width: 44,
@@ -151,52 +152,22 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'center',
   },
-  lede: {
-    fontFamily: font.body.regular,
-    fontSize: 15,
-    lineHeight: 21,
-    color: color.fg,
-  },
+  headTitle: { ...t.title, flex: 1 },
+  lede: { ...t.body, color: c.text },
   section: { marginTop: space.lg },
-  sample: { borderWidth: 1, borderColor: color.border },
+  sample: { borderWidth: 1, borderColor: c.border },
   sampleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
     paddingHorizontal: space.sm + 4,
-    paddingVertical: space.sm + 2,
+    paddingVertical: space.sm + 4,
   },
-  sampleDivider: { borderTopWidth: 1, borderTopColor: color.border },
-  areaName: {
-    flex: 1,
-    fontFamily: font.heading.semibold,
-    fontSize: 15,
-    letterSpacing: -0.3,
-    color: color.ink,
-  },
-  lines: { gap: 8 },
-  line: {
-    fontFamily: font.body.regular,
-    fontSize: 14,
-    lineHeight: 20,
-    color: color.fg,
-  },
+  sampleDivider: { borderTopWidth: 1, borderTopColor: c.border },
+  areaName: { ...t.subheading, flex: 1 },
+  lines: { gap: 10 },
+  lineRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm },
+  lineMark: { width: 10, height: 3, marginTop: 9, backgroundColor: c.accent },
+  line: { ...t.label, flex: 1, fontSize: 15, lineHeight: 21 },
   action: { marginTop: space.xl, gap: space.sm },
-  field: { gap: space.sm },
-  hint: {
-    fontFamily: font.body.regular,
-    fontSize: 14,
-    lineHeight: 19,
-    color: color.fgMuted,
-  },
-  input: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: color.border,
-    backgroundColor: color.background,
-    paddingHorizontal: space.sm + 4,
-    color: color.ink,
-    fontFamily: font.body.medium,
-    fontSize: 16,
-  },
-});
+}));

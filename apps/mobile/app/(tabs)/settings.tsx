@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { router } from 'expo-router';
 import {
   Building2,
@@ -14,13 +14,13 @@ import {
 
 import {
   Button,
-  Card,
   Chip,
   ConfirmSheet,
   Disclosure,
   ListRow,
   Screen,
   SectionHeader,
+  Segmented,
   SignInSheet,
   Touchable,
   useToast,
@@ -30,8 +30,15 @@ import { PLAN_LABEL, PLAN_ORDER, type Plan } from '../../src/core/entitlements';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { useAccount } from '../../src/state/useAccount';
 import { useHistory } from '../../src/state/useHistory';
-import { color, font, space } from '../../src/theme/tokens';
-import { type } from '../../src/theme/typography';
+import {
+  space,
+  themed,
+  THEME_PREFERENCE_LABEL,
+  THEME_PREFERENCES,
+  useTheme,
+  useThemedStyles,
+  type ThemePreference,
+} from '../../src/theme';
 
 /** The three things we always say out loud. */
 const HONEST_FACTS = [
@@ -41,6 +48,8 @@ const HONEST_FACTS = [
 ];
 
 export default function SettingsScreen() {
+  const styles = useThemedStyles(sheet);
+  const { c, preference, setPreference } = useTheme();
   const ent = useEntitlement();
   const toast = useToast();
   const [devOpen, setDevOpen] = useState(false);
@@ -79,25 +88,40 @@ export default function SettingsScreen() {
 
   return (
     <Screen title="Settings">
-      <SectionHeader title="Your plan" />
-      <Card style={styles.planCard}>
-        <Text style={type.heading}>PigeonX {PLAN_LABEL[ent.plan]}</Text>
-        <Text style={styles.meta} numberOfLines={1}>
+      <SectionHeader index="01" title="Your plan" />
+      <View style={styles.planBlock}>
+        <Text style={styles.planName}>PigeonX {PLAN_LABEL[ent.plan]}</Text>
+        <Text style={styles.planMeta} numberOfLines={1}>
           {guest ? 'On this phone only' : `Signed in as ${email ?? 'your account'}`}
         </Text>
-      </Card>
+      </View>
       <View style={styles.upgrade}>
         <Button
           label={free ? 'Upgrade' : 'Change plan'}
           variant={free ? 'primary' : 'secondary'}
+          size="lg"
           onPress={() => router.push('/paywall')}
         />
       </View>
 
       <View style={styles.section}>
+        <SectionHeader index="02" title="How it looks" />
+        <Segmented
+          value={preference}
+          onChange={(next: ThemePreference) => setPreference(next)}
+          accessibilityLabel="How it looks"
+          options={THEME_PREFERENCES.map((p) => ({
+            value: p,
+            label: THEME_PREFERENCE_LABEL[p],
+          }))}
+        />
+        <Text style={styles.hint}>System follows your phone.</Text>
+      </View>
+
+      <View style={styles.section}>
         <View style={styles.rows}>
           <ListRow
-            icon={<History size={18} color={color.ink} strokeWidth={1.75} />}
+            icon={History}
             title="History"
             meta={
               entries.length === 0
@@ -107,7 +131,7 @@ export default function SettingsScreen() {
             onPress={() => router.push('/history')}
           />
           <ListRow
-            icon={<RadioTower size={18} color={color.ink} strokeWidth={1.75} />}
+            icon={RadioTower}
             title="Use this phone as a speaker"
             meta="The phone stays on this screen and plays your times on its own."
             onPress={() => {
@@ -116,7 +140,7 @@ export default function SettingsScreen() {
             }}
           />
           <ListRow
-            icon={<Building2 size={18} color={color.ink} strokeWidth={1.75} />}
+            icon={Building2}
             title="For businesses"
             meta="Run a roof, a patio and a dock from one phone."
             onPress={() =>
@@ -127,12 +151,13 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
-        <SectionHeader title="Help" />
+        <SectionHeader index="03" title="Help" />
         <View style={styles.facts}>
           {HONEST_FACTS.map((f) => (
-            <Text key={f} style={styles.fact}>
-              {f}
-            </Text>
+            <View key={f} style={styles.fact}>
+              <View style={styles.factMark} />
+              <Text style={styles.factText}>{f}</Text>
+            </View>
           ))}
         </View>
       </View>
@@ -141,7 +166,7 @@ export default function SettingsScreen() {
         <View style={styles.rows}>
           {guest ? (
             <ListRow
-              icon={<LogIn size={18} color={color.ink} strokeWidth={1.75} />}
+              icon={LogIn}
               title="Sign in"
               meta="Keep your sounds when you change phones."
               onPress={() => setSignInOpen(true)}
@@ -149,14 +174,15 @@ export default function SettingsScreen() {
           ) : (
             <>
               <ListRow
-                icon={<LogOut size={18} color={color.ink} strokeWidth={1.75} />}
+                icon={LogOut}
                 title="Sign out"
                 meta={`Signed in as ${email ?? 'your account'}`}
                 chevron={false}
                 onPress={() => void signOut()}
               />
               <ListRow
-                icon={<Trash2 size={18} color={color.danger} strokeWidth={1.75} />}
+                icon={Trash2}
+                iconColor={c.danger}
                 title="Delete my account"
                 meta="This takes away your account and everything in it."
                 chevron={false}
@@ -197,7 +223,7 @@ export default function SettingsScreen() {
                 const d = addTestSpeaker();
                 toast.show(`${d.name} added.`, 'success');
               }}
-              icon={<Plus size={14} color={color.ink} strokeWidth={1.75} />}
+              icon={Plus}
             />
             <Button
               label="Show the welcome screens again"
@@ -207,7 +233,7 @@ export default function SettingsScreen() {
                 resetOnboarding();
                 router.replace('/onboarding');
               }}
-              icon={<RotateCcw size={14} color={color.ink} strokeWidth={1.75} />}
+              icon={RotateCcw}
             />
           </Disclosure>
         </View>
@@ -242,35 +268,29 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  planCard: { gap: 4 },
+const sheet = themed((c, t) => ({
+  planBlock: {
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+    padding: space.md,
+    gap: 2,
+  },
+  planName: { ...t.title, fontSize: 24, letterSpacing: -0.9 },
+  planMeta: { ...t.bodySmall },
   upgrade: { marginTop: space.sm },
-  section: { marginTop: space.lg },
-  rows: { borderWidth: 1, borderColor: color.border },
-  meta: {
-    fontFamily: font.body.regular,
-    fontSize: 13,
-    lineHeight: 17,
-    color: color.fgMuted,
-  },
-  facts: { gap: space.sm },
-  fact: {
-    fontFamily: font.body.regular,
-    fontSize: 14,
-    lineHeight: 20,
-    color: color.fg,
-  },
+  section: { marginTop: space.lg, gap: space.sm },
+  rows: { borderWidth: 1, borderColor: c.border },
+  hint: { ...t.caption },
+  facts: { gap: space.sm + 2 },
+  fact: { flexDirection: 'row', gap: space.sm + 2, alignItems: 'flex-start' },
+  factMark: { width: 10, height: 3, marginTop: 9, backgroundColor: c.accent },
+  factText: { ...t.label, flex: 1, fontSize: 15, lineHeight: 21 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs + 2 },
   footerLink: {
     marginTop: space.lg,
     minHeight: 44,
     justifyContent: 'center',
   },
-  footerLinkText: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.accent,
-  },
-});
+  footerLinkText: { ...t.bodyStrong, fontSize: 15, color: c.link },
+}));
