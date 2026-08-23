@@ -1,14 +1,23 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Plan } from '../core/entitlements';
-import { persistStorage, STORAGE_KEYS } from './storage';
+import { persistStorage, STORAGE_KEYS, uid } from './storage';
+
+export type SpeakerKind = 'simulated' | 'pigeonx_emitter' | 'bt_speaker';
 
 export interface SimulatedDevice {
   id: string;
   name: string;
-  kind: 'simulated' | 'pigeonx_emitter';
+  kind: SpeakerKind;
   pairedAt: number;
+  /** last time this row changed, for last write wins */
+  updatedAt: number;
+  /** the id the server gave this speaker, once it has one */
+  remoteId: string | null;
 }
+
+/** What a teammate is allowed to do. */
+export type TeamRole = 'owner' | 'manager' | 'staff';
 
 interface AccountState {
   /** Test plan for now. Real plans arrive with RevenueCat or Stripe. */
@@ -20,14 +29,23 @@ interface AccountState {
   onboarded: boolean;
   devices: SimulatedDevice[];
   activeOrgId: string | null;
+  activeOrgName: string | null;
+  activeOrgRole: TeamRole | null;
 
   setPlan: (plan: Plan) => void;
   continueAsGuest: () => void;
   setSession: (session: { userId: string; email: string | null } | null) => void;
+  setBusiness: (
+    org: { id: string; name: string; role: TeamRole } | null
+  ) => void;
   completeOnboarding: () => void;
   resetOnboarding: () => void;
-  addSimulatedDevice: (name?: string) => SimulatedDevice;
+  addSimulatedDevice: (name?: string, kind?: SpeakerKind) => SimulatedDevice;
+  renameDevice: (id: string, name: string) => void;
   removeDevice: (id: string) => void;
+  setDevices: (devices: SimulatedDevice[]) => void;
+  markDeviceSynced: (id: string, remoteId: string | null) => void;
+  isSignedIn: () => boolean;
 }
 
 export const useAccount = create<AccountState>()(
@@ -40,6 +58,8 @@ export const useAccount = create<AccountState>()(
       onboarded: false,
       devices: [],
       activeOrgId: null,
+      activeOrgName: null,
+      activeOrgRole: null,
 
       setPlan: (plan) => set({ plan }),
       continueAsGuest: () => set({ guest: true, userId: null, email: null }),
@@ -47,25 +67,74 @@ export const useAccount = create<AccountState>()(
         set(
           session
             ? { userId: session.userId, email: session.email, guest: false }
-            : { userId: null, email: null, guest: true }
+            : {
+                userId: null,
+                email: null,
+                guest: true,
+                activeOrgId: null,
+                activeOrgName: null,
+                activeOrgRole: null,
+              }
+        ),
+      setBusiness: (org) =>
+        set(
+          org
+            ? {
+                activeOrgId: org.id,
+                activeOrgName: org.name,
+                activeOrgRole: org.role,
+              }
+            : { activeOrgId: null, activeOrgName: null, activeOrgRole: null }
         ),
       completeOnboarding: () => set({ onboarded: true }),
       resetOnboarding: () => set({ onboarded: false }),
 
-      addSimulatedDevice: (name) => {
+      addSimulatedDevice: (name, kind = 'simulated') => {
         const n = get().devices.length + 1;
         const device: SimulatedDevice = {
-          id: `sim_${Date.now().toString(36)}`,
+          id: uid('spk'),
           name: name ?? `Test speaker ${n}`,
-          kind: 'simulated',
+          kind,
           pairedAt: Date.now(),
+          updatedAt: Date.now(),
+          remoteId: null,
         };
         set({ devices: [...get().devices, device] });
         return device;
       },
+      renameDevice: (id, name) =>
+        set({
+          devices: get().devices.map((d) =>
+            d.id === id ? { ...d, name, updatedAt: Date.now() } : d
+          ),
+        }),
       removeDevice: (id) =>
         set({ devices: get().devices.filter((d) => d.id !== id) }),
+      setDevices: (devices) => set({ devices }),
+      markDeviceSynced: (id, remoteId) =>
+        set({
+          devices: get().devices.map((d) =>
+            d.id === id ? { ...d, remoteId } : d
+          ),
+        }),
+      isSignedIn: () => get().userId !== null,
     }),
-    { name: STORAGE_KEYS.account, storage: persistStorage }
+    {
+      name: STORAGE_KEYS.account,
+      storage: persistStorage,
+      version: 2,
+      migrate: (state) => {
+        const s = state as Partial<AccountState> | undefined;
+        if (!s) return state as AccountState;
+        return {
+          ...s,
+          devices: (s.devices ?? []).map((d) => ({
+            ...d,
+            updatedAt: d.updatedAt ?? d.pairedAt ?? Date.now(),
+            remoteId: d.remoteId ?? null,
+          })),
+        } as AccountState;
+      },
+    }
   )
 );

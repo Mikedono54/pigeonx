@@ -8,12 +8,14 @@ import {
   LogOut,
   Plus,
   RotateCcw,
+  Trash2,
 } from 'lucide-react-native';
 
 import {
   Button,
   Card,
   Chip,
+  ConfirmSheet,
   Disclosure,
   ListRow,
   Screen,
@@ -22,6 +24,7 @@ import {
   Touchable,
   useToast,
 } from '../../src/components';
+import { deleteMyAccount, signOut as signOutOfAccount } from '../../src/services/auth';
 import { PLAN_LABEL, PLAN_ORDER, type Plan } from '../../src/core/entitlements';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { useAccount } from '../../src/state/useAccount';
@@ -41,6 +44,8 @@ export default function SettingsScreen() {
   const toast = useToast();
   const [devOpen, setDevOpen] = useState(false);
   const [signInOpen, setSignInOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const email = useAccount((s) => s.email);
   const guest = useAccount((s) => s.guest);
@@ -53,9 +58,22 @@ export default function SettingsScreen() {
 
   const free = ent.plan === 'free';
 
-  const signOut = useCallback(() => {
+  const signOut = useCallback(async () => {
+    const result = await signOutOfAccount();
     setSession(null);
-    toast.show('Signed out.');
+    toast.show(result.message, result.ok ? 'default' : 'danger');
+  }, [setSession, toast]);
+
+  const removeAccount = useCallback(async () => {
+    setDeleting(true);
+    try {
+      const result = await deleteMyAccount();
+      setSession(null);
+      setDeleteOpen(false);
+      toast.show(result.message, result.ok ? 'default' : 'danger');
+    } finally {
+      setDeleting(false);
+    }
   }, [setSession, toast]);
 
   return (
@@ -64,7 +82,9 @@ export default function SettingsScreen() {
       <Card style={styles.planCard}>
         <Text style={type.heading}>PigeonX {PLAN_LABEL[ent.plan]}</Text>
         <Text style={styles.meta} numberOfLines={1}>
-          {guest ? 'On this phone only' : (email ?? 'Signed in')}
+          {guest
+            ? 'On this phone only'
+            : `Signed in as ${email ?? 'your account'}`}
         </Text>
       </Card>
       <View style={styles.upgrade}>
@@ -121,13 +141,24 @@ export default function SettingsScreen() {
               onPress={() => setSignInOpen(true)}
             />
           ) : (
-            <ListRow
-              icon={<LogOut size={18} color={color.ink} strokeWidth={1.75} />}
-              title="Sign out"
-              meta={email ?? 'Signed in'}
-              chevron={false}
-              onPress={signOut}
-            />
+            <>
+              <ListRow
+                icon={<LogOut size={18} color={color.ink} strokeWidth={1.75} />}
+                title="Sign out"
+                meta={`Signed in as ${email ?? 'your account'}`}
+                chevron={false}
+                onPress={() => void signOut()}
+              />
+              <ListRow
+                icon={
+                  <Trash2 size={18} color={color.danger} strokeWidth={1.75} />
+                }
+                title="Delete my account"
+                meta="This takes away your account and everything in it."
+                chevron={false}
+                onPress={() => setDeleteOpen(true)}
+              />
+            </>
           )}
         </View>
       </View>
@@ -190,6 +221,18 @@ export default function SettingsScreen() {
         open={signInOpen}
         onClose={() => setSignInOpen(false)}
         onSignedIn={() => setSignInOpen(false)}
+      />
+
+      <ConfirmSheet
+        open={deleteOpen}
+        title="Delete my account"
+        body="This takes away your account, your sounds, your times and what played. You cannot get it back. What is on this phone stays until you delete the app."
+        confirmLabel="Yes, delete it"
+        cancelLabel="Keep my account"
+        danger
+        busy={deleting}
+        onConfirm={() => void removeAccount()}
+        onClose={() => setDeleteOpen(false)}
       />
     </Screen>
   );

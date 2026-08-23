@@ -2,6 +2,7 @@ export { Banner } from './Banner';
 export { Button, buttonForeground } from './Button';
 export { Card } from './Card';
 export { Chip } from './Chip';
+export { ConfirmSheet } from './ConfirmSheet';
 export { Disclosure } from './Disclosure';
 export { EmptyState } from './EmptyState';
 export { ListRow } from './ListRow';

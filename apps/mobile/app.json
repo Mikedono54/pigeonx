@@ -24,7 +24,8 @@
         "NSBluetoothPeripheralUsageDescription": "PigeonX uses Bluetooth to find and set up PigeonX emitters near you.",
         "ITSAppUsesNonExemptEncryption": false,
         "NSMicrophoneUsageDescription": "PigeonX does not record audio. The audio engine links microphone APIs, and Apple requires this notice."
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "org.pigeonx.app",
@@ -51,6 +52,7 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "expo-apple-authentication",
       "expo-font",
       "@react-native-community/datetimepicker",
       [

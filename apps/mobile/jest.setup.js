@@ -17,6 +17,43 @@ jest.mock('expo-haptics', () => ({
   ImpactFeedbackStyle: { Light: 'light', Medium: 'medium' },
 }));
 
+jest.mock('expo-apple-authentication', () => ({
+  isAvailableAsync: jest.fn(async () => false),
+  signInAsync: jest.fn(async () => ({ identityToken: 'test-token' })),
+  AppleAuthenticationScope: { FULL_NAME: 0, EMAIL: 1 },
+  AppleAuthenticationButton: () => null,
+  AppleAuthenticationButtonType: { CONTINUE: 1, SIGN_IN: 0 },
+  AppleAuthenticationButtonStyle: { BLACK: 2, WHITE: 0 },
+}));
+
+jest.mock('expo-crypto', () => ({
+  getRandomBytes: jest.fn(() => new Uint8Array(16).fill(7)),
+  digestStringAsync: jest.fn(async (_alg, value) => `hashed:${value}`),
+  CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
+}));
+
+jest.mock('expo-secure-store', () => {
+  const vault = new Map();
+  return {
+    isAvailableAsync: jest.fn(async () => true),
+    getItemAsync: jest.fn(async (k) => vault.get(k) ?? null),
+    setItemAsync: jest.fn(async (k, v) => {
+      vault.set(k, v);
+    }),
+    deleteItemAsync: jest.fn(async (k) => {
+      vault.delete(k);
+    }),
+    __vault: vault,
+  };
+});
+
+jest.mock('expo-linking', () => ({
+  getInitialURL: jest.fn(async () => null),
+  addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+  createURL: jest.fn((path) => `pigeonx://${path}`),
+  openURL: jest.fn(async () => true),
+}));
+
 jest.mock('@react-native-async-storage/async-storage', () => {
   const store = new Map();
   return {

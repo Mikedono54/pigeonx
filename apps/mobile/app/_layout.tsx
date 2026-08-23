@@ -18,14 +18,19 @@ import {
 } from '@expo-google-fonts/inter';
 import { JetBrainsMono_500Medium } from '@expo-google-fonts/jetbrains-mono';
 
-import { ToastProvider } from '../src/components';
+import * as Linking from 'expo-linking';
+
+import { ToastProvider, useToast } from '../src/components';
 import { configureAudioSession } from '../src/audio';
+import { completeSignInFromUrl } from '../src/services/auth';
+import { askForMoveUp } from '../src/services/guestMigration';
 import {
   ACTION_START_NOW,
   ACTION_STOP,
   configureNotifications,
 } from '../src/services/notifications';
 import { sessionRecorder } from '../src/services/sessionRecorder';
+import { getSupabase } from '../src/services/supabase';
 import { color } from '../src/theme/tokens';
 import { useAccount } from '../src/state/useAccount';
 import { useSession } from '../src/state/useSession';
@@ -84,6 +89,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ToastProvider>
           <StatusBar style="dark" />
+          <AccountWatch />
           <Stack
             screenOptions={{
               headerShown: false,
@@ -102,6 +108,11 @@ export default function RootLayout() {
             />
             <Stack.Screen name="history" />
             <Stack.Screen name="for-businesses" />
+            <Stack.Screen name="team" />
+            <Stack.Screen
+              name="speaker"
+              options={{ animation: 'fade', gestureEnabled: false }}
+            />
             <Stack.Screen
               name="make-a-sound"
               options={{ presentation: 'modal' }}
@@ -113,6 +124,68 @@ export default function RootLayout() {
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+/**
+ * Watches who is signed in.
+ *
+ * Two things arrive from outside the app: the link a person taps in their
+ * email, and the word from the server that a sign-in worked. Both land here,
+ * so every screen can just read `useAccount`.
+ */
+function AccountWatch() {
+  const toast = useToast();
+  const setSession = useAccount((s) => s.setSession);
+
+  useEffect(() => {
+    const sb = getSupabase();
+    if (!sb) return;
+
+    const { data } = sb.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setSession({
+          userId: session.user.id,
+          email: session.user.email ?? null,
+        });
+        if (event === 'SIGNED_IN') {
+          void askForMoveUp();
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setSession(null);
+      }
+    });
+
+    void sb.auth.getSession().then(({ data: current }) => {
+      if (current.session?.user) {
+        setSession({
+          userId: current.session.user.id,
+          email: current.session.user.email ?? null,
+        });
+      }
+    });
+
+    return () => data.subscription.unsubscribe();
+  }, [setSession]);
+
+  useEffect(() => {
+    let alive = true;
+
+    const handle = async (url: string | null) => {
+      const result = await completeSignInFromUrl(url);
+      if (!alive || !result || !result.message) return;
+      toast.show(result.message, result.ok ? 'success' : 'danger');
+    };
+
+    void Linking.getInitialURL().then((url) => void handle(url));
+    const sub = Linking.addEventListener('url', ({ url }) => void handle(url));
+
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, [toast]);
+
+  return null;
 }
 
 /** Sends new people to the welcome screens, once. */
