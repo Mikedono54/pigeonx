@@ -89,6 +89,70 @@ export const ScheduleInput = z
     path: ['end_time'],
   });
 
+/** Solo accounts' own reminders — no org, so no zone is required. */
+export const UserScheduleInput = z
+  .object({
+    zone_id: Uuid.optional(),
+    profile_id: Uuid,
+    days: z.array(Weekday).min(1).max(7),
+    start_time: TimeOfDay,
+    end_time: TimeOfDay,
+    enabled: z.boolean().default(true),
+    executor: ScheduleExecutorSchema.default('reminder'),
+  })
+  .refine((s) => s.start_time !== s.end_time, {
+    message: 'A schedule must cover a non-empty window',
+    path: ['end_time'],
+  });
+
+/** A solo account's remembered speakers. */
+export const UserDeviceInput = z.object({
+  kind: DeviceKindSchema,
+  name: z.string().min(1).max(120),
+  last_seen_at: z.string().nullish(),
+});
+
+// ─── teams ────────────────────────────────────────────────────────────────────
+
+export const CreateOrgInput = z.object({
+  name: z.string().trim().min(1).max(120),
+});
+
+/**
+ * The address is lowercased here and again in `invite_member`, because
+ * `accept_invite` compares it to the signed-in address and a mismatch reads to
+ * the invitee as "this invite was sent to someone else".
+ */
+export const InviteMemberInput = z.object({
+  org_id: Uuid,
+  email: z.string().trim().toLowerCase().pipe(z.email()),
+  role: MemberRoleSchema.default('staff'),
+});
+
+export const AcceptInviteInput = z.object({
+  token: Uuid,
+});
+
+export const RemoveMemberInput = z.object({
+  org_id: Uuid,
+  user_id: Uuid,
+});
+
+// ─── billing ──────────────────────────────────────────────────────────────────
+
+/** Body of the `stripe-checkout` edge function. Business is billed per location. */
+export const StripeCheckoutInput = z.object({
+  org_id: Uuid,
+  locations: z.number().int().min(1).max(1000),
+  success_url: z.url(),
+  cancel_url: z.url(),
+});
+
+export const StripePortalInput = z.object({
+  org_id: Uuid,
+  return_url: z.url(),
+});
+
 export const StartSessionInput = z.object({
   zone_id: Uuid.nullish(),
   device_id: Uuid.nullish(),
@@ -147,3 +211,11 @@ export type ZoneInput = z.infer<typeof ZoneInput>;
 export type DeviceInput = z.infer<typeof DeviceInput>;
 export type ScheduleInput = z.infer<typeof ScheduleInput>;
 export type StartSessionInput = z.infer<typeof StartSessionInput>;
+export type UserScheduleInput = z.infer<typeof UserScheduleInput>;
+export type UserDeviceInput = z.infer<typeof UserDeviceInput>;
+export type CreateOrgInput = z.infer<typeof CreateOrgInput>;
+export type InviteMemberInput = z.infer<typeof InviteMemberInput>;
+export type AcceptInviteInput = z.infer<typeof AcceptInviteInput>;
+export type RemoveMemberInput = z.infer<typeof RemoveMemberInput>;
+export type StripeCheckoutInput = z.infer<typeof StripeCheckoutInput>;
+export type StripePortalInput = z.infer<typeof StripePortalInput>;
