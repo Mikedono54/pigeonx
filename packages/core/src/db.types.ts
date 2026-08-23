@@ -133,6 +133,41 @@ export type Database = {
           },
         ];
       };
+      location_reports: {
+        Row: {
+          created_at: string;
+          data: Json;
+          id: string;
+          location_id: string;
+          updated_at: string;
+          week_start: string;
+        };
+        Insert: {
+          created_at?: string;
+          data: Json;
+          id?: string;
+          location_id: string;
+          updated_at?: string;
+          week_start: string;
+        };
+        Update: {
+          created_at?: string;
+          data?: Json;
+          id?: string;
+          location_id?: string;
+          updated_at?: string;
+          week_start?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'location_reports_location_id_fkey';
+            columns: ['location_id'];
+            isOneToOne: false;
+            referencedRelation: 'locations';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       locations: {
         Row: {
           address: string | null;
@@ -167,6 +202,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: 'locations_org_id_fkey';
+            columns: ['org_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      org_invites: {
+        Row: {
+          accepted_at: string | null;
+          created_at: string;
+          email: string;
+          expires_at: string;
+          id: string;
+          invited_by: string | null;
+          org_id: string;
+          role: Database['public']['Enums']['member_role_t'];
+          token: string;
+          updated_at: string;
+        };
+        Insert: {
+          accepted_at?: string | null;
+          created_at?: string;
+          email: string;
+          expires_at?: string;
+          id?: string;
+          invited_by?: string | null;
+          org_id: string;
+          role?: Database['public']['Enums']['member_role_t'];
+          token?: string;
+          updated_at?: string;
+        };
+        Update: {
+          accepted_at?: string | null;
+          created_at?: string;
+          email?: string;
+          expires_at?: string;
+          id?: string;
+          invited_by?: string | null;
+          org_id?: string;
+          role?: Database['public']['Enums']['member_role_t'];
+          token?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'org_invites_org_id_fkey';
             columns: ['org_id'];
             isOneToOne: false;
             referencedRelation: 'organizations';
@@ -434,6 +516,93 @@ export type Database = {
           },
         ];
       };
+      user_devices: {
+        Row: {
+          created_at: string;
+          id: string;
+          kind: Database['public']['Enums']['device_kind_t'];
+          last_seen_at: string | null;
+          name: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          kind: Database['public']['Enums']['device_kind_t'];
+          last_seen_at?: string | null;
+          name: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          kind?: Database['public']['Enums']['device_kind_t'];
+          last_seen_at?: string | null;
+          name?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      user_schedules: {
+        Row: {
+          created_at: string;
+          days: number[];
+          enabled: boolean;
+          end_time: string;
+          executor: Database['public']['Enums']['schedule_executor_t'];
+          id: string;
+          profile_id: string;
+          start_time: string;
+          updated_at: string;
+          user_id: string;
+          zone_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          days: number[];
+          enabled?: boolean;
+          end_time: string;
+          executor?: Database['public']['Enums']['schedule_executor_t'];
+          id?: string;
+          profile_id: string;
+          start_time: string;
+          updated_at?: string;
+          user_id: string;
+          zone_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          days?: number[];
+          enabled?: boolean;
+          end_time?: string;
+          executor?: Database['public']['Enums']['schedule_executor_t'];
+          id?: string;
+          profile_id?: string;
+          start_time?: string;
+          updated_at?: string;
+          user_id?: string;
+          zone_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'user_schedules_profile_id_fkey';
+            columns: ['profile_id'];
+            isOneToOne: false;
+            referencedRelation: 'audio_profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'user_schedules_zone_id_fkey';
+            columns: ['zone_id'];
+            isOneToOne: false;
+            referencedRelation: 'zones';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       zones: {
         Row: {
           active_profile_id: string | null;
@@ -484,8 +653,39 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      accept_invite: { Args: { p_token: string }; Returns: string };
+      create_org: { Args: { p_name: string }; Returns: string };
+      current_email: { Args: never; Returns: string };
+      delete_my_account: { Args: never; Returns: undefined };
       device_org: { Args: { device: string }; Returns: string };
       end_session: { Args: { p_session_id: string }; Returns: number };
+      history: {
+        Args: { p_from?: string; p_to?: string };
+        Returns: {
+          ended_at: string;
+          id: string;
+          location_id: string;
+          location_name: string;
+          minutes: number;
+          output_kind: Database['public']['Enums']['output_kind_t'];
+          peak_freq_hz: number;
+          profile_id: string;
+          profile_name: string;
+          source: Database['public']['Enums']['session_source_t'];
+          started_at: string;
+          user_id: string;
+          zone_id: string;
+          zone_name: string;
+        }[];
+      };
+      invite_member: {
+        Args: {
+          p_email: string;
+          p_org_id: string;
+          p_role?: Database['public']['Enums']['member_role_t'];
+        };
+        Returns: string;
+      };
       is_org_member: {
         Args: {
           min_role?: Database['public']['Enums']['member_role_t'];
@@ -502,6 +702,15 @@ export type Database = {
           zones_active: number;
         }[];
       };
+      my_memberships: {
+        Args: never;
+        Returns: {
+          name: string;
+          org_id: string;
+          plan: Database['public']['Enums']['org_plan_t'];
+          role: Database['public']['Enums']['member_role_t'];
+        }[];
+      };
       my_orgs: {
         Args: never;
         Returns: {
@@ -512,6 +721,10 @@ export type Database = {
         }[];
       };
       profile_peak_freq_hz: { Args: { p_profile_id: string }; Returns: number };
+      remove_member: {
+        Args: { p_org_id: string; p_user_id: string };
+        Returns: boolean;
+      };
       role_rank: {
         Args: { r: Database['public']['Enums']['member_role_t'] };
         Returns: number;
@@ -532,6 +745,17 @@ export type Database = {
           day: string;
           sessions: number;
           total_minutes: number;
+        }[];
+      };
+      zone_live_status: {
+        Args: { p_location_id: string };
+        Returns: {
+          current_session_id: string;
+          profile_name: string;
+          running: boolean;
+          started_at: string;
+          zone_id: string;
+          zone_name: string;
         }[];
       };
       zone_org: { Args: { zone: string }; Returns: string };
