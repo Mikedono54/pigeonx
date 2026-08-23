@@ -1,5 +1,5 @@
 import type { LiveByArea } from '../core/places';
-import { getSupabase } from './supabase';
+import { callFunction, getSupabase } from './supabase';
 
 /**
  * What is playing right now, in every area of a place.
@@ -34,6 +34,7 @@ export function liveFromRows(rows: unknown): LiveByArea {
     const startedAt = startedRaw ? Date.parse(startedRaw) || null : null;
     const ended = str(row, 'ended_at');
     const playing =
+      row.running === true ||
       row.playing === true ||
       row.is_playing === true ||
       row.live === true ||
@@ -49,7 +50,7 @@ export function liveFromRows(rows: unknown): LiveByArea {
 export async function fetchLive(placeId: string): Promise<LiveByArea> {
   const sb = getSupabase();
   if (!sb) return {};
-  const { data, error } = await sb.rpc('zone_live_status', {
+  const { data, error } = await callFunction(sb, 'zone_live_status', {
     location_id: placeId,
   });
   if (error) return {};

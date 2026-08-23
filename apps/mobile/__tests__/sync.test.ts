@@ -7,6 +7,7 @@ import {
   timeToMinutes,
   type LocalRow,
 } from '../src/services/sync';
+import { callFunction, prefixed } from '../src/services/supabase';
 import type { SessionEntry } from '../src/state/useHistory';
 
 interface Row extends LocalRow {
@@ -202,5 +203,47 @@ describe('what played, from both sides', () => {
 
   it('leaves the list alone when nothing came back', () => {
     expect(mergeHistory(local, [])).toEqual(local);
+  });
+});
+
+describe('asking the server for something', () => {
+  it('names the inputs the way the server names them', () => {
+    expect(prefixed({ org_id: 'o1', email: 'a@b.c' })).toEqual({
+      p_org_id: 'o1',
+      p_email: 'a@b.c',
+    });
+  });
+
+  it('leaves an input alone that is already named that way', () => {
+    expect(prefixed({ p_token: 't' })).toEqual({ p_token: 't' });
+  });
+
+  it('tries the other spelling when the server has never heard of it', async () => {
+    const rpc = jest
+      .fn()
+      .mockResolvedValueOnce({
+        data: null,
+        error: { code: 'PGRST202', message: 'Could not find the function' },
+      })
+      .mockResolvedValueOnce({ data: 'ok', error: null });
+
+    const result = await callFunction({ rpc }, 'create_org', { name: 'Dock' });
+
+    expect(rpc).toHaveBeenNthCalledWith(1, 'create_org', { p_name: 'Dock' });
+    expect(rpc).toHaveBeenNthCalledWith(2, 'create_org', { name: 'Dock' });
+    expect(result.data).toBe('ok');
+  });
+
+  it('does not try twice when the server answered', async () => {
+    const rpc = jest.fn().mockResolvedValue({ data: 'id', error: null });
+    await callFunction({ rpc }, 'create_org', { name: 'Dock' });
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not try twice when the server said no', async () => {
+    const rpc = jest.fn().mockResolvedValue({ data: null, error: { message: 'sign in required' } });
+    const result = await callFunction({ rpc }, 'create_org', { name: 'Dock' });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(result.error?.message).toBe('sign in required');
   });
 });

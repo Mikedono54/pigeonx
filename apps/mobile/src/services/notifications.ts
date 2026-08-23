@@ -83,9 +83,7 @@ export async function presentRunningNotification(args: {
   }
 }
 
-export async function dismissRunningNotification(
-  id: string | null
-): Promise<void> {
+export async function dismissRunningNotification(id: string | null): Promise<void> {
   try {
     if (id) await Notifications.dismissNotificationAsync(id);
     else await Notifications.dismissAllNotificationsAsync();
@@ -106,9 +104,7 @@ export interface ReminderSpec {
 }
 
 /** One weekly repeating reminder per day you picked. */
-export async function scheduleReminders(
-  spec: ReminderSpec
-): Promise<string[]> {
+export async function scheduleReminders(spec: ReminderSpec): Promise<string[]> {
   const ids: string[] = [];
   for (const day of spec.days) {
     try {

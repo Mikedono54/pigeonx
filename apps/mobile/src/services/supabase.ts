@@ -37,6 +37,37 @@ export function __setSupabase(next: SupabaseClient | null): void {
   client = next;
 }
 
+/**
+ * Calls a server function, then tries the other spelling of its inputs.
+ *
+ * The server names its inputs with a `p_` in front. An older spelling without
+ * it may still be out there, so a call that comes back "no such function"
+ * gets one more try before it counts as a failure.
+ */
+export async function callFunction(
+  sb: {
+    rpc: (
+      name: string,
+      args?: Record<string, unknown>,
+    ) => PromiseLike<{ data: unknown; error: BackendError | null }>;
+  },
+  name: string,
+  args: Record<string, unknown>,
+): Promise<{ data: unknown; error: BackendError | null }> {
+  const first = await sb.rpc(name, prefixed(args));
+  if (!first.error || !isMissingOnServer(first.error)) return first;
+  return sb.rpc(name, args);
+}
+
+/** The same inputs, named the way the server names them. */
+export function prefixed(args: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(args)) {
+    out[key.startsWith('p_') ? key : `p_${key}`] = value;
+  }
+  return out;
+}
+
 export interface BackendError {
   code?: string | null;
   message?: string | null;

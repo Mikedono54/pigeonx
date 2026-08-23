@@ -3,7 +3,7 @@ import { peakFreqHz } from '../core/profiles';
 import { useHistory, type SessionEntry, type SessionSource } from '../state/useHistory';
 import { useAccount } from '../state/useAccount';
 import { remoteSoundId } from './soundIds';
-import { getSupabase } from './supabase';
+import { callFunction, getSupabase } from './supabase';
 import { somethingChanged } from './syncSignal';
 
 /**
@@ -33,14 +33,14 @@ export const supabaseSink: RemoteSink = {
     // A play in an area goes through the server so the rest of the team sees
     // it. A play that belongs to one person is written straight down.
     if (entry.zoneId) {
-      const { data, error } = await sb.rpc('start_session', {
-        p_zone_id: entry.zoneId,
-        p_profile_id: profileId,
-        p_device_id: entry.deviceId,
-        p_output: entry.outputKind,
-        p_source: entry.source,
+      const { data, error } = await callFunction(sb, 'start_session', {
+        zone_id: entry.zoneId,
+        profile_id: profileId,
+        device_id: entry.deviceId,
+        output: entry.outputKind,
+        source: entry.source,
       });
-      if (error) throw new Error(error.message);
+      if (error) throw new Error(error.message ?? 'That did not reach the account.');
       return typeof data === 'string' ? data : null;
     }
 
@@ -68,10 +68,10 @@ export const supabaseSink: RemoteSink = {
     if (!entry.remoteId) return;
 
     if (entry.zoneId) {
-      const { error } = await sb.rpc('end_session', {
-        p_session_id: entry.remoteId,
+      const { error } = await callFunction(sb, 'end_session', {
+        session_id: entry.remoteId,
       });
-      if (error) throw new Error(error.message);
+      if (error) throw new Error(error.message ?? 'That did not reach the account.');
       return;
     }
 

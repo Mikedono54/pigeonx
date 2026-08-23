@@ -138,6 +138,19 @@ describe('what is playing right now', () => {
     expect(live.z1.startedAt).toBe(Date.parse('2026-08-21T12:00:00Z'));
   });
 
+  it('reads the flag the server actually sends', () => {
+    const live = liveFromRows([
+      {
+        zone_id: 'z0',
+        zone_name: 'Roof',
+        running: true,
+        started_at: '2026-08-21T12:00:00Z',
+        profile_name: 'Pigeon sound',
+      },
+    ]);
+    expect(live.z0.playing).toBe(true);
+  });
+
   it('treats an open run as playing even with no flag', () => {
     const live = liveFromRows([{ zone_id: 'z2', started_at: '2026-08-21T12:00:00Z' }]);
     expect(live.z2.playing).toBe(true);

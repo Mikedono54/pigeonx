@@ -1,7 +1,7 @@
 import { planRank } from '../core/entitlements';
 import { useAccount, type TeamRole } from '../state/useAccount';
 import { usePlaces } from '../state/usePlaces';
-import { getSupabase, isMissingOnServer, plainMessage } from './supabase';
+import { callFunction, getSupabase, isMissingOnServer, plainMessage } from './supabase';
 
 /**
  * A business: the places a team looks after together.
@@ -73,7 +73,7 @@ export function membershipFromRow(input: unknown): Membership | null {
 export function teammateFromRow(input: unknown, myUserId: string | null): Teammate {
   const row = (input ?? {}) as Row;
   const userId = text(row, 'user_id', 'id') ?? '';
-  const added = text(row, 'created_at', 'added_at');
+  const added = text(row, 'joined_at', 'created_at', 'added_at');
   const you = myUserId !== null && userId === myUserId;
   const name = text(row, 'email', 'display_name', 'name');
 
@@ -140,7 +140,7 @@ export async function createBusiness(name: string): Promise<BusinessOutcome<Memb
     return { ok: false, message: 'Give your business a name first.' };
   }
 
-  const { data, error } = await sb.rpc('create_org', { name: trimmed });
+  const { data, error } = await callFunction(sb, 'create_org', { name: trimmed });
   if (error) {
     return {
       ok: false,
@@ -177,7 +177,7 @@ export async function inviteTeammate(
   const sb = getSupabase();
   if (!sb) return { ok: false, message: NOT_READY };
 
-  const { data, error } = await sb.rpc('invite_member', {
+  const { data, error } = await callFunction(sb, 'invite_member', {
     org_id: orgId,
     email: email.trim(),
     role,
@@ -197,7 +197,7 @@ export async function inviteTeammate(
 export async function removeTeammate(orgId: string, userId: string): Promise<BusinessOutcome> {
   const sb = getSupabase();
   if (!sb) return { ok: false, message: NOT_READY };
-  const { error } = await sb.rpc('remove_member', {
+  const { error } = await callFunction(sb, 'remove_member', {
     org_id: orgId,
     user_id: userId,
   });
@@ -213,7 +213,7 @@ export async function removeTeammate(orgId: string, userId: string): Promise<Bus
 export async function acceptInvite(token: string): Promise<BusinessOutcome> {
   const sb = getSupabase();
   if (!sb) return { ok: false, message: NOT_READY };
-  const { error } = await sb.rpc('accept_invite', { token });
+  const { error } = await callFunction(sb, 'accept_invite', { token });
   if (error) {
     return {
       ok: false,

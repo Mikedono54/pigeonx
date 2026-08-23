@@ -14,7 +14,7 @@ import { useSchedules, type Executor, type Schedule } from '../state/useSchedule
 import { askForMoveUp, markMoveUpDone, moveUpDone, moveUpPending } from './guestMigration';
 import { sessionRecorder } from './sessionRecorder';
 import { loadBuiltInSoundIds, localSoundId, remoteSoundId } from './soundIds';
-import { getSupabase, isMissingOnServer } from './supabase';
+import { callFunction, getSupabase, isMissingOnServer } from './supabase';
 import { setChangeHandler, somethingChanged, type ChangeReason } from './syncSignal';
 
 /**
@@ -568,7 +568,7 @@ export async function fetchRemoteHistory(window: HistoryWindow): Promise<Session
   const { data } = await sb.auth.getUser();
   if (!data.user) return [];
 
-  const { data: rows, error } = await sb.rpc('history', {
+  const { data: rows, error } = await callFunction(sb, 'history', {
     from: window.from.toISOString(),
     to: window.to.toISOString(),
   });
