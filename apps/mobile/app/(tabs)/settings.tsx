@@ -286,7 +286,7 @@ const sheet = themed((c, t) => ({
   fact: { flexDirection: 'row', gap: space.sm + 2, alignItems: 'flex-start' },
   factMark: { width: 10, height: 3, marginTop: 9, backgroundColor: c.accent },
   factText: { ...t.label, flex: 1, fontSize: 15, lineHeight: 21 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs + 2 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   footerLink: {
     marginTop: space.lg,
     minHeight: 44,

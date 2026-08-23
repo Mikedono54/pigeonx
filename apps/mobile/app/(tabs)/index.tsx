@@ -372,7 +372,7 @@ const sheet = themed((c, t) => ({
   noteText: { ...t.bodySmall, color: c.link },
   howLong: { marginTop: space.md, gap: space.sm },
   fieldLabel: { ...t.index },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs + 2 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   spacer: { flex: 1, minHeight: space.sm },
   adjust: {
     minHeight: 44,

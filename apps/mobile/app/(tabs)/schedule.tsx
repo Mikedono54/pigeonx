@@ -440,7 +440,7 @@ const sheet = themed((c, t) => ({
     letterSpacing: -1,
     color: c.ink,
   },
-  chipRail: { gap: space.xs + 2, paddingRight: space.md },
+  chipRail: { gap: space.sm, paddingRight: space.md },
   hint: { ...t.bodySmall },
   pickerWrap: { gap: space.sm },
 }));
