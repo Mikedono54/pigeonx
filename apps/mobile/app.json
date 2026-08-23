@@ -6,7 +6,7 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "backgroundColor": "#FFFFFF",
     "primaryColor": "#2B5CFF",
     "assetBundlePatterns": [
@@ -19,7 +19,6 @@
         "UIBackgroundModes": [
           "audio"
         ],
-        "UIUserInterfaceStyle": "Light",
         "NSBluetoothAlwaysUsageDescription": "PigeonX uses Bluetooth to find and set up PigeonX emitters near you.",
         "NSBluetoothPeripheralUsageDescription": "PigeonX uses Bluetooth to find and set up PigeonX emitters near you.",
         "ITSAppUsesNonExemptEncryption": false,

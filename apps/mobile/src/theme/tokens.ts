@@ -1,41 +1,21 @@
 /**
- * PigeonX design tokens.
+ * PigeonX shape tokens: space, corners, faces, motion.
  *
- * Flat, light, high contrast. The app gets used on patios and rooftops in
- * daylight, so every surface is white or near-white, every edge is a hairline
- * border, and nothing is defined by a shadow or a glow.
+ * Colour does not live here. Colour lives in `themes.ts` and reaches a screen
+ * through `useTheme()`, so the same component works in daylight and at night
+ * without a second copy of itself.
  *
  * NOTE: this file is a temporary duplicate. Once `@pigeonx/core` ships its
  * `tokens.ts`, this module becomes `export * from '@pigeonx/core'`, so the
- * exported shape ({ color, font, radius, space }) must not drift.
+ * exported shape ({ font, radius, space }) must not drift.
  */
-
-export const color = {
-  background: '#FFFFFF',
-  surface: '#F5F5F3',
-  card: '#FFFFFF',
-  elevated: '#EDEDEA',
-  border: '#E3E3DF',
-
-  /** primary text and the darkest surface the app ever paints */
-  ink: '#0A0A0A',
-  fg: '#1F1F1F',
-  fgMuted: '#5F5F5F',
-  fgSubtle: '#8A8A8A',
-
-  /** the one accent. Running state, primary buttons, active meters. */
-  accent: '#2B5CFF',
-  onAccent: '#FFFFFF',
-
-  success: '#0F8A4B',
-  warning: '#B26A00',
-  danger: '#C62828',
-} as const;
 
 export const font = {
   heading: {
     semibold: 'InterTight_600SemiBold',
     bold: 'InterTight_700Bold',
+    /** the state line and every title. Heavy on purpose. */
+    extrabold: 'InterTight_800ExtraBold',
   },
   body: {
     regular: 'Inter_400Regular',
@@ -44,6 +24,8 @@ export const font = {
   },
   mono: {
     medium: 'JetBrainsMono_500Medium',
+    /** clocks and numbers that have to hold their own */
+    bold: 'JetBrainsMono_700Bold',
   },
 } as const;
 
@@ -69,9 +51,42 @@ export const space = {
 /** Hairline that separates one surface from the next. */
 export const hairline = 1;
 
-export const tokens = { color, font, radius, space } as const;
+/**
+ * The hard offset shadow. No blur, no glow: a solid block of ink sitting down
+ * and right of the thing, the way a printed poster casts one.
+ */
+export const offset = {
+  /** how far the shadow sits from the face at rest */
+  rest: 4,
+  /** how far the face moves when a finger is on it */
+  press: 2,
+  /** the small version, for rows and chips */
+  small: 2,
+} as const;
 
-export type Color = keyof typeof color;
+/** How long things take. Short enough to feel like the phone, not a film. */
+export const motion = {
+  /** a colour or a border changing */
+  quick: 150,
+  /** a block changing state */
+  state: 220,
+  /** the bird leaving or landing */
+  flight: 500,
+  /** the breath on a playing block */
+  breath: 1600,
+  spring: { damping: 18, stiffness: 180, mass: 0.9 },
+} as const;
+
+/** One size for every icon, one weight for every stroke. */
+export const icon = {
+  sm: 16,
+  md: 22,
+  lg: 28,
+  stroke: 2,
+} as const;
+
+export const tokens = { font, radius, space, offset, motion, icon } as const;
+
 export type Radius = keyof typeof radius;
 export type Space = keyof typeof space;
 

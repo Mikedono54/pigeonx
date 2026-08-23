@@ -1,94 +1,133 @@
 import { TextStyle } from 'react-native';
-import { color, font } from './tokens';
+import { font } from './tokens';
+import type { Palette } from './themes';
 
-type Variant =
+export type TypeVariant =
   | 'display'
+  | 'state'
   | 'title'
   | 'heading'
   | 'subheading'
   | 'body'
+  | 'bodySmall'
   | 'bodyStrong'
   | 'label'
   | 'caption'
   | 'index'
   | 'mono'
-  | 'monoLarge';
+  | 'monoLarge'
+  | 'timer';
 
-export const type: Record<Variant, TextStyle> = {
-  display: {
-    fontFamily: font.heading.bold,
-    fontSize: 34,
-    lineHeight: 38,
-    letterSpacing: -1,
-    color: color.ink,
-  },
-  title: {
-    fontFamily: font.heading.bold,
-    fontSize: 27,
-    lineHeight: 31,
-    letterSpacing: -0.8,
-    color: color.ink,
-  },
-  heading: {
-    fontFamily: font.heading.semibold,
-    fontSize: 19,
-    lineHeight: 24,
-    letterSpacing: -0.5,
-    color: color.ink,
-  },
-  subheading: {
-    fontFamily: font.heading.semibold,
-    fontSize: 16,
-    lineHeight: 21,
-    letterSpacing: -0.3,
-    color: color.ink,
-  },
-  body: {
-    fontFamily: font.body.regular,
-    fontSize: 15,
-    lineHeight: 21,
-    color: color.fgMuted,
-  },
-  bodyStrong: {
-    fontFamily: font.body.semibold,
-    fontSize: 15,
-    lineHeight: 21,
-    color: color.ink,
-  },
-  label: {
-    fontFamily: font.body.medium,
-    fontSize: 13,
-    lineHeight: 18,
-    color: color.fg,
-  },
-  caption: {
-    fontFamily: font.body.regular,
-    fontSize: 12,
-    lineHeight: 16,
-    color: color.fgSubtle,
-  },
-  /** Section index labels: "01 PROFILE". */
-  index: {
-    fontFamily: font.mono.medium,
-    fontSize: 11,
-    lineHeight: 14,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.fgSubtle,
-  },
-  mono: {
-    fontFamily: font.mono.medium,
-    fontSize: 12,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: color.ink,
-  },
-  monoLarge: {
-    fontFamily: font.mono.medium,
-    fontSize: 40,
-    letterSpacing: -0.5,
-    color: color.ink,
-  },
-};
+export type TypeScale = Record<TypeVariant, TextStyle>;
 
-export default type;
+/**
+ * The type scale, painted in one palette.
+ *
+ * Two faces do the talking. Inter Tight, very heavy and tight, says the state
+ * of things. JetBrains Mono counts: clocks, kHz, section numbers. Inter at 17
+ * carries every sentence, because 17 is the size a person reads standing up.
+ */
+export function makeType(c: Palette): TypeScale {
+  return {
+    display: {
+      fontFamily: font.heading.extrabold,
+      fontSize: 36,
+      lineHeight: 39,
+      letterSpacing: -1.4,
+      color: c.ink,
+    },
+    /** The one line that says what the app is doing right now. */
+    state: {
+      fontFamily: font.heading.extrabold,
+      fontSize: 44,
+      lineHeight: 46,
+      letterSpacing: -2,
+      color: c.ink,
+    },
+    title: {
+      fontFamily: font.heading.extrabold,
+      fontSize: 28,
+      lineHeight: 31,
+      letterSpacing: -1.1,
+      color: c.ink,
+    },
+    heading: {
+      fontFamily: font.heading.bold,
+      fontSize: 20,
+      lineHeight: 25,
+      letterSpacing: -0.6,
+      color: c.ink,
+    },
+    subheading: {
+      fontFamily: font.heading.bold,
+      fontSize: 16,
+      lineHeight: 21,
+      letterSpacing: -0.35,
+      color: c.ink,
+    },
+    body: {
+      fontFamily: font.body.medium,
+      fontSize: 17,
+      lineHeight: 24,
+      letterSpacing: -0.2,
+      color: c.muted,
+    },
+    bodySmall: {
+      fontFamily: font.body.regular,
+      fontSize: 14,
+      lineHeight: 20,
+      color: c.muted,
+    },
+    bodyStrong: {
+      fontFamily: font.body.semibold,
+      fontSize: 17,
+      lineHeight: 24,
+      letterSpacing: -0.2,
+      color: c.text,
+    },
+    label: {
+      fontFamily: font.body.medium,
+      fontSize: 14,
+      lineHeight: 19,
+      color: c.text,
+    },
+    caption: {
+      fontFamily: font.body.regular,
+      fontSize: 13,
+      lineHeight: 18,
+      color: c.muted,
+    },
+    /** Section index labels: "01 SOUND". */
+    index: {
+      fontFamily: font.mono.bold,
+      fontSize: 11,
+      lineHeight: 14,
+      letterSpacing: 1.4,
+      textTransform: 'uppercase',
+      color: c.muted,
+    },
+    mono: {
+      fontFamily: font.mono.medium,
+      fontSize: 12,
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+      color: c.text,
+    },
+    monoLarge: {
+      fontFamily: font.mono.bold,
+      fontSize: 34,
+      letterSpacing: -1,
+      color: c.ink,
+    },
+    /** The clock on a playing block, and in Speaker mode. */
+    timer: {
+      fontFamily: font.mono.bold,
+      fontSize: 52,
+      lineHeight: 56,
+      letterSpacing: -2.5,
+      color: c.ink,
+    },
+  };
+}
+
+export default makeType;
