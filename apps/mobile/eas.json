@@ -54,6 +54,11 @@
       "ios": {
         "ascAppId": "6804041779",
         "appleTeamId": "NJB8ZPR9H9"
+      },
+      "android": {
+        "serviceAccountKeyPath": "/Users/wakandon/.google-play/play-submit-key.json",
+        "track": "internal",
+        "changesNotSentForReview": false
       }
     }
   }
