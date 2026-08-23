@@ -1,80 +1,209 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import {
+  speakerCount,
+  type Area,
+  type LiveByArea,
+  type Place,
+} from '../core/places';
+import * as remote from '../services/placesRemote';
+import { somethingChanged } from '../services/syncSignal';
 import { persistStorage, STORAGE_KEYS, uid } from './storage';
+import { useAccount } from './useAccount';
+
+export type { Area, Place, Speaker } from '../core/places';
 
 /**
  * Places for the Business plan.
  *
  * A place is a building. An area is one part of it, like a roof or a patio.
  * A speaker sits in an area and plays the sound there.
+ *
+ * One phone keeps its own list. A business keeps its list in the account, so
+ * the whole team sees the same thing. Every action below works either way and
+ * the screens never have to ask which one they are looking at.
  */
 
-export interface Area {
-  id: string;
-  name: string;
-  /** ids of speakers kept in useAccount */
-  speakerIds: string[];
+export type PlacesMode = 'phone' | 'business';
+
+export interface PlacesResult {
+  ok: boolean;
+  message: string;
 }
 
-export interface Place {
-  id: string;
-  name: string;
-  areas: Area[];
-}
+const OK: PlacesResult = { ok: true, message: '' };
 
 interface PlacesState {
   places: Place[];
-  addPlace: (name: string) => Place;
-  renamePlace: (id: string, name: string) => void;
-  removePlace: (id: string) => void;
-  addArea: (placeId: string, name: string) => Area | undefined;
-  removeArea: (placeId: string, areaId: string) => void;
-  addSpeaker: (placeId: string, areaId: string, speakerId: string) => void;
-  removeSpeaker: (speakerId: string) => void;
+  mode: PlacesMode;
+  orgId: string | null;
+  loading: boolean;
+  problem: string | null;
+  live: LiveByArea;
+
+  useBusiness: (orgId: string | null) => void;
+  refresh: () => Promise<void>;
+  setLive: (live: LiveByArea) => void;
+
+  addPlace: (name: string) => Promise<PlacesResult>;
+  renamePlace: (id: string, name: string) => Promise<PlacesResult>;
+  removePlace: (id: string) => Promise<PlacesResult>;
+  addArea: (placeId: string, name: string) => Promise<PlacesResult>;
+  renameArea: (
+    placeId: string,
+    areaId: string,
+    name: string
+  ) => Promise<PlacesResult>;
+  removeArea: (placeId: string, areaId: string) => Promise<PlacesResult>;
+  addSpeaker: (
+    placeId: string,
+    areaId: string,
+    name?: string
+  ) => Promise<PlacesResult>;
+  removeSpeaker: (
+    placeId: string,
+    areaId: string,
+    speakerId: string
+  ) => Promise<PlacesResult>;
   speakerCount: (place: Place) => number;
+  areaById: (areaId: string) => { place: Place; area: Area } | null;
 }
 
 export const usePlaces = create<PlacesState>()(
   persist(
     (set, get) => ({
       places: [],
+      mode: 'phone',
+      orgId: null,
+      loading: false,
+      problem: null,
+      live: {},
 
-      addPlace: (name) => {
-        const place: Place = { id: uid('plc'), name, areas: [] };
-        set({ places: [...get().places, place] });
-        return place;
+      useBusiness: (orgId) => {
+        set({
+          mode: orgId ? 'business' : 'phone',
+          orgId,
+          problem: null,
+          live: {},
+        });
+        if (orgId) void get().refresh();
       },
 
-      renamePlace: (id, name) =>
+      refresh: async () => {
+        const { mode, orgId } = get();
+        if (mode !== 'business' || !orgId) return;
+        set({ loading: true });
+        const result = await remote.fetchPlaces(orgId);
+        set({
+          loading: false,
+          problem: result.ok ? null : result.message,
+          places: result.ok ? (result.value ?? []) : get().places,
+        });
+      },
+
+      setLive: (live) => set({ live }),
+
+      addPlace: async (name) => {
+        if (get().mode === 'business' && get().orgId) {
+          const result = await remote.addPlace(get().orgId!, name);
+          if (result.ok) await get().refresh();
+          return { ok: result.ok, message: result.message };
+        }
+        const place: Place = { id: uid('plc'), name, areas: [] };
+        set({ places: [...get().places, place] });
+        somethingChanged('place');
+        return { ok: true, message: `${name} added.` };
+      },
+
+      renamePlace: async (id, name) => {
+        if (get().mode === 'business') {
+          const result = await remote.renamePlace(id, name);
+          if (result.ok) await get().refresh();
+          return { ok: result.ok, message: result.message };
+        }
         set({
           places: get().places.map((p) => (p.id === id ? { ...p, name } : p)),
-        }),
+        });
+        somethingChanged('place');
+        return OK;
+      },
 
-      removePlace: (id) =>
-        set({ places: get().places.filter((p) => p.id !== id) }),
+      removePlace: async (id) => {
+        if (get().mode === 'business') {
+          const result = await remote.removePlace(id);
+          if (result.ok) await get().refresh();
+          return { ok: result.ok, message: result.message };
+        }
+        set({ places: get().places.filter((p) => p.id !== id) });
+        somethingChanged('place');
+        return OK;
+      },
 
-      addArea: (placeId, name) => {
-        const place = get().places.find((p) => p.id === placeId);
-        if (!place) return undefined;
+      addArea: async (placeId, name) => {
+        if (get().mode === 'business') {
+          const result = await remote.addArea(placeId, name);
+          if (result.ok) await get().refresh();
+          return { ok: result.ok, message: result.message };
+        }
         const area: Area = { id: uid('ara'), name, speakerIds: [] };
         set({
           places: get().places.map((p) =>
             p.id === placeId ? { ...p, areas: [...p.areas, area] } : p
           ),
         });
-        return area;
+        somethingChanged('place');
+        return { ok: true, message: `${name} added.` };
       },
 
-      removeArea: (placeId, areaId) =>
+      renameArea: async (placeId, areaId, name) => {
+        if (get().mode === 'business') {
+          const result = await remote.renameArea(areaId, name);
+          if (result.ok) await get().refresh();
+          return { ok: result.ok, message: result.message };
+        }
+        set({
+          places: get().places.map((p) =>
+            p.id !== placeId
+              ? p
+              : {
+                  ...p,
+                  areas: p.areas.map((a) =>
+                    a.id === areaId ? { ...a, name } : a
+                  ),
+                }
+          ),
+        });
+        somethingChanged('place');
+        return OK;
+      },
+
+      removeArea: async (placeId, areaId) => {
+        if (get().mode === 'business') {
+          const result = await remote.removeArea(areaId);
+          if (result.ok) await get().refresh();
+          return { ok: result.ok, message: result.message };
+        }
         set({
           places: get().places.map((p) =>
             p.id === placeId
               ? { ...p, areas: p.areas.filter((a) => a.id !== areaId) }
               : p
           ),
-        }),
+        });
+        somethingChanged('place');
+        return OK;
+      },
 
-      addSpeaker: (placeId, areaId, speakerId) =>
+      addSpeaker: async (placeId, areaId, name) => {
+        if (get().mode === 'business') {
+          const result = await remote.addSpeaker(
+            areaId,
+            name ?? 'Test speaker'
+          );
+          if (result.ok) await get().refresh();
+          return { ok: result.ok, message: result.message };
+        }
+        const speaker = useAccount.getState().addSimulatedDevice(name);
         set({
           places: get().places.map((p) =>
             p.id !== placeId
@@ -84,13 +213,21 @@ export const usePlaces = create<PlacesState>()(
                   areas: p.areas.map((a) =>
                     a.id !== areaId
                       ? a
-                      : { ...a, speakerIds: [...a.speakerIds, speakerId] }
+                      : { ...a, speakerIds: [...a.speakerIds, speaker.id] }
                   ),
                 }
           ),
-        }),
+        });
+        somethingChanged('place');
+        return { ok: true, message: `${speaker.name} added.` };
+      },
 
-      removeSpeaker: (speakerId) =>
+      removeSpeaker: async (placeId, areaId, speakerId) => {
+        if (get().mode === 'business') {
+          const result = await remote.removeSpeaker(speakerId);
+          if (result.ok) await get().refresh();
+          return { ok: result.ok, message: result.message };
+        }
         set({
           places: get().places.map((p) => ({
             ...p,
@@ -99,15 +236,28 @@ export const usePlaces = create<PlacesState>()(
               speakerIds: a.speakerIds.filter((s) => s !== speakerId),
             })),
           })),
-        }),
+        });
+        useAccount.getState().removeDevice(speakerId);
+        somethingChanged('place');
+        return OK;
+      },
 
-      speakerCount: (place) =>
-        place.areas.reduce((sum, a) => sum + a.speakerIds.length, 0),
+      speakerCount,
+
+      areaById: (areaId) => {
+        for (const place of get().places) {
+          const area = place.areas.find((a) => a.id === areaId);
+          if (area) return { place, area };
+        }
+        return null;
+      },
     }),
     {
       name: STORAGE_KEYS.places,
       storage: persistStorage,
-      partialize: (s) => ({ places: s.places }),
+      // Only what one phone keeps is worth saving. A business reads its own
+      // list from the account every time.
+      partialize: (s) => ({ places: s.mode === 'phone' ? s.places : [] }),
     }
   )
 );

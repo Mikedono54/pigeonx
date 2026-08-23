@@ -1,8 +1,19 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { ChevronLeft, LayoutGrid } from 'lucide-react-native';
 
-import { Button, Screen, SectionHeader, StatusPill, Touchable } from '../src/components';
+import {
+  Button,
+  Screen,
+  SectionHeader,
+  Sheet,
+  StatusPill,
+  Touchable,
+  useToast,
+} from '../src/components';
+import { createBusiness, refreshBusiness } from '../src/services/business';
+import { useAccount } from '../src/state/useAccount';
 import { color, font, space } from '../src/theme/tokens';
 import { type } from '../src/theme/typography';
 
@@ -21,6 +32,27 @@ const WHAT_YOU_GET = [
 ];
 
 export default function ForBusinesses() {
+  const toast = useToast();
+  const signedIn = useAccount((s) => s.userId) !== null;
+  const [asking, setAsking] = useState(false);
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const setUp = useCallback(async () => {
+    setBusy(true);
+    try {
+      const result = await createBusiness(name);
+      toast.show(result.message, result.ok ? 'success' : 'danger');
+      if (!result.ok) return;
+      await refreshBusiness();
+      setAsking(false);
+      setName('');
+      router.replace('/places');
+    } finally {
+      setBusy(false);
+    }
+  }, [name, toast]);
+
   return (
     <Screen
       header={
@@ -72,13 +104,53 @@ export default function ForBusinesses() {
 
       <View style={styles.action}>
         <Button
-          label="See the Business plan"
+          label="Create a business"
           size="lg"
+          onPress={() => {
+            if (!signedIn) {
+              toast.show('Sign in first, then set up your business.');
+              return;
+            }
+            setAsking(true);
+          }}
+        />
+        <Button
+          label="See the Business plan"
+          variant="secondary"
           onPress={() =>
             router.push({ pathname: '/paywall', params: { tab: 'business' } })
           }
         />
       </View>
+
+      <Sheet
+        open={asking}
+        title="Create a business"
+        onClose={() => setAsking(false)}
+        footer={
+          <Button
+            label="Create it"
+            size="lg"
+            loading={busy}
+            disabled={name.trim().length === 0}
+            onPress={() => void setUp()}
+          />
+        }
+      >
+        <View style={styles.field}>
+          <Text style={styles.hint}>
+            The name your team knows. Like Main Street Property.
+          </Text>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="Main Street Property"
+            placeholderTextColor={color.fgSubtle}
+            style={styles.input}
+            accessibilityLabel="Business name"
+          />
+        </View>
+      </Sheet>
     </Screen>
   );
 }
@@ -121,5 +193,22 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: color.fg,
   },
-  action: { marginTop: space.xl },
+  action: { marginTop: space.xl, gap: space.sm },
+  field: { gap: space.sm },
+  hint: {
+    fontFamily: font.body.regular,
+    fontSize: 14,
+    lineHeight: 19,
+    color: color.fgMuted,
+  },
+  input: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: color.border,
+    backgroundColor: color.background,
+    paddingHorizontal: space.sm + 4,
+    color: color.ink,
+    fontFamily: font.body.medium,
+    fontSize: 16,
+  },
 });

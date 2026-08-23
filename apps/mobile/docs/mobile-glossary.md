@@ -40,6 +40,10 @@ Write for a ten year old holding the phone.
 | effective range, ceiling | Will this speaker play it? Yes / Partly / No |
 | guests may hear | Some people can hear this |
 | entitlement, gate, tier | plan |
+| org, organization, account (the company) | business |
+| member, org member, seat | teammate |
+| invitation, invite token | invite, and the link you send |
+| owner / manager / staff | Owner / Manager / Teammate |
 | upgrade path, paywall | plans |
 | sandbox | hidden from people. Developer only. |
 | sandbox purchase toast | Test mode: plan set to Pro |
@@ -70,6 +74,12 @@ Write for a ten year old holding the phone.
 | Who runs it | This phone reminds me, or a PigeonX speaker runs it by itself. |
 | Plan | Free, Pro or Business. |
 | History | What played and when. |
+| Business | The company a team works for. It owns the places. |
+| Teammate | One person on your team. |
+| Invite | The link you send someone so they join your team. |
+| Speaker mode | This phone runs your times, screen on, until you leave it. |
+| Signed in as | Which account this phone is using. |
+| Delete my account | Takes the account away for good. Apple asks for this. |
 
 ## Numbers
 
@@ -89,6 +99,18 @@ The app never pretends a phone can play a 25 kHz sound. The Adjust sheet asks
 - Yes. This speaker plays the whole sound.
 - Partly. Phone speakers play the low part. The top is lost.
 - No. Phone speakers can't play sounds this high. Use a PigeonX speaker.
+
+## Business words
+
+A business owns places. A place is a building, an area is one part of it, a
+speaker sits in an area. Everyone else on the business is a teammate, and you
+add one by sending an invite.
+
+Three things a teammate can be:
+
+- Owner. Can do everything, including billing.
+- Manager. Can add places, areas, speakers and times.
+- Teammate. Can play a sound and see what played.
 
 ## The three honest facts
 

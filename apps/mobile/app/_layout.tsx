@@ -23,6 +23,7 @@ import * as Linking from 'expo-linking';
 import { ToastProvider, useToast } from '../src/components';
 import { configureAudioSession } from '../src/audio';
 import { completeSignInFromUrl } from '../src/services/auth';
+import { acceptInvite, refreshBusiness } from '../src/services/business';
 import { askForMoveUp } from '../src/services/guestMigration';
 import {
   ACTION_START_NOW,
@@ -154,9 +155,11 @@ function AccountWatch() {
         });
         if (event === 'SIGNED_IN') {
           void askForMoveUp();
+          void refreshBusiness();
         }
       } else if (event === 'SIGNED_OUT') {
         setSession(null);
+        void refreshBusiness();
       }
     });
 
@@ -166,6 +169,7 @@ function AccountWatch() {
           userId: current.session.user.id,
           email: current.session.user.email ?? null,
         });
+        void refreshBusiness();
       }
     });
 
@@ -177,8 +181,17 @@ function AccountWatch() {
 
     const handle = async (url: string | null) => {
       const result = await completeSignInFromUrl(url);
-      if (!alive || !result || !result.message) return;
-      toast.show(result.message, result.ok ? 'success' : 'danger');
+      if (result?.message && alive) {
+        toast.show(result.message, result.ok ? 'success' : 'danger');
+      }
+
+      // A link that puts someone on a team carries a token instead.
+      const token = inviteToken(url);
+      if (!token) return;
+      const joined = await acceptInvite(token);
+      if (!alive) return;
+      toast.show(joined.message, joined.ok ? 'success' : 'danger');
+      if (joined.ok) await refreshBusiness();
     };
 
     void Linking.getInitialURL().then((url) => void handle(url));
@@ -191,6 +204,18 @@ function AccountWatch() {
   }, [toast]);
 
   return null;
+}
+
+/** Pulls the join token out of an invite link. */
+function inviteToken(url: string | null | undefined): string | null {
+  if (!url || !url.includes('token=')) return null;
+  const match = /[?&#]token=([^&#]+)/.exec(url);
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
 }
 
 /** Sends new people to the welcome screens, once. */

@@ -29,6 +29,9 @@ interface SessionState {
   volume: number;
   duration: DurationChoice;
   deviceId: string | null;
+  /** the area this phone plays into, when the business has areas */
+  zoneId: string | null;
+  zoneName: string | null;
 
   engineState: EngineState;
   error: string | null;
@@ -43,6 +46,7 @@ interface SessionState {
   setOutput: (output: OutputKind, deviceId?: string | null) => void;
   setVolume: (v: number) => void;
   setDuration: (d: DurationChoice) => void;
+  setArea: (zoneId: string | null, zoneName?: string | null) => void;
   setParam: (key: string, value: number) => void;
   start: (opts?: {
     profileId?: string;
@@ -65,6 +69,8 @@ export const useSession = create<SessionState>()(
       volume: 0.85,
       duration: 15,
       deviceId: null,
+      zoneId: null,
+      zoneName: null,
 
       engineState: 'idle',
       error: null,
@@ -110,6 +116,8 @@ export const useSession = create<SessionState>()(
         getEngine().setVolume(v);
       },
       setDuration: (d) => set({ duration: d }),
+      setArea: (zoneId, zoneName) =>
+        set({ zoneId, zoneName: zoneName ?? null }),
       setParam: (key, value) => {
         getEngine().setParam(key, value);
       },
@@ -156,6 +164,7 @@ export const useSession = create<SessionState>()(
           profile,
           output: get().output,
           source: opts?.source ?? 'manual',
+          zoneId: get().zoneId,
           deviceId: get().deviceId,
         });
 
@@ -193,6 +202,8 @@ export const useSession = create<SessionState>()(
         volume: s.volume,
         duration: s.duration,
         deviceId: s.deviceId,
+        zoneId: s.zoneId,
+        zoneName: s.zoneName,
       }),
     }
   )

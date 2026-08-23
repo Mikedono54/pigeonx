@@ -18,6 +18,7 @@ import {
   moveUpPending,
 } from './guestMigration';
 import { sessionRecorder } from './sessionRecorder';
+import { loadBuiltInSoundIds, localSoundId, remoteSoundId } from './soundIds';
 import { getSupabase, isMissingOnServer } from './supabase';
 import { setChangeHandler, somethingChanged, type ChangeReason } from './syncSignal';
 
@@ -349,11 +350,11 @@ async function runOnce(): Promise<SyncReport> {
   const report: SyncReport = { ran: true, pushed: 0, pulled: 0, skipped: [] };
 
   // Sounds go first: a schedule and a play both point at one.
+  await refreshSoundIds(sb);
   await syncSounds(sb, userId, report);
-  const catalogue = await loadSoundCatalogue(sb, userId);
-  await syncSchedules(sb, userId, catalogue, report);
+  await syncSchedules(sb, userId, report);
   await syncSpeakers(sb, userId, report);
-  await pushPlays(sb, userId, catalogue, report);
+  await pushPlays(sb, userId, report);
 
   await sessionRecorder.flush();
 
@@ -366,47 +367,8 @@ async function runOnce(): Promise<SyncReport> {
 
 /* ── sounds ───────────────────────────────────────────────────────────────── */
 
-export interface SoundCatalogue {
-  /** the id the account uses for one of our built-in sounds */
-  remoteBySlug: Map<string, string>;
-  /** the sound on this phone that a remote id belongs to */
-  localByRemote: Map<string, string>;
-}
-
-async function loadSoundCatalogue(
-  sb: SupabaseClient,
-  userId: string
-): Promise<SoundCatalogue> {
-  const catalogue: SoundCatalogue = {
-    remoteBySlug: new Map(),
-    localByRemote: new Map(),
-  };
-
-  const { data, error } = await sb
-    .from('audio_profiles')
-    .select('id, slug, is_system, owner_user_id')
-    .or(`is_system.eq.true,owner_user_id.eq.${userId}`);
-
-  if (error || !data) return catalogue;
-
-  for (const row of data as { id: string; slug: string | null }[]) {
-    if (row.slug) catalogue.remoteBySlug.set(row.slug, row.id);
-  }
-  for (const sound of useProfiles.getState().saved) {
-    if (sound.remoteId) catalogue.localByRemote.set(sound.remoteId, sound.id);
-  }
-  return catalogue;
-}
-
-/** The account's id for a sound on this phone, when there is one. */
-export function remoteSoundId(
-  localId: string,
-  catalogue: SoundCatalogue
-): string | null {
-  const built = SYSTEM_PROFILES.find((p) => p.id === localId);
-  if (built) return catalogue.remoteBySlug.get(localId) ?? null;
-  const mine = useProfiles.getState().saved.find((p) => p.id === localId);
-  return mine?.remoteId ?? null;
+async function refreshSoundIds(sb: SupabaseClient): Promise<void> {
+  await loadBuiltInSoundIds(sb);
 }
 
 async function syncSounds(
@@ -473,7 +435,6 @@ async function syncSounds(
 async function syncSchedules(
   sb: SupabaseClient,
   userId: string,
-  catalogue: SoundCatalogue,
   report: SyncReport
 ): Promise<void> {
   const local = useSchedules.getState().schedules;
@@ -491,11 +452,7 @@ async function syncSchedules(
   }
 
   const nameFor = (remoteId: string | null) => {
-    const localId = remoteId ? catalogue.localByRemote.get(remoteId) : undefined;
-    const slug = remoteId
-      ? [...catalogue.remoteBySlug.entries()].find(([, id]) => id === remoteId)?.[0]
-      : undefined;
-    const sound = useProfiles.getState().byId(localId ?? slug ?? '');
+    const sound = useProfiles.getState().byId(localSoundId(remoteId) ?? '');
     return sound
       ? { id: sound.id, name: sound.name }
       : { id: SYSTEM_PROFILES[0].id, name: SYSTEM_PROFILES[0].name };
@@ -511,7 +468,7 @@ async function syncSchedules(
   report.pulled += Math.max(0, merged.keep.length - local.length);
 
   for (const schedule of merged.push) {
-    const profileId = remoteSoundId(schedule.profileId, catalogue);
+    const profileId = remoteSoundId(schedule.profileId);
     if (!profileId) continue; // the sound has not reached the account yet
     const payload = {
       user_id: userId,
@@ -598,15 +555,16 @@ async function syncSpeakers(
 async function pushPlays(
   sb: SupabaseClient,
   userId: string,
-  catalogue: SoundCatalogue,
   report: SyncReport
 ): Promise<void> {
   const waiting = useHistory
     .getState()
-    .entries.filter((e) => !e.synced && !e.remoteId && e.zoneId === null);
+    .entries.filter(
+      (e) => !e.synced && !e.remoteId && e.zoneId === null && e.endedAt !== null
+    );
 
   for (const entry of waiting.slice(0, 50)) {
-    const profileId = remoteSoundId(entry.profileId, catalogue);
+    const profileId = remoteSoundId(entry.profileId);
     if (!profileId) continue;
 
     const { data: created, error } = await sb

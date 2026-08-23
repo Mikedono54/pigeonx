@@ -5,6 +5,8 @@ import {
   type SessionEntry,
   type SessionSource,
 } from '../state/useHistory';
+import { useAccount } from '../state/useAccount';
+import { remoteSoundId } from './soundIds';
 import { getSupabase } from './supabase';
 import { somethingChanged } from './syncSignal';
 
@@ -22,25 +24,67 @@ export interface RemoteSink {
 
 export const supabaseSink: RemoteSink = {
   isAvailable() {
-    return getSupabase() !== null;
+    return getSupabase() !== null && useAccount.getState().userId !== null;
   },
+
   async startSession(entry) {
     const sb = getSupabase();
     if (!sb) throw new Error('No account yet.');
-    const { data, error } = await sb.rpc('start_session', {
-      zone_id: entry.zoneId,
-      profile_id: entry.profileId,
-      device_id: entry.deviceId,
-    });
+
+    const profileId = remoteSoundId(entry.profileId);
+    if (!profileId) throw new Error('That sound has not reached the account.');
+
+    // A play in an area goes through the server so the rest of the team sees
+    // it. A play that belongs to one person is written straight down.
+    if (entry.zoneId) {
+      const { data, error } = await sb.rpc('start_session', {
+        p_zone_id: entry.zoneId,
+        p_profile_id: profileId,
+        p_device_id: entry.deviceId,
+        p_output: entry.outputKind,
+        p_source: entry.source,
+      });
+      if (error) throw new Error(error.message);
+      return typeof data === 'string' ? data : null;
+    }
+
+    const userId = useAccount.getState().userId;
+    const { data, error } = await sb
+      .from('sessions')
+      .insert({
+        user_id: userId,
+        zone_id: null,
+        profile_id: profileId,
+        started_at: new Date(entry.startedAt).toISOString(),
+        output_kind: entry.outputKind,
+        peak_freq_hz: entry.peakFreqHz,
+        source: entry.source,
+      })
+      .select('id')
+      .single();
     if (error) throw new Error(error.message);
-    return typeof data === 'string' ? data : null;
+    return (data as { id: string } | null)?.id ?? null;
   },
+
   async endSession(entry) {
     const sb = getSupabase();
     if (!sb) throw new Error('No account yet.');
-    const { error } = await sb.rpc('end_session', {
-      session_id: entry.remoteId,
-    });
+    if (!entry.remoteId) return;
+
+    if (entry.zoneId) {
+      const { error } = await sb.rpc('end_session', {
+        p_session_id: entry.remoteId,
+      });
+      if (error) throw new Error(error.message);
+      return;
+    }
+
+    const { error } = await sb
+      .from('sessions')
+      .update({
+        ended_at: new Date(entry.endedAt ?? Date.now()).toISOString(),
+      })
+      .eq('id', entry.remoteId);
     if (error) throw new Error(error.message);
   },
 };
@@ -80,6 +124,7 @@ export class SessionRecorder {
 
     if (!this.sink.isAvailable()) {
       useHistory.getState().enqueue('start', entry.id);
+      somethingChanged('play');
       return entry;
     }
 
@@ -99,6 +144,7 @@ export class SessionRecorder {
 
     if (!this.sink.isAvailable()) {
       useHistory.getState().enqueue('end', entry.id);
+      somethingChanged('play');
       return entry;
     }
 

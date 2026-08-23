@@ -12,6 +12,8 @@ import {
   findSystemProfile,
 } from '../src/core/profiles';
 import { FEATURE_LABEL, PLAN_LABEL } from '../src/core/entitlements';
+import { ROLE_HINT, ROLE_LABEL } from '../src/services/business';
+import { liveLabel } from '../src/core/places';
 import { describeDays, describeSchedule } from '../src/state/useSchedules';
 
 /** Words a person should never have to read. See docs/mobile-glossary.md. */
@@ -96,6 +98,8 @@ describe('labels people read', () => {
       ...Object.values(KIND_LABEL),
       ...Object.values(FEATURE_LABEL),
       ...Object.values(PLAN_LABEL),
+      ...Object.values(ROLE_LABEL),
+      ...Object.values(ROLE_HINT),
       AUDIBLE_TAG,
       REACH_QUESTION,
     ]) {
@@ -105,6 +109,20 @@ describe('labels people read', () => {
 
   it('warns about sounds people can hear', () => {
     expect(AUDIBLE_TAG).toBe('Some people can hear this');
+  });
+});
+
+describe('what an area row says', () => {
+  it('reads as words, not as a state', () => {
+    expect(liveLabel(undefined)).toBe('Off');
+    expect(
+      liveLabel({ playing: true, startedAt: 0 }, 12 * 60_000 + 40_000)
+    ).toBe('Playing 12:40');
+  });
+
+  it('names each teammate in plain words', () => {
+    expect(ROLE_LABEL.staff).toBe('Teammate');
+    expect(ROLE_LABEL.owner).toBe('Owner');
   });
 });
 
