@@ -407,6 +407,27 @@ export async function deleteSchedule(id: string): Promise<void> {
 
 export async function listMembers(orgId: string): Promise<TeamMember[]> {
   const db = requireSupabase();
+  const { data, error } = await db.rpc('org_member_list', { p_org_id: orgId });
+  if (!error) {
+    const rows = (data ?? []) as Array<{
+      user_id: string;
+      email: string | null;
+      display_name: string | null;
+      role: MemberRole;
+      joined_at: string;
+    }>;
+    return rows.map((r) => ({
+      id: r.user_id,
+      user_id: r.user_id,
+      role: r.role,
+      created_at: r.joined_at,
+      display_name: r.display_name,
+      email: r.email,
+    }));
+  }
+
+  // The RPC is not available yet, or the caller cannot use it. Read the
+  // same list straight from the table instead.
   const rows = unwrap(
     await db
       .from('org_members')
@@ -414,7 +435,7 @@ export async function listMembers(orgId: string): Promise<TeamMember[]> {
       .eq('org_id', orgId)
       .order('created_at'),
   ) as Array<{ id: string; user_id: string; role: MemberRole; created_at: string }>;
-  return rows.map((r) => ({ ...r, display_name: null }));
+  return rows.map((r) => ({ ...r, display_name: null, email: null }));
 }
 
 export async function listInvites(orgId: string): Promise<Invite[]> {

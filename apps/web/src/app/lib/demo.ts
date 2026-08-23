@@ -270,6 +270,7 @@ export const DEMO_MEMBERS: TeamMember[] = [
     role: 'owner',
     created_at: '2026-05-02T10:00:00Z',
     display_name: 'Alex',
+    email: 'alex@harbourhouse.com',
   },
   {
     id: 'm2',
@@ -277,6 +278,7 @@ export const DEMO_MEMBERS: TeamMember[] = [
     role: 'manager',
     created_at: '2026-06-14T10:00:00Z',
     display_name: 'Dana',
+    email: 'dana@harbourhouse.com',
   },
   {
     id: 'm3',
@@ -284,6 +286,7 @@ export const DEMO_MEMBERS: TeamMember[] = [
     role: 'staff',
     created_at: '2026-07-30T10:00:00Z',
     display_name: 'Sam',
+    email: 'sam@harbourhouse.com',
   },
 ];
 

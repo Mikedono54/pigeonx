@@ -190,11 +190,12 @@ export default function Team() {
               <tbody>
                 {members.map((m) => {
                   const isYou = m.user_id === userId;
+                  const name = m.display_name ?? m.email ?? (isYou ? 'You' : 'Teammate');
                   return (
                     <tr key={m.id}>
                       <Td>
-                        {m.display_name ?? (isYou ? 'You' : 'Teammate')}
-                        {isYou && m.display_name ? ' (you)' : ''}
+                        {name}
+                        {isYou && name !== 'You' ? ' (you)' : ''}
                       </Td>
                       <Td>
                         <Pill>{roleLabel(m.role)}</Pill>

@@ -15,3 +15,4 @@ supabase/.temp/
 supabase/.branches/
 .netlify/
 *.tsbuildinfo
+.secrets/

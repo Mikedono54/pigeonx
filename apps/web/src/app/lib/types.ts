@@ -105,6 +105,7 @@ export type TeamMember = {
   role: MemberRole;
   created_at: string;
   display_name: string | null;
+  email: string | null;
 };
 
 export type Invite = {
