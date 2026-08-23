@@ -49,6 +49,14 @@ export function whenLabel(iso: string | null, locale = 'en-US'): string {
   return `${day}, ${time}`;
 }
 
+/** `2026-05-02T10:00:00Z` as `May 2, 2026`, when the time of day does not matter. */
+export function dateLabel(iso: string | null, locale = 'en-US'): string {
+  if (!iso) return 'Not yet';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return 'Not yet';
+  return d.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 /** How long ago, in the roughest honest terms. */
 export function agoLabel(iso: string | null, now: Date = new Date()): string {
   if (!iso) return 'Never';

@@ -15,12 +15,12 @@ export function PageHead({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5">
-      <div>
+    <div className="flex flex-col gap-4 border-b border-line pb-5 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+      <div className="min-w-0">
         <h1 className="text-[clamp(1.5rem,3vw,2rem)] leading-[1.1] font-semibold">{title}</h1>
         {intro ? <p className="mt-2 max-w-[60ch] text-[15px] text-muted">{intro}</p> : null}
       </div>
-      {action}
+      {action ? <div className="shrink-0">{action}</div> : null}
     </div>
   );
 }
@@ -45,7 +45,9 @@ export function Stat({ label, value, note }: { label: string; value: string; not
   return (
     <div className="border border-line p-5">
       <Label>{label}</Label>
-      <p className="px-num mt-3 text-[28px] leading-none text-ink">{value}</p>
+      <p className="px-num mt-3 text-[clamp(1.375rem,2.2vw,1.75rem)] leading-tight text-ink">
+        {value}
+      </p>
       {note ? <p className="mt-2 text-[14px] text-muted">{note}</p> : null}
     </div>
   );

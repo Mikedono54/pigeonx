@@ -91,14 +91,12 @@ function PlaceCard({ place, areas, now }: { place: Place; areas: LiveArea[]; now
   const playing = areas.filter((a) => a.running).length;
   return (
     <Card as="li" className="flex flex-col">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="truncate text-[17px] font-semibold text-ink">{place.name}</h3>
-          <p className="mt-1 truncate text-[14px] text-muted">
-            {place.address ?? 'No address yet'}
-          </p>
+      <div>
+        <h3 className="text-[17px] font-semibold text-ink">{place.name}</h3>
+        <p className="mt-1 truncate text-[14px] text-muted">{place.address ?? 'No address yet'}</p>
+        <div className="mt-3">
+          <Pill tone={playing > 0 ? 'live' : 'quiet'}>{placeStatus(areas)}</Pill>
         </div>
-        <Pill tone={playing > 0 ? 'live' : 'quiet'}>{placeStatus(areas)}</Pill>
       </div>
 
       {areas.length === 0 ? (

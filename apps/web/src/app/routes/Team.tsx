@@ -5,7 +5,7 @@ import { useAuth } from '../AuthProvider';
 import { useAsync } from '../lib/useAsync';
 import { cancelInvite, inviteMember, listInvites, listMembers, removeMember } from '../lib/db';
 import { DEMO_INVITES, DEMO_MEMBERS, demoWriteBlocked, isDemo } from '../lib/demo';
-import { whenLabel } from '../lib/derive';
+import { dateLabel } from '../lib/derive';
 import type { Invite, MemberRole, TeamMember } from '../lib/types';
 import {
   Card,
@@ -199,7 +199,7 @@ export default function Team() {
                       <Td>
                         <Pill>{roleLabel(m.role)}</Pill>
                       </Td>
-                      <Td className="whitespace-nowrap">{whenLabel(m.created_at)}</Td>
+                      <Td className="whitespace-nowrap">{dateLabel(m.created_at)}</Td>
                       <Td className="text-right">
                         {amOwner && !isYou ? (
                           <GhostButton danger onClick={() => setRemovingMember(m)}>
@@ -240,7 +240,7 @@ export default function Team() {
                     <Td>
                       <Pill>{roleLabel(i.role)}</Pill>
                     </Td>
-                    <Td className="whitespace-nowrap">{whenLabel(i.expires_at)}</Td>
+                    <Td className="whitespace-nowrap">{dateLabel(i.expires_at)}</Td>
                     <Td className="text-right whitespace-nowrap">
                       <GhostButton onClick={() => void copy(joinLink(i.token))}>
                         <Copy size={14} strokeWidth={1.75} aria-hidden />

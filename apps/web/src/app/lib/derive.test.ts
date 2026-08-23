@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   areaStatus,
+  dateLabel,
   bucketByDay,
   clock,
   countToday,
@@ -121,6 +122,17 @@ describe('bucketByDay', () => {
   it('drops timestamps outside the window and junk values', () => {
     const buckets = bucketByDay(['2026-01-01T09:00:00', null, 'nope'], 7, NOW);
     expect(buckets.reduce((sum, b) => sum + b.count, 0)).toBe(0);
+  });
+});
+
+describe('dateLabel', () => {
+  it('prints a plain date', () => {
+    expect(dateLabel('2026-05-02T10:00:00')).toBe('May 2, 2026');
+  });
+
+  it('says so when there is no date', () => {
+    expect(dateLabel(null)).toBe('Not yet');
+    expect(dateLabel('nope')).toBe('Not yet');
   });
 });
 
