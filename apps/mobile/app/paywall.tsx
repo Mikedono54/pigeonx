@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -13,8 +13,13 @@ import {
   type Feature,
 } from '../src/core/entitlements';
 import {
-  createSandboxPurchases,
+  BUSINESS_BILLING_URL,
+  createPurchases,
+  LISTED_PRICES,
+  PRIVACY_URL,
+  TERMS_URL,
   type ProductId,
+  type PurchasePrices,
 } from '../src/services/purchases';
 import { useAccount } from '../src/state/useAccount';
 import { color, font, space } from '../src/theme/tokens';
@@ -50,16 +55,38 @@ export default function Paywall() {
 
   const [term, setTerm] = useState<'monthly' | 'yearly'>('yearly');
   const [busy, setBusy] = useState(false);
+  const [prices, setPrices] = useState<PurchasePrices>(LISTED_PRICES);
 
   const feature = params.feature as Feature | undefined;
-  const purchases = useMemo(() => createSandboxPurchases(setPlan), [setPlan]);
+  const purchases = useMemo(() => createPurchases(setPlan), [setPlan]);
+  const live = purchases.isLive();
+
+  // Real money, in the money this person's store uses.
+  useEffect(() => {
+    let alive = true;
+    void purchases.prices().then((found) => {
+      if (!alive) return;
+      setPrices({
+        monthly: found.monthly ?? LISTED_PRICES.monthly,
+        yearly: found.yearly ?? LISTED_PRICES.yearly,
+      });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [purchases]);
+
+  const monthly = prices.monthly ?? LISTED_PRICES.monthly ?? '';
+  const yearly = prices.yearly ?? LISTED_PRICES.yearly ?? '';
 
   const buy = useCallback(
     async (product: ProductId) => {
       setBusy(true);
       try {
         const result = await purchases.purchase(product);
-        toast.show(result.message, result.ok ? 'success' : 'danger');
+        if (result.message) {
+          toast.show(result.message, result.ok ? 'success' : 'danger');
+        }
         if (result.ok) router.back();
       } finally {
         setBusy(false);
@@ -106,11 +133,7 @@ export default function Paywall() {
 
         <PlanCard
           name="Pro"
-          price={
-            term === 'yearly'
-              ? `${PRICES.pro.yearly.label} a year`
-              : `${PRICES.pro.monthly.label} a month`
-          }
+          price={term === 'yearly' ? `${yearly} a year` : `${monthly} a month`}
           note="For one person and one phone"
           lines={PRO_LINES}
           current={plan === 'pro'}
@@ -120,8 +143,8 @@ export default function Paywall() {
             onChange={setTerm}
             accessibilityLabel="How often you pay"
             options={[
-              { value: 'yearly', label: '$29.99 a year' },
-              { value: 'monthly', label: '$4.99 a month' },
+              { value: 'yearly', label: `${yearly} a year` },
+              { value: 'monthly', label: `${monthly} a month` },
             ]}
           />
           <Button
@@ -143,7 +166,7 @@ export default function Paywall() {
             label="Set up Business on the web"
             size="lg"
             variant="secondary"
-            onPress={() => void Linking.openURL('https://pigeonx.org/app')}
+            onPress={() => void Linking.openURL(BUSINESS_BILLING_URL)}
             accessibilityHint="Opens PigeonX in your browser"
           />
         </PlanCard>
@@ -169,13 +192,36 @@ export default function Paywall() {
           size="sm"
           onPress={async () => {
             const r = await purchases.restore();
-            toast.show(r.message);
+            if (r.message) toast.show(r.message, r.ok ? 'success' : 'danger');
           }}
         />
 
-        <Text style={styles.fine}>
-          Test mode. No money moves and no store is connected yet.
-        </Text>
+        <View style={styles.legal}>
+          <Touchable
+            onPress={() => void Linking.openURL(TERMS_URL)}
+            accessibilityLabel="Read the rules"
+            style={styles.legalLink}
+          >
+            <Text style={styles.legalText}>The rules</Text>
+          </Touchable>
+          <Touchable
+            onPress={() => void Linking.openURL(PRIVACY_URL)}
+            accessibilityLabel="Read what we do with your information"
+            style={styles.legalLink}
+          >
+            <Text style={styles.legalText}>What we keep</Text>
+          </Touchable>
+        </View>
+
+        {live ? (
+          <Text style={styles.fine}>
+            You pay through your phone's store. It renews until you stop it.
+          </Text>
+        ) : (
+          <Text style={styles.fine}>
+            Test mode. No money moves and no store is connected yet.
+          </Text>
+        )}
       </ScrollView>
     </View>
   );
@@ -301,5 +347,18 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     color: color.fgSubtle,
     textAlign: 'center',
+  },
+  legal: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: space.lg,
+  },
+  legalLink: { minHeight: 44, justifyContent: 'center' },
+  legalText: {
+    fontFamily: font.mono.medium,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: color.accent,
   },
 });

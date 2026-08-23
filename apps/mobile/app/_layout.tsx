@@ -30,6 +30,7 @@ import {
   ACTION_STOP,
   configureNotifications,
 } from '../src/services/notifications';
+import { createPurchases } from '../src/services/purchases';
 import { sessionRecorder } from '../src/services/sessionRecorder';
 import { getSupabase } from '../src/services/supabase';
 import { attachSync } from '../src/services/sync';
@@ -86,6 +87,7 @@ export default function RootLayout() {
 
   useNotificationActions();
   useQueueFlush();
+  useStorePlan();
   useOnboardingGate(ready);
 
   if (!ready) return <View style={styles.root} />;
@@ -204,6 +206,15 @@ function AccountWatch() {
   }, [toast]);
 
   return null;
+}
+
+/** Asks the store once, at the start, what this person already paid for. */
+function useStorePlan() {
+  useEffect(() => {
+    const store = createPurchases((plan) => useAccount.getState().setPlan(plan));
+    if (!store.isLive()) return;
+    void store.refresh();
+  }, []);
 }
 
 /** Pulls the join token out of an invite link. */
