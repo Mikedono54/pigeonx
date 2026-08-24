@@ -8,8 +8,8 @@
  *  - phone speakers stop near 18 kHz, Bluetooth near 19 kHz, PigeonX 25 kHz
  *  - anything above 17 kHz is audible to many people under 30
  *
- * Every string in here is read by a person. Plain words only. See
- * docs/mobile-glossary.md before you add one.
+ * Every string in here is read by a person. Clear, specific and professional,
+ * never a code word. See docs/mobile-glossary.md before you add one.
  */
 
 import type { Plan } from './entitlements';
@@ -61,8 +61,8 @@ export interface AudioProfile {
 export const SYSTEM_PROFILES: AudioProfile[] = [
   {
     id: 'sys_pigeon_18k',
-    name: 'Pigeon sound',
-    description: 'Steady high sound',
+    name: 'High-frequency deterrent',
+    description: 'Steady 18 kHz tone',
     kind: 'tone',
     params: { freqHz: 18000 },
     minPlan: 'free',
@@ -70,8 +70,8 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   },
   {
     id: 'sys_pulse_16k',
-    name: 'Beeping sound',
-    description: 'Beeps birds cannot predict',
+    name: 'Unpredictable beeps',
+    description: 'Irregular beeps that prevent habituation',
     kind: 'pulse',
     params: { freqHz: 16000, onMs: 400, offMs: 600, randomizePct: 20 },
     minPlan: 'free',
@@ -79,8 +79,8 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   },
   {
     id: 'sys_sweep_15_19k',
-    name: 'Rising and falling sound',
-    description: 'Slides up and down',
+    name: 'Variable pitch sweep',
+    description: 'Continuously shifts frequency',
     kind: 'sweep',
     params: { startHz: 15000, endHz: 19000, rateHz: 0.5 },
     minPlan: 'free',
@@ -88,8 +88,8 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   },
   {
     id: 'sys_gull_17k',
-    name: 'Gull sound',
-    description: 'For roofs and docks',
+    name: 'Gull deterrent',
+    description: 'Steady tone for roofs and docks',
     kind: 'tone',
     params: { freqHz: 17000 },
     minPlan: 'pro',
@@ -97,8 +97,8 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   },
   {
     id: 'sys_random_pulse',
-    name: 'Mixed up beeping',
-    description: 'Beeps at random times',
+    name: 'Randomized beeps',
+    description: 'Random timing for long sessions',
     kind: 'pulse',
     params: { freqHz: 17500, onMs: 250, offMs: 900, randomizePct: 60 },
     minPlan: 'pro',
@@ -106,8 +106,8 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   },
   {
     id: 'sys_distress_pigeon',
-    name: 'Pigeon alarm call',
-    description: 'Scared pigeon call',
+    name: 'Pigeon distress call',
+    description: 'Real distress recording. Most effective',
     kind: 'sample',
     params: { asset: 'distress_pigeon', gapMs: 8000, randomizePct: 40 },
     minPlan: 'pro',
@@ -116,7 +116,7 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   {
     id: 'sys_predator_hawk',
     name: 'Hawk call',
-    description: 'Hawk cry',
+    description: 'Real hawk cry',
     kind: 'sample',
     params: { asset: 'predator_hawk', gapMs: 15000, randomizePct: 50 },
     minPlan: 'pro',
@@ -125,7 +125,7 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   {
     id: 'sys_predator_falcon',
     name: 'Falcon call',
-    description: 'Falcon cry',
+    description: 'Real falcon cry',
     kind: 'sample',
     params: { asset: 'predator_falcon', gapMs: 15000, randomizePct: 50 },
     minPlan: 'pro',
@@ -133,8 +133,8 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   },
   {
     id: 'sys_max_22k',
-    name: 'Very high sound',
-    description: 'Needs a PigeonX speaker',
+    name: 'Maximum frequency',
+    description: '22 kHz. Needs a PigeonX speaker',
     kind: 'tone',
     params: { freqHz: 22000 },
     minPlan: 'pro',
@@ -200,8 +200,13 @@ export function guestsMayHear(p: AudioProfile): boolean {
   return peakFreqHz(p) > 17000 || p.kind === 'sample';
 }
 
-/** The tag shown next to a sound people can hear. */
-export const AUDIBLE_TAG = 'People can hear it';
+/**
+ * The tag on a sound that sits inside human hearing.
+ *
+ * One word, on the same small bordered chip every other tag uses. What it
+ * means lives one tap away, in `AUDIBLE_EXPLAINER`.
+ */
+export const AUDIBLE_TAG = 'Audible';
 
 export type OutputKind = 'phone' | 'bt_speaker' | 'pigeonx_emitter' | 'simulated';
 

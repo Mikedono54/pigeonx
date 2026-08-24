@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Linking, Text, View } from 'react-native';
+import { Linking, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Music, Play, Speaker, Square } from 'lucide-react-native';
+import { Music, Play, SlidersHorizontal, Speaker, Square } from 'lucide-react-native';
 
 import {
   Banner,
@@ -54,10 +54,23 @@ const SOON_MS = 90 * 60 * 1000;
 
 const BLUETOOTH_NOTE = 'Pair it in your phone settings first.';
 
+/** What PigeonX is, in four words, under the word Off. */
+const BRAND_LINE = 'Press Start. Birds leave.';
+
+/**
+ * The share of the phone the state block takes.
+ *
+ * It is a proportion and not a number of points, so the block reads as the
+ * top of the screen on a small phone and on a large one alike.
+ */
+const STATE_BLOCK_SHARE = 0.4;
+const STATE_BLOCK_MIN = 236;
+
 export default function HomeScreen() {
   const styles = useThemedStyles(sheet);
   const { c, dark } = useTheme();
   const insets = useSafeAreaInsets();
+  const { height: screenHeight } = useWindowDimensions();
   const ent = useEntitlement();
   const toast = useToast();
   const [speakerOpen, setSpeakerOpen] = useState(false);
@@ -135,11 +148,15 @@ export default function HomeScreen() {
 
       <StateBlock
         state={playing ? 'playing' : upNext ? 'soon' : 'off'}
-        label={playing ? 'Playing' : upNext ? `Starts ${upNext}` : '01  State'}
+        label={playing ? 'Playing' : upNext ? `Starts ${upNext}` : undefined}
         headline={playing ? formatElapsed(elapsed) : 'Off'}
         clock={playing}
-        line={playing ? 'You can lock the phone. The sound keeps going.' : undefined}
+        line={playing ? 'You can lock the phone. The sound keeps going.' : BRAND_LINE}
         topInset={insets.top}
+        height={Math.max(
+          STATE_BLOCK_MIN,
+          Math.round(screenHeight * STATE_BLOCK_SHARE)
+        )}
       >
         {playing ? (
           <SpectrumBars
@@ -183,6 +200,12 @@ export default function HomeScreen() {
             onPress={() => setSpeakerOpen(true)}
             accessibilityLabel={`Plays on ${SPEAKER_LABEL[playsOn]}. Tap to change.`}
           />
+          <ListRow
+            icon={SlidersHorizontal}
+            title="Pitch and loudness"
+            onPress={() => setAdjustOpen(true)}
+            accessibilityLabel="Pitch and loudness. Tap to change."
+          />
         </View>
 
         {playsOn === 'bt_speaker' ? (
@@ -196,7 +219,7 @@ export default function HomeScreen() {
         ) : null}
 
         <View style={styles.howLong}>
-          <Text style={styles.fieldLabel}>02  How long</Text>
+          <Text style={styles.fieldLabel}>How long</Text>
           <View style={styles.chipRow}>
             {HOW_LONG.map((d) => (
               <Chip
@@ -211,14 +234,6 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.spacer} />
-
-        <Touchable
-          onPress={() => setAdjustOpen(true)}
-          accessibilityLabel="Adjust the pitch and the loudness"
-          style={styles.adjust}
-        >
-          <Text style={styles.adjustText}>Adjust</Text>
-        </Touchable>
 
         <BlockButton
           label={playing ? 'Stop' : 'Start'}
@@ -258,7 +273,7 @@ export default function HomeScreen() {
 
 /* ------------------------------------------------------------------ */
 
-/** Pitch and loudness. Kept behind one link so Home stays simple. */
+/** Pitch and loudness. Kept behind one row so Home stays simple. */
 function AdjustSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const styles = useThemedStyles(sheet);
   const profileId = useSession((s) => s.profileId);
@@ -309,7 +324,7 @@ function AdjustSheet({ open, onClose }: { open: boolean; onClose: () => void }) 
     : null;
 
   return (
-    <Sheet open={open} title="Adjust" onClose={onClose}>
+    <Sheet open={open} title="Pitch and loudness" onClose={onClose}>
       {hasPitch ? (
         <View style={styles.field}>
           <Slider
@@ -368,14 +383,8 @@ const sheet = themed((c, t) => ({
   howLong: { marginTop: space.md, gap: space.sm },
   fieldLabel: { ...t.overline },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-  spacer: { flex: 1, minHeight: space.sm },
-  adjust: {
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: space.sm,
-  },
-  adjustText: { ...t.bodyStrong, fontSize: 15, color: c.link },
+  /** the only slack on the screen, and it sits above the one big button */
+  spacer: { flex: 1, minHeight: space.md },
   sheetNote: { ...t.bodySmall },
   field: { gap: space.xs },
   mono: { ...t.caption, fontFamily: font.mono.medium, letterSpacing: 0.5 },

@@ -125,7 +125,12 @@ export default function TeamScreen() {
           <Text style={styles.link} numberOfLines={2}>
             {link}
           </Text>
-          <Button label="Send it" onPress={() => void share()} icon={Share2} />
+          <Button
+            label="Send it"
+            variant="secondary"
+            onPress={() => void share()}
+            icon={Share2}
+          />
         </View>
       ) : null}
 

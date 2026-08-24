@@ -17,17 +17,28 @@ import { liveLabel } from '../src/core/places';
 import { plainMessage } from '../src/services/supabase';
 import { describeLinkProblem } from '../src/services/auth';
 import { describeDays, describeSchedule } from '../src/state/useSchedules';
-import { PLACEHOLDER_NOTICE } from '../src/audio/samples';
+import { SAMPLE_LABEL, SAMPLE_SHORT, SOUND_CREDITS } from '../src/audio/samples';
+import { AUDIBLE_EXPLAINER } from '../src/components/AudibleChip';
 
-/** Words a person should never have to read. See docs/mobile-glossary.md. */
+/**
+ * Code words a person should never have to read. See docs/mobile-glossary.md.
+ *
+ * The register is precise product language now, so words like frequency,
+ * deterrent and session are ours to use. What stays out is the naming inside
+ * the app: the things a person has no way to know about.
+ */
 const BANNED =
-  /\b(profile|deterrent|deterrence|session|output|emitter|zone|frequency|entitlement|sandbox|simulated|tier|gate|RPC|sync|queue|config|invalid|null)\b/i;
+  /\b(profile|emitter|zone|entitlement|sandbox|simulated|tier|gate|RPC|sync|queue|config|invalid|null|undefined)\b/i;
 
 const DASHES = /[–—]/;
+
+/** A section that counts itself: "01 STATE", "02 HOW LONG". */
+const INDEX_LABEL = /^0\d\s/;
 
 function checkString(s: string): void {
   expect(s).not.toMatch(BANNED);
   expect(s).not.toMatch(DASHES);
+  expect(s).not.toMatch(INDEX_LABEL);
 }
 
 describe('sound names and descriptions', () => {
@@ -44,19 +55,66 @@ describe('sound names and descriptions', () => {
     }
   });
 
-  it('names the sounds we have not recorded yet in one word', () => {
-    expect(PLACEHOLDER_NOTICE).toBe('Stand-in');
-    checkString(PLACEHOLDER_NOTICE);
+  it('names every sound the way the sounds screen shows it', () => {
+    const named = Object.fromEntries(SYSTEM_PROFILES.map((p) => [p.id, p.name]));
+    expect(named.sys_pigeon_18k).toBe('High-frequency deterrent');
+    expect(named.sys_pulse_16k).toBe('Unpredictable beeps');
+    expect(named.sys_sweep_15_19k).toBe('Variable pitch sweep');
+    expect(named.sys_gull_17k).toBe('Gull deterrent');
+    expect(named.sys_random_pulse).toBe('Randomized beeps');
+    expect(named.sys_distress_pigeon).toBe('Pigeon distress call');
+    expect(named.sys_predator_hawk).toBe('Hawk call');
+    expect(named.sys_predator_falcon).toBe('Falcon call');
+    expect(named.sys_max_22k).toBe('Maximum frequency');
   });
 
   it('reads the way the sounds screen shows them', () => {
     const said = Object.fromEntries(SYSTEM_PROFILES.map((p) => [p.id, p.description]));
-    expect(said.sys_pigeon_18k).toBe('Steady high sound');
-    expect(said.sys_pulse_16k).toBe('Beeps birds cannot predict');
-    expect(said.sys_sweep_15_19k).toBe('Slides up and down');
-    expect(said.sys_distress_pigeon).toBe('Scared pigeon call');
-    expect(said.sys_predator_hawk).toBe('Hawk cry');
-    expect(said.sys_predator_falcon).toBe('Falcon cry');
+    expect(said.sys_pigeon_18k).toBe('Steady 18 kHz tone');
+    expect(said.sys_pulse_16k).toBe('Irregular beeps that prevent habituation');
+    expect(said.sys_sweep_15_19k).toBe('Continuously shifts frequency');
+    expect(said.sys_gull_17k).toBe('Steady tone for roofs and docks');
+    expect(said.sys_random_pulse).toBe('Random timing for long sessions');
+    expect(said.sys_distress_pigeon).toBe('Real distress recording. Most effective');
+    expect(said.sys_predator_hawk).toBe('Real hawk cry');
+    expect(said.sys_predator_falcon).toBe('Real falcon cry');
+    expect(said.sys_max_22k).toBe('22 kHz. Needs a PigeonX speaker');
+  });
+
+  it('keeps the ids, so a sound someone already picked still loads', () => {
+    expect(SYSTEM_PROFILES.map((p) => p.id)).toEqual([
+      'sys_pigeon_18k',
+      'sys_pulse_16k',
+      'sys_sweep_15_19k',
+      'sys_gull_17k',
+      'sys_random_pulse',
+      'sys_distress_pigeon',
+      'sys_predator_hawk',
+      'sys_predator_falcon',
+      'sys_max_22k',
+    ]);
+  });
+});
+
+describe('the recordings are real', () => {
+  it('never calls a bird call a stand-in', () => {
+    for (const s of [
+      ...SYSTEM_PROFILES.map((p) => p.name),
+      ...SYSTEM_PROFILES.map((p) => p.description),
+      ...Object.values(SAMPLE_LABEL),
+      ...Object.values(SAMPLE_SHORT),
+    ]) {
+      expect(s).not.toMatch(/stand.?in/i);
+    }
+  });
+
+  it('credits every recording it plays', () => {
+    expect(SOUND_CREDITS).toHaveLength(4);
+    for (const credit of SOUND_CREDITS) {
+      checkString(credit.title);
+      expect(credit.lines.length).toBeGreaterThan(0);
+      for (const line of credit.lines) checkString(line);
+    }
   });
 });
 
@@ -126,8 +184,33 @@ describe('labels people read', () => {
     }
   });
 
-  it('warns about sounds people can hear', () => {
-    expect(AUDIBLE_TAG).toBe('People can hear it');
+  it('marks a sound people can hear with one word', () => {
+    expect(AUDIBLE_TAG).toBe('Audible');
+  });
+
+  it('says what that one word means, one tap away', () => {
+    expect(AUDIBLE_EXPLAINER).toBe(
+      'This sound is within human hearing range. Guests nearby may hear it.',
+    );
+    checkString(AUDIBLE_EXPLAINER);
+  });
+});
+
+describe('no section counts itself out loud', () => {
+  it('never labels anything "01 something"', () => {
+    for (const s of [
+      ...SYSTEM_PROFILES.map((p) => p.name),
+      ...Object.values(SPEAKER_LABEL),
+      ...Object.values(KIND_LABEL),
+      ...Object.values(SAMPLE_LABEL),
+      ...Object.values(FEATURE_LABEL),
+      ...Object.values(PLAN_LABEL),
+      ...Object.values(ROLE_LABEL),
+      AUDIBLE_TAG,
+      REACH_QUESTION,
+    ]) {
+      expect(s).not.toMatch(INDEX_LABEL);
+    }
   });
 });
 
@@ -177,9 +260,9 @@ describe('describeSchedule()', () => {
         days: [1, 2, 3, 4, 5],
         startMinutes: 18 * 60,
         endMinutes: 22 * 60,
-        profileName: 'Pigeon sound',
+        profileName: 'High-frequency deterrent',
       }),
-    ).toBe('Weekdays, 6:00 PM to 10:00 PM, Pigeon sound');
+    ).toBe('Weekdays, 6:00 PM to 10:00 PM, High-frequency deterrent');
   });
 
   it('names groups of days in words', () => {

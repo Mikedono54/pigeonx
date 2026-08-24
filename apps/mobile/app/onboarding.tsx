@@ -14,24 +14,22 @@ import { space, themed, useTheme, useThemedStyles } from '../src/theme';
 
 type Block = 'accent' | 'paper' | 'ink';
 
+/** The dots under the pager count the screens. Nothing else needs to. */
 const PAGES: {
   block: Block;
   pose: PigeonPose;
-  index: string;
   title: string;
   lines: string[];
 }[] = [
   {
     block: 'accent',
     pose: 'sit',
-    index: '01',
     title: 'Birds leave',
     lines: ['PigeonX plays sounds birds do not like.', 'You press Start.', 'Birds leave.'],
   },
   {
     block: 'paper',
     pose: 'call',
-    index: '02',
     title: 'Pick where it plays',
     lines: [
       'Pick where it plays: this phone, a Bluetooth speaker, or a PigeonX speaker.',
@@ -41,9 +39,11 @@ const PAGES: {
   {
     block: 'ink',
     pose: 'lean',
-    index: '03',
-    title: 'Some people can hear it',
-    lines: ['Some sounds are very high.', 'We mark sounds people can hear.'],
+    title: 'Some sounds are audible',
+    lines: [
+      'The most effective sounds sit inside human hearing.',
+      'Every one of those carries an Audible tag, so you always know.',
+    ],
   },
 ];
 
@@ -94,7 +94,7 @@ export default function Onboarding() {
         }
         style={styles.pager}
       >
-        {PAGES.map(({ block, pose, index, title, lines }) => {
+        {PAGES.map(({ block, pose, title, lines }) => {
           const p = paint(block);
           return (
             <ScrollView
@@ -109,7 +109,7 @@ export default function Onboarding() {
                   { backgroundColor: p.bg, paddingTop: insets.top + space.lg },
                 ]}
               >
-                <Text style={[styles.index, { color: p.fg }]}>{index}</Text>
+                <View />
                 <Pigeon size={92} pose={pose} color={p.fg} holeColor={p.hole} beakColor={c.energy} />
               </View>
 
@@ -173,7 +173,6 @@ const sheet = themed((c, t) => ({
     paddingHorizontal: space.lg,
     paddingBottom: space.lg,
   },
-  index: { ...t.overline, letterSpacing: 2 },
   words: { paddingHorizontal: space.lg, paddingTop: space.lg, gap: space.md },
   title: { ...t.display },
   lines: { gap: space.sm },

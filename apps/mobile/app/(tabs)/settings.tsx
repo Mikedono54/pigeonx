@@ -1,14 +1,18 @@
 import { useCallback, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Linking, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import {
   Building2,
   History,
   LogIn,
   LogOut,
+  Mail,
+  Music4,
   Plus,
   RadioTower,
   RotateCcw,
+  Speaker,
+  Target,
   Trash2,
 } from 'lucide-react-native';
 
@@ -21,10 +25,12 @@ import {
   Screen,
   SectionHeader,
   Segmented,
+  Sheet,
   SignInSheet,
   Touchable,
   useToast,
 } from '../../src/components';
+import { SOUND_CREDITS, SOUND_CREDITS_NOTE } from '../../src/audio/samples';
 import { deleteMyAccount, signOut as signOutOfAccount } from '../../src/services/auth';
 import { PLAN_LABEL, PLAN_ORDER, type Plan } from '../../src/core/entitlements';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
@@ -40,12 +46,41 @@ import {
   type ThemePreference,
 } from '../../src/theme';
 
-/** The three things we always say out loud. */
-const HONEST_FACTS = [
-  'Phones cannot play the highest sounds. A PigeonX speaker can.',
-  'We mark sounds people can hear.',
-  'Alarm calls work best. People hear them too.',
+const CONTACT_EMAIL = 'hello@pigeonx.org';
+
+/**
+ * Help, and the three things we always say out loud.
+ *
+ * The facts used to sit on Settings as a list nobody had asked for. They live
+ * inside the answers now, where a person meets them while they are looking
+ * for them.
+ */
+const HELP: { id: HelpTopic; title: string; icon: typeof Target; lines: string[] }[] = [
+  {
+    id: 'results',
+    title: 'Getting the best results',
+    icon: Target,
+    lines: [
+      'Position the speaker close to where the birds land.',
+      'Run 15 minute sessions at random times.',
+      'Switch sounds every few days, so the birds do not habituate.',
+      'Distress calls work best. They are also audible, so people nearby hear them too.',
+    ],
+  },
+  {
+    id: 'speaker',
+    title: 'Which speaker should I use?',
+    icon: Speaker,
+    lines: [
+      'This phone plays up to 18 kHz.',
+      'A Bluetooth speaker plays up to 19 kHz.',
+      'A PigeonX speaker plays up to 25 kHz.',
+      'Phones cannot reach the highest sounds. A PigeonX speaker can.',
+    ],
+  },
 ];
+
+type HelpTopic = 'results' | 'speaker' | 'credits';
 
 export default function SettingsScreen() {
   const styles = useThemedStyles(sheet);
@@ -53,6 +88,7 @@ export default function SettingsScreen() {
   const ent = useEntitlement();
   const toast = useToast();
   const [devOpen, setDevOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState<HelpTopic | null>(null);
   const [signInOpen, setSignInOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -138,7 +174,7 @@ export default function SettingsScreen() {
           <ListRow
             icon={Building2}
             title="For businesses"
-            meta="Places, areas and a team"
+            meta="Manage multiple locations and speakers"
             onPress={() =>
               ent.can('zones') ? router.navigate('/places') : router.push('/for-businesses')
             }
@@ -148,13 +184,34 @@ export default function SettingsScreen() {
 
       <View style={styles.section}>
         <SectionHeader title="Help" />
-        <View style={styles.facts}>
-          {HONEST_FACTS.map((f) => (
-            <View key={f} style={styles.fact}>
-              <View style={styles.factMark} />
-              <Text style={styles.factText}>{f}</Text>
-            </View>
+        <View style={styles.rows}>
+          {HELP.map((topic) => (
+            <ListRow
+              key={topic.id}
+              icon={topic.icon}
+              title={topic.title}
+              onPress={() => setHelpOpen(topic.id)}
+            />
           ))}
+          <ListRow
+            icon={Mail}
+            title="Contact us"
+            meta={CONTACT_EMAIL}
+            chevron={false}
+            onPress={() => void Linking.openURL(`mailto:${CONTACT_EMAIL}`)}
+          />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <SectionHeader title="About" />
+        <View style={styles.rows}>
+          <ListRow
+            icon={Music4}
+            title="Sound credits"
+            meta="Who recorded the bird calls"
+            onPress={() => setHelpOpen('credits')}
+          />
         </View>
       </View>
 
@@ -243,6 +300,44 @@ export default function SettingsScreen() {
         <Text style={styles.footerLinkText}>See the plans</Text>
       </Touchable>
 
+      {HELP.map((topic) => (
+        <Sheet
+          key={topic.id}
+          open={helpOpen === topic.id}
+          title={topic.title}
+          onClose={() => setHelpOpen(null)}
+        >
+          <View style={styles.answer}>
+            {topic.lines.map((line) => (
+              <View key={line} style={styles.fact}>
+                <View style={styles.factMark} />
+                <Text style={styles.factText}>{line}</Text>
+              </View>
+            ))}
+          </View>
+        </Sheet>
+      ))}
+
+      <Sheet
+        open={helpOpen === 'credits'}
+        title="Sound credits"
+        onClose={() => setHelpOpen(null)}
+      >
+        <View style={styles.answer}>
+          {SOUND_CREDITS.map((credit) => (
+            <View key={credit.title} style={styles.credit}>
+              <Text style={styles.creditTitle}>{credit.title}</Text>
+              {credit.lines.map((line) => (
+                <Text key={line} style={styles.creditLine}>
+                  {line}
+                </Text>
+              ))}
+            </View>
+          ))}
+          <Text style={styles.creditNote}>{SOUND_CREDITS_NOTE}</Text>
+        </View>
+      </Sheet>
+
       <SignInSheet
         open={signInOpen}
         onClose={() => setSignInOpen(false)}
@@ -278,10 +373,14 @@ const sheet = themed((c, t) => ({
   section: { marginTop: space.lg, gap: space.sm },
   rows: { borderWidth: 1, borderColor: c.border },
   hint: { ...t.caption },
-  facts: { gap: space.sm + 2 },
+  answer: { gap: space.sm + 2, marginBottom: space.sm },
   fact: { flexDirection: 'row', gap: space.sm + 2, alignItems: 'flex-start' },
   factMark: { width: 10, height: 3, marginTop: 9, backgroundColor: c.accent },
   factText: { ...t.label, flex: 1, fontSize: 15, lineHeight: 21 },
+  credit: { gap: 2 },
+  creditTitle: { ...t.subheading },
+  creditLine: { ...t.bodySmall },
+  creditNote: { ...t.caption, marginTop: space.xs },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   footerLink: {
     marginTop: space.lg,

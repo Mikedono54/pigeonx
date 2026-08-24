@@ -11,8 +11,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "expo lint",
-    "doctor": "expo-doctor",
-    "assets:audio": "node scripts/generate-audio-placeholders.mjs"
+    "doctor": "expo-doctor"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",

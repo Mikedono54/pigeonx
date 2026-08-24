@@ -7,8 +7,10 @@ The test that keeps this honest lives in `__tests__/copy.test.ts`.
 
 ## The rule
 
-Write for a ten year old holding the phone.
+Clear, specific, professional. Write for the person who bought a tool to solve
+a bird problem, not for a child.
 
+- Say the precise thing. "Steady 18 kHz tone" beats "steady high sound".
 - Short sentences. One idea per line.
 - One line of helper text per screen, and never two.
 - A row gets a name and at most three words under it. If the name or the
@@ -17,32 +19,29 @@ Write for a ten year old holding the phone.
 - Active voice. Say "you".
 - No adverbs. No marketing words.
 - No em dashes or en dashes. A period works.
-- Never show a code word, a number in Hz on a main screen, a hex color, or an id.
+- Never show a code word, a hex colour, or an id.
+- Never number a section for the reader. No "01 STATE", no "02 HOW LONG". A
+  section is named in small caps or it carries no label at all.
+
+The words below are the ones we settled on. The left column is still wrong,
+but it is wrong because it is vague or because it names something inside the
+app, not because it is long.
 
 ## Old word to new word
 
 | Old word | Say this instead |
 | --- | --- |
 | profile | sound |
-| deterrent, deterrence | bird sound, or "the sound" |
-| session, run (noun) | what played |
-| run (verb), start a session | play |
+| deterrence, the deterrent (the app) | the sound, or PigeonX |
 | output | plays on |
 | device, emitter | speaker |
 | PigeonX emitter, hardware | PigeonX speaker |
 | simulated device | test speaker |
 | zone | area |
-| location | place |
-| tone | steady sound |
-| sweep | rising and falling sound |
-| pulse | beeping sound |
-| sample, recording | bird call |
-| distress call | bird alarm call |
-| predator call | hawk call, falcon call |
-| frequency, Hz, kHz | pitch, shown as Low / High / Very high |
-| volume | loudness |
-| effective range, ceiling | Will this speaker play it? Yes / Partly / No |
-| guests may hear | People can hear it |
+| location (one building) | place |
+| location (a business with many) | locations, as in "multiple locations" |
+| sample, recording | bird call, or the recording |
+| guests may hear, people can hear it | Audible |
 | entitlement, gate, tier | plan |
 | org, organization, account (the company) | business |
 | member, org member, seat | teammate |
@@ -64,14 +63,19 @@ Write for a ten year old holding the phone.
 | Word | What it means |
 | --- | --- |
 | Sound | One thing PigeonX can play. |
+| Deterrent | A sound built to move birds on. Used in a sound's name. |
+| Distress call | A real recording of a bird in trouble. The most effective sound we have. |
+| Habituation | Birds learning a sound and ignoring it. What randomised timing is for. |
+| Session | One run of a sound, from Start to Stop. |
 | Play | What Start does. |
 | Plays on | Which speaker the sound comes out of. |
 | This phone | The phone in your hand. |
 | Bluetooth speaker | A speaker you already paired in phone settings. |
-| PigeonX speaker | Our hardware. It plays the highest pitches. Not out yet. |
+| PigeonX speaker | Our hardware. It reaches the highest frequencies. Not out yet. |
 | Test speaker | A pretend speaker so you can try the whole app. |
 | Pitch | How high a sound is. Low, High or Very high. |
 | Loudness | How loud it is. |
+| Audible | This sound sits inside human hearing. People nearby will hear it. |
 | Place | A building. |
 | Area | One part of a building, like a roof or a patio. |
 | Schedule | Days and times you want the sound to play. |
@@ -85,24 +89,59 @@ Write for a ten year old holding the phone.
 | Signed in as | Which account this phone is using. |
 | Delete my account | Takes the account away for good. Apple asks for this. |
 
+## The sounds
+
+The nine built-in sounds, exactly as they read. The ids never change, because
+a sound someone already picked has to keep loading.
+
+| Name | Under it |
+| --- | --- |
+| High-frequency deterrent | Steady 18 kHz tone |
+| Unpredictable beeps | Irregular beeps that prevent habituation |
+| Variable pitch sweep | Continuously shifts frequency |
+| Gull deterrent | Steady tone for roofs and docks |
+| Randomized beeps | Random timing for long sessions |
+| Pigeon distress call | Real distress recording. Most effective |
+| Hawk call | Real hawk cry |
+| Falcon call | Real falcon cry |
+| Maximum frequency | 22 kHz. Needs a PigeonX speaker |
+
+All four bird calls are real recordings. Nothing in the app is a stand-in any
+more, and no screen says one is. Where each recording came from lives in
+`assets/audio/SOURCES.md`, and Settings shows those credits under About.
+
 ## Numbers
 
-Pitch is a word on every screen: Low, High, Very high.
+Pitch is still a word wherever a person is choosing rather than tuning: Low,
+High, Very high.
 
-`18 kHz` is allowed in one place only: a small mono line under a slider on the
-Adjust sheet and in the make your own screen, where someone tuning a sound
-wants the exact number. Nowhere else.
+A frequency in kHz is allowed where it is the useful fact: in a sound's
+description, in the pitch and loudness sheet, in the make your own screen, and
+in the Help answer about speakers. It is never the only thing said.
 
 Cut-offs live in `pitchWord()` in `src/core/profiles.ts`.
 
 ## Speaker reach
 
-The app never pretends a phone can play a 25 kHz sound. The Adjust sheet asks
-"Will this speaker play it?" and answers with one word plus one sentence:
+The app never pretends a phone can play a 25 kHz sound. The pitch and loudness
+sheet asks "Will this speaker play it?" and answers with one word plus one
+sentence:
 
 - Yes. This speaker plays the whole sound.
 - Partly. Phone speakers play the low part. The top is lost.
 - No. Phone speakers can't play sounds this high. Use a PigeonX speaker.
+
+## The audible tag
+
+A sound inside human hearing carries one small chip: a yellow dot and the word
+`AUDIBLE`. One chip per row, never two, and never a banner.
+
+Tapping it opens the one panel that explains it:
+
+> This sound is within human hearing range. Guests nearby may hear it.
+
+That chip is the only place yellow appears on a row. Locks are muted ink, not
+yellow, because a locked row is not a warning.
 
 ## Business words
 
@@ -138,11 +177,16 @@ A person backing out on purpose is never an error. Nothing is said at all.
 
 ## The three honest facts
 
-They live on Settings, under Help, and on the third welcome screen.
+They used to sit on Settings as a list nobody had asked for. They live inside
+the Help answers now, where a person meets them while they are looking, and on
+the third welcome screen.
 
-1. Phones cannot play the highest sounds. A PigeonX speaker can.
-2. We mark sounds people can hear.
-3. Alarm calls work best. People hear them too.
+1. Phones cannot reach the highest sounds. A PigeonX speaker can.
+   Lives in Help, "Which speaker should I use?".
+2. Sounds inside human hearing carry an Audible tag.
+   Lives on the third welcome screen and one tap behind every Audible chip.
+3. Distress calls work best. They are audible, so people nearby hear them too.
+   Lives in Help, "Getting the best results".
 
 ## Code names that stay
 

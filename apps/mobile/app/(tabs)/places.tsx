@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
   Building2,
@@ -15,6 +16,7 @@ import {
   Banner,
   Button,
   Card,
+  dockClearance,
   EmptyState,
   Screen,
   Sheet,
@@ -40,6 +42,7 @@ type Asking =
 export default function PlacesScreen() {
   const styles = useThemedStyles(sheet);
   const { c } = useTheme();
+  const insets = useSafeAreaInsets();
   const toast = useToast();
   const places = usePlaces((s) => s.places);
   const mode = usePlaces((s) => s.mode);
@@ -121,11 +124,25 @@ export default function PlacesScreen() {
     [setArea]
   );
 
+  const empty = places.length === 0;
+
   return (
+    // One way in, the same as Schedule: the empty state carries the button
+    // until there is a list, and then the pinned one carries it.
     <Screen
       title="Places"
       subtitle={businessName ?? 'A place is a building. An area is one part of it.'}
       scroll={false}
+      dock={
+        empty ? undefined : (
+          <Button
+            label="Add a place"
+            size="lg"
+            onPress={() => setAsking({ kind: 'place' })}
+            icon={Plus}
+          />
+        )
+      }
     >
       {mode === 'business' ? (
         <View style={styles.teamRow}>
@@ -146,15 +163,23 @@ export default function PlacesScreen() {
         </View>
       ) : null}
 
-      {places.length === 0 ? (
-        <EmptyState
-          title="No places yet"
-          body="Add a place. Then add the areas inside it, like a roof or a patio."
-          actionLabel="Add a place"
-          onAction={() => setAsking({ kind: 'place' })}
-        />
+      {empty ? (
+        <View style={styles.emptyWrap}>
+          <EmptyState
+            title="No places yet"
+            body="Add a place. Then add the areas inside it, like a roof or a patio."
+            actionLabel="Add a place"
+            onAction={() => setAsking({ kind: 'place' })}
+          />
+        </View>
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.list}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.list,
+            { paddingBottom: dockClearance(insets.bottom) },
+          ]}
+        >
           {places.map((place: Place) => (
             <Card key={place.id}>
               <View style={styles.placeHead}>
@@ -301,15 +326,6 @@ export default function PlacesScreen() {
         </ScrollView>
       )}
 
-      <View style={styles.spacer} />
-
-      <Button
-        label="Add a place"
-        size="lg"
-        onPress={() => setAsking({ kind: 'place' })}
-        icon={Plus}
-      />
-
       <NameSheet asking={asking} onClose={() => setAsking(null)} onSubmit={submitName} />
     </Screen>
   );
@@ -409,7 +425,8 @@ function NameSheet({
 }
 
 const sheet = themed((c, t) => ({
-  list: { gap: space.sm, paddingBottom: space.sm },
+  list: { gap: space.sm },
+  emptyWrap: { flex: 1, justifyContent: 'center' },
   grow: { flex: 1, gap: 2 },
   teamRow: { flexDirection: 'row', marginBottom: space.sm },
   problem: { marginBottom: space.sm },
@@ -440,5 +457,4 @@ const sheet = themed((c, t) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  spacer: { flex: 1, minHeight: space.md },
 }));

@@ -1,10 +1,14 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Plus, Trash2 } from 'lucide-react-native';
 
 import {
+  AudibleChip,
+  AudibleSheet,
   Button,
+  dockClearance,
   LockBadge,
   Pigeon,
   Screen,
@@ -13,7 +17,6 @@ import {
   Touchable,
   useToast,
 } from '../../src/components';
-import { PLACEHOLDER_NOTICE } from '../../src/audio/samples';
 import {
   AUDIBLE_TAG,
   SYSTEM_PROFILES,
@@ -28,7 +31,9 @@ import { icon, space, themed, useTheme, useThemedStyles } from '../../src/theme'
 
 export default function SoundsScreen() {
   const styles = useThemedStyles(sheet);
+  const insets = useSafeAreaInsets();
   const ent = useEntitlement();
+  const [audibleOpen, setAudibleOpen] = useState(false);
   const toast = useToast();
   const saved = useProfiles((s) => s.saved);
   const remove = useProfiles((s) => s.remove);
@@ -57,8 +62,24 @@ export default function SoundsScreen() {
   );
 
   return (
-    <Screen title="Sounds" scroll={false}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.body}>
+    <Screen
+      title="Sounds"
+      scroll={false}
+      dock={
+        <Button
+          label="Make your own"
+          variant="secondary"
+          size="lg"
+          onPress={makeYourOwn}
+          icon={Plus}
+          accessibilityHint="Pro plan"
+        />
+      }
+    >
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.body, { paddingBottom: dockClearance(insets.bottom) }]}
+      >
         <View style={styles.list}>
           {SYSTEM_PROFILES.map((p) => (
             <SoundRow
@@ -67,6 +88,7 @@ export default function SoundsScreen() {
               active={p.id === activeId}
               locked={p.minPlan !== 'free' && !ent.can('profiles.all')}
               onPress={() => pick(p)}
+              onAudible={() => setAudibleOpen(true)}
             />
           ))}
         </View>
@@ -81,6 +103,7 @@ export default function SoundsScreen() {
                   sound={p}
                   active={p.id === activeId}
                   onPress={() => pick(p)}
+                  onAudible={() => setAudibleOpen(true)}
                   onDelete={() => {
                     remove(p.id);
                     toast.show('Sound deleted.');
@@ -92,16 +115,7 @@ export default function SoundsScreen() {
         ) : null}
       </ScrollView>
 
-      <View style={styles.action}>
-        <Button
-          label="Make your own"
-          variant="secondary"
-          size="lg"
-          onPress={makeYourOwn}
-          icon={Plus}
-          accessibilityHint="Pro plan"
-        />
-      </View>
+      <AudibleSheet open={audibleOpen} onClose={() => setAudibleOpen(false)} />
     </Screen>
   );
 }
@@ -118,12 +132,15 @@ function SoundRow({
   locked = false,
   onPress,
   onDelete,
+  onAudible,
 }: {
   sound: AudioProfile;
   active: boolean;
   locked?: boolean;
   onPress: () => void;
   onDelete?: () => void;
+  /** opens the one panel on this screen that says what audible means */
+  onAudible?: () => void;
 }) {
   const styles = useThemedStyles(sheet);
   const { c } = useTheme();
@@ -164,10 +181,7 @@ function SoundRow({
           </Text>
           <View style={styles.tags}>
             <StatusPill label={pitch} tone={active ? 'scheduled' : 'idle'} />
-            {heard ? <StatusPill label={AUDIBLE_TAG} tone="warning" /> : null}
-            {sound.kind === 'sample' ? (
-              <StatusPill label={PLACEHOLDER_NOTICE} tone="idle" />
-            ) : null}
+            {heard ? <AudibleChip onPress={onAudible} /> : null}
           </View>
         </View>
         {onDelete ? (
@@ -213,5 +227,4 @@ const sheet = themed((c, t) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  action: { marginTop: space.md },
 }));

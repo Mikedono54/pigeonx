@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, ScrollView, Switch, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
 import { Plus, Trash2 } from 'lucide-react-native';
@@ -9,6 +10,7 @@ import {
   Button,
   Card,
   Chip,
+  dockClearance,
   EmptyState,
   Screen,
   Segmented,
@@ -43,6 +45,7 @@ import {
 export default function ScheduleScreen() {
   const styles = useThemedStyles(sheet);
   const { c } = useTheme();
+  const insets = useSafeAreaInsets();
   const ent = useEntitlement();
   const schedules = useSchedules((s) => s.schedules);
   const clashes = useMemo(() => overlappingPairs(schedules), [schedules]);
@@ -57,20 +60,47 @@ export default function ScheduleScreen() {
     setOpen(true);
   }, [ent]);
 
+  const empty = schedules.length === 0;
+
   return (
-    <Screen title="Schedule" scroll={false}>
-      {schedules.length === 0 ? (
-        <EmptyState
-          title="Nothing set yet"
-          body="Your phone or a PigeonX speaker starts it."
-          actionLabel="Add a schedule"
-          onAction={openNew}
-        />
+    // One way in. An empty screen offers the button in its own empty state,
+    // and a screen with something on it offers the pinned one. Never both.
+    <Screen
+      title="Schedule"
+      scroll={false}
+      dock={
+        empty ? undefined : (
+          <Button label="Add a schedule" size="lg" onPress={openNew} icon={Plus} />
+        )
+      }
+    >
+      {clashes.length > 0 ? (
+        <View style={styles.clash}>
+          <Banner
+            tone="warning"
+            title="Two times cover the same minutes"
+            body="The one that starts later takes over."
+          />
+        </View>
+      ) : null}
+
+      {empty ? (
+        <View style={styles.emptyWrap}>
+          <EmptyState
+            title="Nothing set yet"
+            body="Your phone or a PigeonX speaker starts it."
+            actionLabel="Add a schedule"
+            onAction={openNew}
+          />
+        </View>
       ) : (
         <ScrollView
           style={styles.list}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: dockClearance(insets.bottom) },
+          ]}
         >
           {schedules.map((s) => (
             <Card key={s.id} active={s.enabled}>
@@ -89,7 +119,8 @@ export default function ScheduleScreen() {
                 />
               </View>
               <View style={styles.cardFooter}>
-                <Text style={styles.state}>{s.enabled ? 'On' : 'Off'}</Text>
+                {/* the switch above already says On or Off. Saying it twice
+                    only gives the eye a second thing to read. */}
                 <View style={styles.grow} />
                 <Touchable
                   onPress={() => {
@@ -113,20 +144,6 @@ export default function ScheduleScreen() {
           ))}
         </ScrollView>
       )}
-
-      {clashes.length > 0 ? (
-        <View style={styles.clash}>
-          <Banner
-            tone="warning"
-            title="Two times cover the same minutes"
-            body="The one that starts later takes over."
-          />
-        </View>
-      ) : null}
-
-      <View style={styles.spacer} />
-
-      <Button label="Add a schedule" size="lg" onPress={openNew} icon={Plus} />
 
       <ScheduleForm open={open} schedule={editing} onClose={() => setOpen(false)} />
     </Screen>
@@ -231,7 +248,7 @@ function ScheduleForm({
       }
     >
       <View style={styles.field}>
-        <Text style={styles.fieldLabel}>01  Days</Text>
+        <Text style={styles.fieldLabel}>Days</Text>
         <View style={styles.dayRow}>
           {DAY_LABELS.map((label, i) => (
             <Touchable
@@ -253,7 +270,7 @@ function ScheduleForm({
       </View>
 
       <View style={styles.field}>
-        <Text style={styles.fieldLabel}>02  Times</Text>
+        <Text style={styles.fieldLabel}>Times</Text>
         <View style={styles.timeRow}>
           <TimeButton
             label="Starts"
@@ -291,7 +308,7 @@ function ScheduleForm({
       </View>
 
       <View style={styles.field}>
-        <Text style={styles.fieldLabel}>03  Which sound</Text>
+        <Text style={styles.fieldLabel}>Which sound</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -313,7 +330,7 @@ function ScheduleForm({
       </View>
 
       <View style={styles.field}>
-        <Text style={styles.fieldLabel}>04  Who runs it</Text>
+        <Text style={styles.fieldLabel}>Who runs it</Text>
         <Segmented
           value={executor}
           onChange={pickWhoRuns}
@@ -367,14 +384,16 @@ function TimeButton({
 }
 
 const sheet = themed((c, t) => ({
-  list: { flexGrow: 0 },
+  /** the list starts right under the title and runs under the dock */
+  list: { flex: 1 },
   listContent: { gap: space.sm },
+  /** nothing to show, so the bird sits in the middle of what is left */
+  emptyWrap: { flex: 1, justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   rowText: { flex: 1, gap: 4 },
   grow: { flex: 1 },
   line: { ...t.subheading },
   meta: { ...t.bodySmall },
-  state: { ...t.overline },
   cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -396,8 +415,7 @@ const sheet = themed((c, t) => ({
     justifyContent: 'center',
   },
   footerActionText: { ...t.bodyStrong, fontSize: 15, color: c.link },
-  spacer: { flex: 1, minHeight: space.md },
-  clash: { marginTop: space.sm },
+  clash: { marginBottom: space.sm },
   field: { gap: space.sm },
   fieldLabel: { ...t.overline },
   dayRow: { flexDirection: 'row' },

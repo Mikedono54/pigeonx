@@ -5,9 +5,13 @@ import { router } from 'expo-router';
 import { Play, Square, X } from 'lucide-react-native';
 
 import {
+  AudibleChip,
+  AudibleSheet,
   Banner,
   Button,
   Card,
+  Dock,
+  dockClearance,
   Segmented,
   Slider,
   SpeakerReach,
@@ -18,9 +22,8 @@ import {
   useToast,
 } from '../src/components';
 import { getEngine } from '../src/audio';
-import { PLACEHOLDER_NOTICE, SAMPLE_LABEL } from '../src/audio/samples';
+import { SAMPLE_LABEL, SAMPLE_SHORT } from '../src/audio/samples';
 import {
-  AUDIBLE_TAG,
   KIND_LABEL,
   formatHz,
   guestsMayHear,
@@ -64,6 +67,7 @@ export default function MakeASound() {
   const [asset, setAsset] = useState<SampleAsset>('distress_pigeon');
   const [previewing, setPreviewing] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [audibleOpen, setAudibleOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const draft = buildDraft({
@@ -153,7 +157,10 @@ export default function MakeASound() {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.body}
+        contentContainerStyle={[
+          styles.body,
+          { paddingBottom: dockClearance(insets.bottom) },
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -173,7 +180,9 @@ export default function MakeASound() {
               label={previewing ? 'Playing' : 'Ready'}
               tone={previewing ? 'running' : 'idle'}
             />
-            {guestsMayHear(draft) ? <StatusPill label={AUDIBLE_TAG} tone="warning" /> : null}
+            {guestsMayHear(draft) ? (
+              <AudibleChip onPress={() => setAudibleOpen(true)} />
+            ) : null}
           </View>
           <Button
             label={previewing ? 'Stop' : 'Hear 5 seconds'}
@@ -185,14 +194,14 @@ export default function MakeASound() {
         </View>
 
         <TextField
-          label="01  Name"
+          label="Name"
           value={name}
           onChangeText={setName}
           placeholder="My sound"
           accessibilityLabel="Name your sound"
         />
 
-        <Field label="02  What kind of sound">
+        <Field label="What kind of sound">
           <Segmented
             value={kind}
             onChange={setKind}
@@ -292,15 +301,9 @@ export default function MakeASound() {
                   accessibilityLabel="Which call"
                   options={(
                     ['distress_pigeon', 'predator_hawk', 'predator_falcon'] as SampleAsset[]
-                  ).map((a) => ({
-                    value: a,
-                    label: SAMPLE_LABEL[a].replace(' call', ''),
-                  }))}
+                  ).map((a) => ({ value: a, label: SAMPLE_SHORT[a] }))}
                 />
               </Field>
-              <Text style={styles.note}>
-                {PLACEHOLDER_NOTICE}. Real recordings replace it before launch.
-              </Text>
               <Slider
                 label="Quiet gap between calls"
                 min={2000}
@@ -332,9 +335,11 @@ export default function MakeASound() {
         <Text style={styles.note}>{describeDraft(draft)}</Text>
       </ScrollView>
 
-      <View style={[styles.dock, { paddingBottom: insets.bottom + space.md }]}>
+      <Dock>
         <Button label="Save this sound" size="lg" onPress={onSave} />
-      </View>
+      </Dock>
+
+      <AudibleSheet open={audibleOpen} onClose={() => setAudibleOpen(false)} />
     </View>
   );
 }
@@ -452,7 +457,7 @@ const sheet = themed((c, t) => ({
     alignItems: 'flex-end',
     justifyContent: 'center',
   },
-  body: { paddingHorizontal: space.md, paddingBottom: space.xl, gap: space.lg },
+  body: { paddingHorizontal: space.md, gap: space.lg },
   preview: {
     backgroundColor: c.play,
     padding: space.md,
@@ -465,11 +470,4 @@ const sheet = themed((c, t) => ({
   fieldLabel: { ...t.overline },
   note: { ...t.bodySmall },
   mono: { ...t.caption, letterSpacing: 0.5 },
-  dock: {
-    paddingHorizontal: space.md,
-    paddingTop: space.md,
-    borderTopWidth: 1,
-    borderTopColor: c.border,
-    backgroundColor: c.bg,
-  },
 }));
