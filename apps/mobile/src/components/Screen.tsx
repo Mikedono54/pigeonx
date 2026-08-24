@@ -3,6 +3,7 @@ import { ScrollView, Text, View, type StyleProp, type ViewStyle } from 'react-na
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { space, themed, useThemedStyles } from '../theme';
+import { Dock, DOCK_HEIGHT } from './Dock';
 
 export interface ScreenProps {
   title?: string;
@@ -16,6 +17,14 @@ export interface ScreenProps {
   header?: React.ReactNode;
   /** the right hand slot in the title row, usually a status tag */
   headerRight?: React.ReactNode;
+  /**
+   * The one action the screen is built around, pinned along the bottom.
+   *
+   * A scrolling screen makes room for it on its own. A screen that lays out
+   * its own list passes `dockClearance(insets.bottom)` to that list instead,
+   * so the list runs under the dock rather than stopping short of it.
+   */
+  dock?: React.ReactNode;
 }
 
 /**
@@ -32,6 +41,7 @@ export function Screen({
   contentStyle,
   header,
   headerRight,
+  dock,
 }: ScreenProps) {
   const styles = useThemedStyles(sheet);
   const insets = useSafeAreaInsets();
@@ -52,22 +62,27 @@ export function Screen({
       </View>
     ) : null;
 
+  // A docked scrolling screen leaves the dock's whole height under its last
+  // line. A docked fixed screen leaves nothing at all, because its own list
+  // runs under the dock and stopping short would only waste the room.
+  const bottom = dock
+    ? scroll
+      ? insets.bottom + space.md + bottomInset + DOCK_HEIGHT + space.md
+      : 0
+    : insets.bottom + space.md + bottomInset;
+
   const padding = {
     paddingTop: insets.top + space.sm,
-    paddingBottom: insets.bottom + space.md + bottomInset,
+    paddingBottom: bottom,
     paddingHorizontal: space.md,
   };
 
-  if (!scroll) {
-    return (
-      <View style={[styles.root, padding, contentStyle]}>
-        {head}
-        {children}
-      </View>
-    );
-  }
-
-  return (
+  const body = !scroll ? (
+    <View style={[styles.root, padding, contentStyle]}>
+      {head}
+      {children}
+    </View>
+  ) : (
     <ScrollView
       style={styles.root}
       contentContainerStyle={[styles.measure, padding, contentStyle]}
@@ -77,6 +92,15 @@ export function Screen({
       {head}
       {children}
     </ScrollView>
+  );
+
+  if (!dock) return body;
+
+  return (
+    <View style={styles.root}>
+      {body}
+      <Dock>{dock}</Dock>
+    </View>
   );
 }
 

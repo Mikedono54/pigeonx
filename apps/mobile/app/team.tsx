@@ -121,7 +121,7 @@ export default function TeamScreen() {
 
       {link ? (
         <View style={styles.linkBlock}>
-          <SectionHeader index="02" title="Send them this link" />
+          <SectionHeader title="Send them this link" />
           <Text style={styles.link} numberOfLines={2}>
             {link}
           </Text>
@@ -273,6 +273,6 @@ const sheet = themed((c, t) => ({
   },
   action: { marginTop: space.xl },
   field: { gap: space.sm },
-  fieldLabel: { ...t.index },
+  fieldLabel: { ...t.overline },
   hint: { ...t.bodySmall },
 }));

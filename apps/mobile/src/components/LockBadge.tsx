@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 import { Lock } from 'lucide-react-native';
 
 import { PLAN_LABEL, type Plan } from '../core/entitlements';
-import { font, icon, themed, useTheme, useThemedStyles } from '../theme';
+import { font, themed, useTheme, useThemedStyles } from '../theme';
 
 export interface LockBadgeProps {
   plan: Plan;
@@ -11,7 +11,12 @@ export interface LockBadgeProps {
   compact?: boolean;
 }
 
-/** Says which plan opens a thing. A lock, then the word. */
+/**
+ * Says which plan opens a thing: a plain lock and the plan name, in muted ink.
+ *
+ * A locked row is not a warning, so nothing here is yellow. Yellow belongs to
+ * the audible tag and to real trouble.
+ */
 export function LockBadge({ plan, compact = false }: LockBadgeProps) {
   const styles = useThemedStyles(sheet);
   const { c } = useTheme();
@@ -23,7 +28,7 @@ export function LockBadge({ plan, compact = false }: LockBadgeProps) {
       accessibilityRole="text"
       accessibilityLabel={`Needs ${label}`}
     >
-      <Lock size={12} color={c.warning} strokeWidth={icon.stroke} />
+      <Lock size={12} color={c.muted} strokeWidth={2} />
       {compact ? null : <Text style={styles.text}>{label}</Text>}
     </View>
   );
@@ -39,11 +44,11 @@ const sheet = themed((c) => ({
     paddingVertical: 3,
     backgroundColor: c.bg,
     borderWidth: 1,
-    borderColor: c.warning,
+    borderColor: c.border,
   },
   compact: { paddingHorizontal: 4 },
   text: {
-    color: c.text,
+    color: c.muted,
     fontFamily: font.mono.bold,
     fontSize: 10,
     letterSpacing: 1,

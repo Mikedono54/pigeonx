@@ -173,7 +173,7 @@ const sheet = themed((c, t) => ({
     paddingHorizontal: space.lg,
     paddingBottom: space.lg,
   },
-  index: { ...t.index, letterSpacing: 2 },
+  index: { ...t.overline, letterSpacing: 2 },
   words: { paddingHorizontal: space.lg, paddingTop: space.lg, gap: space.md },
   title: { ...t.display },
   lines: { gap: space.sm },

@@ -45,7 +45,7 @@ export function Segmented<T extends string>({
           >
             <View style={styles.row}>
               {o.locked ? (
-                <Lock size={12} color={selected ? c.accentOn : c.warning} strokeWidth={2} />
+                <Lock size={12} color={selected ? c.accentOn : c.muted} strokeWidth={2} />
               ) : null}
               <Text
                 numberOfLines={1}

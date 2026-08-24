@@ -71,7 +71,7 @@ export default function ForBusinesses() {
       </Text>
 
       <View style={styles.section}>
-        <SectionHeader index="01" title="What it looks like" />
+        <SectionHeader title="What it looks like" />
         <View style={styles.sample}>
           {SAMPLE_AREAS.map((a, i) => (
             <View key={a.name} style={[styles.sampleRow, i > 0 ? styles.sampleDivider : null]}>
@@ -86,7 +86,7 @@ export default function ForBusinesses() {
       </View>
 
       <View style={styles.section}>
-        <SectionHeader index="02" title="What you get" />
+        <SectionHeader title="What you get" />
         <View style={styles.lines}>
           {WHAT_YOU_GET.map((t) => (
             <View key={t} style={styles.lineRow}>

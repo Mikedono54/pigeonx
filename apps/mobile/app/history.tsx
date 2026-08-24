@@ -52,7 +52,7 @@ export default function HistoryScreen() {
       }
     >
       <SectionHeader
-        index="01"
+       
         title={
           historyDays == null
             ? `${visible.length} time${visible.length === 1 ? '' : 's'} so far`

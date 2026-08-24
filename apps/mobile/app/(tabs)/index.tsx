@@ -366,7 +366,7 @@ const sheet = themed((c, t) => ({
   note: { minHeight: 40, justifyContent: 'center', marginTop: space.sm },
   noteText: { ...t.bodySmall, color: c.link },
   howLong: { marginTop: space.md, gap: space.sm },
-  fieldLabel: { ...t.index },
+  fieldLabel: { ...t.overline },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   spacer: { flex: 1, minHeight: space.sm },
   adjust: {

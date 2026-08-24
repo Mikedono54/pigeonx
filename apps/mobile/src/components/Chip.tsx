@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import { Lock } from 'lucide-react-native';
 
-import { font, offset, space, themed, useTheme, useThemedStyles } from '../theme';
+import { font, space, themed, useTheme, useThemedStyles } from '../theme';
 import { Touchable } from './Touchable';
 
 export interface ChipProps {
@@ -16,8 +16,9 @@ export interface ChipProps {
 }
 
 /**
- * One choice out of a few. Square, hairline, and it steps into a small shadow
- * when a finger lands on it.
+ * One choice out of a few. Square and hairline, and it fills with the accent
+ * once you pick it. That fill is the only fill on the screen that means
+ * "this one", so nothing else in the app is allowed to borrow it.
  */
 export function Chip({
   label,
@@ -32,11 +33,10 @@ export function Chip({
 
   return (
     <View style={styles.slot}>
-      <View style={[styles.shadow, selected ? styles.shadowOn : null]} />
       <Touchable
         onPress={onPress}
         haptic="selection"
-        feel="offset"
+        feel="fade"
         accessibilityLabel={
           accessibilityLabel ?? (locked ? `${label}, locked` : label)
         }
@@ -53,7 +53,7 @@ export function Chip({
           {locked ? (
             <Lock
               size={12}
-              color={selected ? c.accentOn : c.warning}
+              color={selected ? c.accentOn : c.muted}
               strokeWidth={2}
             />
           ) : null}
@@ -67,16 +67,7 @@ export function Chip({
 }
 
 const sheet = themed((c) => ({
-  slot: { paddingRight: offset.small, paddingBottom: offset.small },
-  shadow: {
-    position: 'absolute',
-    left: offset.small,
-    top: offset.small,
-    right: 0,
-    bottom: 0,
-    backgroundColor: c.border,
-  },
-  shadowOn: { backgroundColor: c.shadow },
+  slot: { alignSelf: 'flex-start' },
   press: { minHeight: 0 },
   chip: {
     flexDirection: 'row',
@@ -85,7 +76,7 @@ const sheet = themed((c) => ({
     paddingHorizontal: space.sm + 4,
     height: 38,
     borderWidth: 1,
-    borderColor: c.ink,
+    borderColor: c.border,
     backgroundColor: c.bg,
   },
   compact: { paddingHorizontal: 10, height: 34 },

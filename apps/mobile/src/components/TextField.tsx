@@ -33,7 +33,7 @@ export function TextField({ label, hint, ...rest }: TextFieldProps) {
 
 const sheet = themed((c, t) => ({
   wrap: { gap: space.sm },
-  label: { ...t.index, color: c.muted },
+  label: { ...t.overline, color: c.muted },
   hint: { ...t.bodySmall, marginTop: -4 },
   input: {
     height: 52,

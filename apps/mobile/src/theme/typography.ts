@@ -13,7 +13,7 @@ export type TypeVariant =
   | 'bodyStrong'
   | 'label'
   | 'caption'
-  | 'index'
+  | 'overline'
   | 'mono'
   | 'monoLarge'
   | 'timer';
@@ -24,8 +24,8 @@ export type TypeScale = Record<TypeVariant, TextStyle>;
  * The type scale, painted in one palette.
  *
  * Two faces do the talking. Inter Tight, very heavy and tight, says the state
- * of things. JetBrains Mono counts: clocks, kHz, section numbers. Inter at 17
- * carries every sentence, because 17 is the size a person reads standing up.
+ * of things. JetBrains Mono counts: clocks, kHz, tags. Inter at 17 carries
+ * every sentence, because 17 is the size a person reads standing up.
  */
 export function makeType(c: Palette): TypeScale {
   return {
@@ -97,8 +97,8 @@ export function makeType(c: Palette): TypeScale {
       lineHeight: 18,
       color: c.muted,
     },
-    /** Section index labels: "01 SOUND". */
-    index: {
+    /** The one small-caps label a section is allowed: "HOW LONG". */
+    overline: {
       fontFamily: font.mono.bold,
       fontSize: 11,
       lineHeight: 14,

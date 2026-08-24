@@ -462,7 +462,7 @@ const sheet = themed((c, t) => ({
   controls: { gap: space.md },
   field: { gap: space.xs },
   fieldGroup: { gap: space.sm },
-  fieldLabel: { ...t.index },
+  fieldLabel: { ...t.overline },
   note: { ...t.bodySmall },
   mono: { ...t.caption, letterSpacing: 0.5 },
   dock: {

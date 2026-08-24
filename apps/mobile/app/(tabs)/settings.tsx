@@ -88,7 +88,7 @@ export default function SettingsScreen() {
 
   return (
     <Screen title="Settings">
-      <SectionHeader index="01" title="Your plan" />
+      <SectionHeader title="Your plan" />
       <View style={styles.planBlock}>
         <Text style={styles.planName}>PigeonX {PLAN_LABEL[ent.plan]}</Text>
         <Text style={styles.planMeta} numberOfLines={1}>
@@ -105,7 +105,7 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
-        <SectionHeader index="02" title="How it looks" />
+        <SectionHeader title="How it looks" />
         <Segmented
           value={preference}
           onChange={(next: ThemePreference) => setPreference(next)}
@@ -147,7 +147,7 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
-        <SectionHeader index="03" title="Help" />
+        <SectionHeader title="Help" />
         <View style={styles.facts}>
           {HONEST_FACTS.map((f) => (
             <View key={f} style={styles.fact}>

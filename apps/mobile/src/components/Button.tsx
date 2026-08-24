@@ -34,11 +34,12 @@ const ICON: Record<ButtonSize, number> = {
 };
 
 /**
- * Square, flat, one accent, and a hard slab of shadow behind it.
+ * Square, flat, one accent.
  *
- * Primary is a solid accent block. Secondary is the page with an ink edge.
- * Both sit on their shadow and step into it when a finger lands. Ghost is a
- * word on its own, for the thing you probably do not want.
+ * Only primary gets the hard slab of shadow, and a screen only ever has one
+ * primary action. Secondary is the page with an ink edge and no slab, danger
+ * is the page with a red edge, and ghost is a word on its own. That way the
+ * one raised block on a screen is always the thing to press.
  */
 export function Button({
   label,
@@ -58,7 +59,9 @@ export function Button({
   const { c } = useTheme();
   const busy = loading || disabled;
   const height = HEIGHT[size];
-  const solid = variant !== 'ghost';
+  /** the one action on the screen that sits on a slab of shadow */
+  const raised = variant === 'primary';
+  const bordered = variant !== 'ghost';
 
   const face =
     variant === 'primary'
@@ -81,24 +84,24 @@ export function Button({
   return (
     <View
       style={[
-        solid ? styles.slot : styles.slotFlat,
+        raised ? styles.slot : styles.slotFlat,
         full ? styles.full : styles.hug,
         style,
       ]}
     >
-      {solid ? <View style={styles.shadow} /> : null}
+      {raised ? <View style={styles.shadow} /> : null}
       <Touchable
         onPress={busy ? undefined : onPress}
         disabled={busy}
-        haptic={variant === 'primary' ? 'medium' : 'light'}
-        feel={solid ? 'offset' : 'fade'}
+        haptic={raised ? 'medium' : 'light'}
+        feel={raised ? 'offset' : 'fade'}
         accessibilityLabel={accessibilityLabel ?? label}
         accessibilityHint={accessibilityHint}
         accessibilityState={{ disabled: busy, busy: loading }}
         testID={testID}
         style={styles.press}
       >
-        <View style={[styles.face, { height }, solid ? styles.bordered : null, face]}>
+        <View style={[styles.face, { height }, bordered ? styles.bordered : null, face]}>
           {loading ? (
             <ActivityIndicator color={fg} size="small" />
           ) : (
@@ -127,7 +130,8 @@ export function Button({
 /**
  * The face carries the height. The slot is only the room the shadow needs,
  * and the shadow is pinned to the slot behind it. Nothing in the middle has
- * to stretch, so the button cannot collapse into its own shadow.
+ * to stretch, so the button cannot collapse into its own shadow. A button
+ * with no shadow gets no slot padding, so it lines up with the text above it.
  */
 const sheet = themed((c) => ({
   slot: { paddingRight: offset.small, paddingBottom: offset.small },
@@ -147,6 +151,7 @@ const sheet = themed((c) => ({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: space.md,
+    borderColor: c.border,
   },
   bordered: { borderWidth: 1 },
   row: {

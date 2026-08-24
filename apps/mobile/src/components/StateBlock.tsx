@@ -22,8 +22,9 @@ export type BlockState = 'off' | 'playing' | 'soon';
 
 export interface StateBlockProps {
   state: BlockState;
-  /** the small mono line at the top: "01 STATE", "PLAYING" */
-  label: string;
+  /** the small mono line at the top: "PLAYING", "STARTS 6:00 PM". Off says
+   *  nothing, because the headline under it already says Off. */
+  label?: string;
   /** the one big thing on the screen */
   headline: string;
   /** true when the headline is a clock and should be set in the mono face */
@@ -34,6 +35,8 @@ export interface StateBlockProps {
   children?: React.ReactNode;
   /** room for the status bar, so the block can run to the top of the phone */
   topInset?: number;
+  /** how tall the block stands. Home hands it a share of the screen. */
+  height?: number;
 }
 
 /**
@@ -52,6 +55,7 @@ export function StateBlock({
   line,
   children,
   topInset = 0,
+  height = 224,
 }: StateBlockProps) {
   const styles = useThemedStyles(sheet);
   const { c } = useTheme();
@@ -133,18 +137,20 @@ export function StateBlock({
     <Animated.View
       style={[
         styles.block,
-        { height: 224 + topInset, paddingTop: space.md + topInset },
+        { height: height + topInset, paddingTop: space.md + topInset },
         block,
       ]}
     >
       <Animated.View pointerEvents="none" style={[styles.pulse, pulse]} />
 
-      <View style={styles.head}>
-        <Text style={[styles.label, { color: playing ? c.playOn : c.muted }]}>
-          {label}
-        </Text>
-        {soon ? <View style={styles.soon} /> : null}
-      </View>
+      {label ? (
+        <View style={styles.head}>
+          <Text style={[styles.label, { color: playing ? c.playOn : c.muted }]}>
+            {label}
+          </Text>
+          {soon ? <View style={styles.soon} /> : null}
+        </View>
+      ) : null}
 
       <Text
         style={[
@@ -201,7 +207,7 @@ const sheet = themed((c, t) => ({
     borderColor: c.playOn,
   },
   head: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  label: { ...t.index },
+  label: { ...t.overline },
   soon: { width: 22, height: 4, backgroundColor: c.energy },
   soonRule: {
     position: 'absolute',

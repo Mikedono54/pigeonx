@@ -374,7 +374,7 @@ const sheet = themed((c, t) => ({
   grow: { flex: 1 },
   line: { ...t.subheading },
   meta: { ...t.bodySmall },
-  state: { ...t.index },
+  state: { ...t.overline },
   cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -399,7 +399,7 @@ const sheet = themed((c, t) => ({
   spacer: { flex: 1, minHeight: space.md },
   clash: { marginTop: space.sm },
   field: { gap: space.sm },
-  fieldLabel: { ...t.index },
+  fieldLabel: { ...t.overline },
   dayRow: { flexDirection: 'row' },
   dayPress: { flex: 1, minHeight: 48, marginLeft: -1 },
   day: {
@@ -429,7 +429,7 @@ const sheet = themed((c, t) => ({
     gap: 2,
   },
   timeButtonOpen: { backgroundColor: c.surface },
-  timeLabel: { ...t.index },
+  timeLabel: { ...t.overline },
   timeValue: {
     fontFamily: font.mono.bold,
     fontSize: 22,

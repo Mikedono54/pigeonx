@@ -73,7 +73,7 @@ export default function SoundsScreen() {
 
         {saved.length > 0 ? (
           <View style={styles.section}>
-            <SectionHeader index="02" title="Your own" />
+            <SectionHeader title="Your own" />
             <View style={styles.list}>
               {saved.map((p) => (
                 <SoundRow
