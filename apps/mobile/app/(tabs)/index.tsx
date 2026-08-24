@@ -58,20 +58,29 @@ const BLUETOOTH_NOTE = 'Pair it in your phone settings first.';
 const BRAND_LINE = 'Press Start. Birds leave.';
 
 /**
- * The share of the phone the state block takes.
+ * The share of the screen the state block takes.
  *
- * It is a proportion and not a number of points, so the block reads as the
- * top of the screen on a small phone and on a large one alike.
+ * A proportion and not a number of points, so the block reads as the top of
+ * the phone on a small one and on a large one alike. It gives way, though:
+ * the controls under it get the room they need first, and the block takes
+ * what is left. On a short phone that is less than the share it asked for,
+ * and the alternative is a Start button somebody has to scroll to find.
  */
 const STATE_BLOCK_SHARE = 0.4;
-const STATE_BLOCK_MIN = 236;
+const STATE_BLOCK_MIN = 200;
+
+/** What the stack under the block needs: three rows, the chips, and Start. */
+const CONTROLS_MIN = 368;
 
 export default function HomeScreen() {
   const styles = useThemedStyles(sheet);
   const { c, dark } = useTheme();
   const insets = useSafeAreaInsets();
-  const { height: screenHeight } = useWindowDimensions();
+  const { height: windowHeight } = useWindowDimensions();
   const ent = useEntitlement();
+  // What the tab bar leaves us. Measured, because guessing the bar's height
+  // is how the Start button ends up half a thumb off the bottom.
+  const [frame, setFrame] = useState(0);
   const toast = useToast();
   const [speakerOpen, setSpeakerOpen] = useState(false);
   const [adjustOpen, setAdjustOpen] = useState(false);
@@ -142,8 +151,17 @@ export default function HomeScreen() {
     else void start();
   }, [playing, start, stop]);
 
+  const room = frame || windowHeight - 90;
+  const blockHeight = Math.max(
+    STATE_BLOCK_MIN,
+    Math.min(Math.round(room * STATE_BLOCK_SHARE), room - CONTROLS_MIN)
+  );
+
   return (
-    <View style={styles.root}>
+    <View
+      style={styles.root}
+      onLayout={(e) => setFrame(e.nativeEvent.layout.height)}
+    >
       <StatusBar style={playing || dark ? 'light' : 'dark'} />
 
       <StateBlock
@@ -153,10 +171,7 @@ export default function HomeScreen() {
         clock={playing}
         line={playing ? 'You can lock the phone. The sound keeps going.' : BRAND_LINE}
         topInset={insets.top}
-        height={Math.max(
-          STATE_BLOCK_MIN,
-          Math.round(screenHeight * STATE_BLOCK_SHARE)
-        )}
+        height={Math.max(180, blockHeight - insets.top)}
       >
         {playing ? (
           <SpectrumBars
@@ -378,13 +393,13 @@ const sheet = themed((c, t) => ({
   },
   banner: { marginBottom: space.sm },
   list: { borderWidth: 1, borderColor: c.border },
-  note: { minHeight: 40, justifyContent: 'center', marginTop: space.sm },
+  note: { minHeight: 40, justifyContent: 'center', marginTop: space.md },
   noteText: { ...t.bodySmall, color: c.link },
   howLong: { marginTop: space.md, gap: space.sm },
   fieldLabel: { ...t.overline },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   /** the only slack on the screen, and it sits above the one big button */
-  spacer: { flex: 1, minHeight: space.md },
+  spacer: { flex: 1, minHeight: 0 },
   sheetNote: { ...t.bodySmall },
   field: { gap: space.xs },
   mono: { ...t.caption, fontFamily: font.mono.medium, letterSpacing: 0.5 },

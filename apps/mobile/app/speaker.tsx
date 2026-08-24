@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 
-import { Pigeon, StatusPill } from '../src/components';
+import { Pigeon } from '../src/components';
 import { msUntilEnd, nextRun, playingAt, type TimeWindow } from '../src/core/scheduler';
 import { useAccount } from '../src/state/useAccount';
 import { formatMinutes, useSchedules } from '../src/state/useSchedules';
@@ -180,7 +180,9 @@ export default function SpeakerMode() {
 
       <View style={styles.head}>
         <Text style={styles.kicker}>Speaker mode</Text>
-        <StatusPill label={playing ? 'Playing' : 'Waiting'} tone={playing ? 'running' : 'idle'} />
+        <View style={styles.tag}>
+          <Text style={styles.tagText}>{playing ? 'Playing' : 'Waiting'}</Text>
+        </View>
       </View>
 
       <View style={styles.middle}>
@@ -252,6 +254,20 @@ const sheet = themed((c) => ({
     letterSpacing: 1.4,
     textTransform: 'uppercase',
     color: darkPalette.muted,
+  },
+  /** the one tag on this screen, painted for a black room */
+  tag: {
+    borderWidth: 1,
+    borderColor: night.edge,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+  },
+  tagText: {
+    fontFamily: font.mono.bold,
+    fontSize: 11,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: night.dim,
   },
   middle: { flex: 1, justifyContent: 'center', gap: space.sm },
   clock: {

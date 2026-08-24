@@ -27,7 +27,6 @@ import {
   Segmented,
   Sheet,
   SignInSheet,
-  Touchable,
   useToast,
 } from '../../src/components';
 import { SOUND_CREDITS, SOUND_CREDITS_NOTE } from '../../src/audio/samples';
@@ -292,14 +291,6 @@ export default function SettingsScreen() {
         </View>
       ) : null}
 
-      <Touchable
-        onPress={() => router.push('/paywall')}
-        accessibilityLabel="See the plans"
-        style={styles.footerLink}
-      >
-        <Text style={styles.footerLinkText}>See the plans</Text>
-      </Touchable>
-
       {HELP.map((topic) => (
         <Sheet
           key={topic.id}
@@ -382,10 +373,4 @@ const sheet = themed((c, t) => ({
   creditLine: { ...t.bodySmall },
   creditNote: { ...t.caption, marginTop: space.xs },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-  footerLink: {
-    marginTop: space.lg,
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  footerLinkText: { ...t.bodyStrong, fontSize: 15, color: c.link },
 }));

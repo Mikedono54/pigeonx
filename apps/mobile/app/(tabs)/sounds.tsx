@@ -78,7 +78,8 @@ export default function SoundsScreen() {
     >
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.body, { paddingBottom: dockClearance(insets.bottom) }]}
+        // the dock is pinned, so the last sound needs its height under it
+        contentContainerStyle={{ paddingBottom: dockClearance(insets.bottom) }}
       >
         <View style={styles.list}>
           {SYSTEM_PROFILES.map((p) => (
@@ -154,8 +155,8 @@ function SoundRow({
     <Touchable
       onPress={onPress}
       feel="offset"
-      accessibilityLabel={`${sound.name}. ${sound.description} ${pitch} pitch.${
-        heard ? ` ${AUDIBLE_TAG}.` : ''
+      accessibilityLabel={`${sound.name}. ${sound.description}. ${pitch} pitch.${
+        heard ? ` ${AUDIBLE_TAG}, people nearby may hear it.` : ''
       }${locked ? ' Needs Pro.' : ''}`}
       accessibilityState={{ selected: active }}
       style={styles.press}
@@ -199,7 +200,6 @@ function SoundRow({
 }
 
 const sheet = themed((c, t) => ({
-  body: { paddingBottom: space.md },
   section: { marginTop: space.lg },
   list: { borderWidth: 1, borderColor: c.border },
   press: { minHeight: 0 },
