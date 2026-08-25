@@ -28,6 +28,7 @@ const MATRIX: Array<[Feature, Record<Plan, boolean>]> = [
   ['dashboard', { free: false, pro: false, business: true, enterprise: true }],
   ['org.multiLocation', { free: false, pro: false, business: false, enterprise: true }],
   ['analytics.export', { free: false, pro: false, business: false, enterprise: true }],
+  ['places.multiple', { free: false, pro: true, business: true, enterprise: true }],
 ];
 
 describe('PLAN_RANK', () => {
