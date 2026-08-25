@@ -38,7 +38,7 @@ export default function PricingPage() {
         <Container className="py-12 lg:py-16">
           <p className="px-label text-muted">Pricing</p>
           <h1 className="mt-5 max-w-[16ch] text-[clamp(2.25rem,5vw,4rem)] leading-[1.0] font-bold tracking-[-0.03em]">
-            Free to try. $29 a month to run a location.
+            Free to try. $29/month per location.
           </h1>
           <p className="mt-6 max-w-[58ch] text-[17px] text-body sm:text-[18px]">
             App plans are billed through the App Store and Google Play. Business and Enterprise are
@@ -84,7 +84,18 @@ export default function PricingPage() {
           ))}
         </div>
         <p className="px-label mt-6 text-muted">
-          Prices in USD. App plans renew until you cancel in the store that billed you.
+          Prices in USD. App plans renew until you cancel in the store that billed you. Business is
+          $29/month per location.
+        </p>
+        <p className="mt-3 text-[15px] text-muted">
+          Managing a larger portfolio? Contact us for custom pricing at{' '}
+          <a
+            href="mailto:hello@pigeonx.org"
+            className="font-medium text-accent underline underline-offset-4 hover:text-ink"
+          >
+            hello@pigeonx.org
+          </a>
+          .
         </p>
       </Section>
 

@@ -6,6 +6,7 @@ import { useAsync } from '../lib/useAsync';
 import { listPlaces, openBillingPortal, startCheckout } from '../lib/db';
 import { DEMO_PLACES, isDemo } from '../lib/demo';
 import { monthlyTotal } from '../lib/derive';
+import { PORTFOLIO_LINE, PRICE_LINE } from '../lib/labels';
 import type { Place } from '../lib/types';
 import { Card, ErrorNote, Label, PageHead, SkeletonRows, Stat } from '../components/ui';
 
@@ -62,7 +63,7 @@ export default function Billing() {
     <>
       <PageHead
         title="Billing"
-        intro="Business is $29 per place per month. You pay for the places you have."
+        intro={`Business is ${PRICE_LINE}. You pay for the locations you have.`}
       />
 
       {paid ? (
@@ -89,20 +90,21 @@ export default function Billing() {
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
             <Stat label="Plan" value="Business" note="Everything in the app, for a business" />
             <Stat
-              label="Places"
+              label="Locations"
               value={String(places)}
               note={places === 1 ? 'property' : 'properties'}
             />
-            <Stat label="Every month" value={monthlyTotal(places)} note="$29 per place" />
+            <Stat label="Every month" value={monthlyTotal(places)} note={PRICE_LINE} />
           </div>
 
           <Card className="mt-6">
             <h2 className="text-[18px] font-semibold">What you get</h2>
             <ul className="mt-4 border-t border-line">
               {[
-                'Every place, area and speaker in one dashboard.',
+                'Every location, area and speaker in one dashboard.',
+                'Protection plans that say what plays, when, and how loud.',
                 'Schedules that run without anyone opening the app.',
-                'What played, kept for every place, with a weekly summary.',
+                'One history across every location, with a weekly summary.',
                 'Your whole team on the same account, with roles.',
               ].map((line) => (
                 <li key={line} className="border-b border-line py-3 text-[15px] text-ink">
@@ -129,6 +131,16 @@ export default function Billing() {
                 {note}
               </p>
             ) : null}
+
+            <p className="mt-6 border-t border-line pt-5 text-[15px] text-muted">
+              {PRICE_LINE}. {PORTFOLIO_LINE}{' '}
+              <a
+                href="mailto:hello@pigeonx.org"
+                className="font-medium text-accent underline underline-offset-4 hover:text-ink"
+              >
+                hello@pigeonx.org
+              </a>
+            </p>
           </Card>
 
           <Card className="mt-6">

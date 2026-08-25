@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Plus } from 'lucide-react';
+import { Copy, HelpCircle, Plus } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../AuthProvider';
 import { useAsync } from '../lib/useAsync';
@@ -31,9 +31,14 @@ type TeamData = {
   invitesError: unknown;
 };
 
+/**
+ * The three roles, in the same three sentences the phone app uses. One list,
+ * one wording: somebody reading the app and somebody reading the dashboard
+ * should never have to work out whether they mean the same thing.
+ */
 const ROLES: Array<{ value: MemberRole; label: string; note: string }> = [
-  { value: 'staff', label: 'Staff', note: 'Can play sounds and see what played.' },
-  { value: 'manager', label: 'Manager', note: 'Can also add places, areas and schedules.' },
+  { value: 'staff', label: 'Teammate', note: 'Can play a sound and see what played.' },
+  { value: 'manager', label: 'Manager', note: 'Can add places, areas, speakers and times.' },
   { value: 'owner', label: 'Owner', note: 'Can do everything, including billing.' },
 ];
 
@@ -60,6 +65,7 @@ export default function Team() {
   const [freshLink, setFreshLink] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [removingMember, setRemovingMember] = useState<TeamMember | null>(null);
+  const [explaining, setExplaining] = useState(false);
 
   const state = useAsync<TeamData>(async () => {
     if (demo) return { members: DEMO_MEMBERS, invites: DEMO_INVITES, invitesError: null };
@@ -125,18 +131,24 @@ export default function Team() {
     <>
       <PageHead
         title="Team"
-        intro="Who can run sounds at your places, and what each of them can change."
+        intro="Who can run sounds at your locations, and what each of them can change."
         action={
-          <Button
-            onClick={() => {
-              setError(null);
-              setInviting(true);
-            }}
-            disabled={!canInvite}
-          >
-            <Plus size={16} strokeWidth={2} aria-hidden />
-            Invite someone
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <Button variant="secondary" onClick={() => setExplaining(true)}>
+              <HelpCircle size={16} strokeWidth={1.75} aria-hidden />
+              What the roles mean
+            </Button>
+            <Button
+              onClick={() => {
+                setError(null);
+                setInviting(true);
+              }}
+              disabled={!canInvite}
+            >
+              <Plus size={16} strokeWidth={2} aria-hidden />
+              Invite someone
+            </Button>
+          </div>
         }
       />
 
@@ -176,7 +188,7 @@ export default function Team() {
           {state.loading && !state.data ? (
             <SkeletonRows rows={3} />
           ) : members.length === 0 ? (
-            <Empty title="Only you so far. Invite the people who look after these places." />
+            <Empty title="Only you so far. Invite the people who look after these locations." />
           ) : (
             <TableWrap>
               <thead>
@@ -268,6 +280,25 @@ export default function Team() {
           )}
         </div>
       </section>
+
+      <Dialog
+        open={explaining}
+        title="What the roles mean"
+        onClose={() => setExplaining(false)}
+      >
+        <ul>
+          {[...ROLES].reverse().map((r) => (
+            <li key={r.value} className="border-b border-line py-3 first:pt-0 last:border-b-0">
+              <p className="text-[16px] font-medium text-ink">{r.label}</p>
+              <p className="mt-1 text-[15px] text-muted">{r.note}</p>
+            </li>
+          ))}
+        </ul>
+        <p className="text-[14px] text-muted">
+          Everybody on the team sees the same history. Only an owner can change what somebody
+          else is allowed to do.
+        </p>
+      </Dialog>
 
       <Dialog
         open={inviting}
