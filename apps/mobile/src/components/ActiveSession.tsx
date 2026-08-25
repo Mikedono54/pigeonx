@@ -155,6 +155,9 @@ function ConnectionLine({ status }: { status: SpeakerStatus | null }) {
     return <Text style={styles.meta}>Whichever speaker your phone is paired with</Text>;
   }
 
+  // The row above already says "This phone". Saying it twice is not a status.
+  if (status === 'this_phone') return null;
+
   return (
     <View style={styles.connection}>
       <View

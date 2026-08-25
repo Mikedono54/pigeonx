@@ -35,6 +35,7 @@ import {
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { useElapsed } from '../../src/hooks/useElapsed';
 import {
+  HOME_ATTENTION_LINE,
   HOME_OFF_LINE,
   homeState,
   nextSessionLine,
@@ -321,14 +322,21 @@ export default function HomeScreen() {
       ? 'Held. Nothing is coming out.'
       : 'You can lock the phone. The sound keeps going.'
     : state === 'attention'
-      ? reconnectLine(deviceName)
+      ? // One move to make, naming the speaker when we know what it is called
+        // and saying the plain fact when we do not.
+        deviceName
+        ? reconnectLine(deviceName)
+        : HOME_ATTENTION_LINE
       : state === 'scheduled' && nextAt
         ? nextSessionLine(nextAt, new Date(minute))
         : HOME_OFF_LINE;
 
+  // The bird watches the button once this place has something of its own to
+  // play: a protection plan, or a sound somebody picked on purpose. The sound
+  // every phone ships with is not a decision anybody made.
   const pose = mascotPose({
     state: playing && !paused ? 'active' : playing ? 'off' : state,
-    ready: paused || sound !== undefined || plan !== undefined,
+    ready: paused || plan !== undefined || soundOverride,
     finishing,
   });
 
@@ -486,7 +494,7 @@ export default function HomeScreen() {
               style={styles.note}
             >
               <Text style={styles.noteText}>
-                {speakerMissing ? reconnectLine(deviceName) : BLUETOOTH_NOTE}
+                {speakerMissing ? 'Open phone settings' : BLUETOOTH_NOTE}
               </Text>
             </Touchable>
           ) : null}

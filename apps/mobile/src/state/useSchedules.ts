@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import {
   nextOccurrence,
   scheduleTimeline,
+  startOn,
   type ScheduleTrigger,
 } from '../core/scheduleTimeline';
 import {
@@ -148,13 +149,20 @@ async function refreshReminders(s: Schedule): Promise<string[]> {
   if (!s.enabled || s.executor !== 'reminder' || s.days.length === 0) return [];
   const ok = await configureNotifications();
   if (!ok) return [];
+
+  // A weekly reminder repeats at one hour and minute, and sunrise moves a
+  // little every week. This takes today's sunrise as the standing time, which
+  // is right to a few minutes across a season and wrong by more than that
+  // across a year. The schedule itself always resolves the real time.
+  const start = startOn(s, new Date(), useLocation.getState().coords).minutes;
+
   return scheduleReminders({
     scheduleId: s.id,
     profileId: s.profileId,
-    profileName: s.profileName,
+    profileName: s.planName ?? s.profileName,
     days: s.days,
-    hour: Math.floor(s.startMinutes / 60),
-    minute: s.startMinutes % 60,
+    hour: Math.floor(start / 60),
+    minute: start % 60,
     label: s.name,
   });
 }
