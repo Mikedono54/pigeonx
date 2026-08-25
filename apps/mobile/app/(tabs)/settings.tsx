@@ -25,11 +25,11 @@ import {
   Screen,
   SectionHeader,
   Segmented,
+  CreditsSheet,
   Sheet,
   SignInSheet,
   useToast,
 } from '../../src/components';
-import { SOUND_CREDITS, SOUND_CREDITS_NOTE } from '../../src/audio/samples';
 import { deleteMyAccount, signOut as signOutOfAccount } from '../../src/services/auth';
 import { PLAN_LABEL, PLAN_ORDER, type Plan } from '../../src/core/entitlements';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
@@ -62,8 +62,8 @@ const HELP: { id: HelpTopic; title: string; icon: typeof Target; lines: string[]
     lines: [
       'Position the speaker close to where the birds land.',
       'Run 15 minute sessions at random times.',
-      'Switch sounds every few days, so the birds do not habituate.',
-      'Distress calls work best. They are also audible, so people nearby hear them too.',
+      'Switch sounds every few days, so the pattern is harder to predict.',
+      'Distress calls are well studied. They are also audible, so people nearby hear them too.',
     ],
   },
   {
@@ -309,25 +309,7 @@ export default function SettingsScreen() {
         </Sheet>
       ))}
 
-      <Sheet
-        open={helpOpen === 'credits'}
-        title="Sound credits"
-        onClose={() => setHelpOpen(null)}
-      >
-        <View style={styles.answer}>
-          {SOUND_CREDITS.map((credit) => (
-            <View key={credit.title} style={styles.credit}>
-              <Text style={styles.creditTitle}>{credit.title}</Text>
-              {credit.lines.map((line) => (
-                <Text key={line} style={styles.creditLine}>
-                  {line}
-                </Text>
-              ))}
-            </View>
-          ))}
-          <Text style={styles.creditNote}>{SOUND_CREDITS_NOTE}</Text>
-        </View>
-      </Sheet>
+      <CreditsSheet open={helpOpen === 'credits'} onClose={() => setHelpOpen(null)} />
 
       <SignInSheet
         open={signInOpen}
@@ -368,9 +350,5 @@ const sheet = themed((c, t) => ({
   fact: { flexDirection: 'row', gap: space.sm + 2, alignItems: 'flex-start' },
   factMark: { width: 10, height: 3, marginTop: 9, backgroundColor: c.accent },
   factText: { ...t.label, flex: 1, fontSize: 15, lineHeight: 21 },
-  credit: { gap: 2 },
-  creditTitle: { ...t.subheading },
-  creditLine: { ...t.bodySmall },
-  creditNote: { ...t.caption, marginTop: space.xs },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
 }));

@@ -39,6 +39,10 @@ export function Sheet({ open, title, onClose, children, footer }: SheetProps) {
           </View>
 
           <ScrollView
+            // the panel is capped at nine tenths of the screen. Without this
+            // a long panel lays out past that cap, and its footer, and the
+            // safe area under it, end up off the bottom of the phone.
+            style={styles.scroll}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.body}
@@ -82,6 +86,8 @@ const sheet = themed((c, t) => ({
     justifyContent: 'space-between',
     paddingTop: space.md,
   },
+  /** gives way so the panel keeps its cap, its footer and its safe area */
+  scroll: { flexShrink: 1 },
   title: { ...t.heading, flex: 1 },
   close: { width: 44, alignItems: 'flex-end' },
   body: { gap: space.lg, paddingBottom: space.sm },

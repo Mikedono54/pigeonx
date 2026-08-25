@@ -21,12 +21,13 @@ import {
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { useElapsed } from '../../src/hooks/useElapsed';
 import {
+  AUDIBLE_LABEL,
   SPEAKER_HINT,
   SPEAKER_LABEL,
+  audibleState,
   formatHz,
   peakFreqHz,
-  pitchWord,
-  soundPitch,
+  pitchLabel,
   type OutputKind,
   type PulseParams,
   type SweepParams,
@@ -38,7 +39,7 @@ import { useProfiles } from '../../src/state/useProfiles';
 import { formatMinutes, useSchedules } from '../../src/state/useSchedules';
 import { formatElapsed, useSession } from '../../src/state/useSession';
 import type { DurationChoice } from '../../src/state/useSession';
-import { font, space, themed, useTheme, useThemedStyles } from '../../src/theme';
+import { space, themed, useTheme, useThemedStyles } from '../../src/theme';
 
 const HOW_LONG: { value: DurationChoice; label: string }[] = [
   { value: 15, label: '15 min' },
@@ -204,7 +205,11 @@ export default function HomeScreen() {
           <ListRow
             icon={Music}
             title={sound ? sound.name : 'No sound picked yet'}
-            meta={sound ? `${soundPitch(sound)} pitch` : undefined}
+            meta={
+              sound
+                ? `${pitchLabel(sound)}. ${AUDIBLE_LABEL[audibleState(sound, playsOn)]}`
+                : undefined
+            }
             onPress={() => router.navigate('/sounds')}
             accessibilityLabel={`Sound, ${sound?.name ?? 'none picked yet'}. Tap to change.`}
           />
@@ -348,11 +353,10 @@ function AdjustSheet({ open, onClose }: { open: boolean; onClose: () => void }) 
             max={25000}
             step={100}
             value={hz}
-            readout={pitchWord(hz)}
+            readout={formatHz(hz)}
             onChange={changeHz}
             accessibilityHint="Higher pitches are harder for people to hear and harder for speakers to play"
           />
-          <Text style={styles.mono}>{formatHz(hz)}</Text>
         </View>
       ) : null}
 
@@ -402,5 +406,4 @@ const sheet = themed((c, t) => ({
   spacer: { flex: 1, minHeight: 0 },
   sheetNote: { ...t.bodySmall },
   field: { gap: space.xs },
-  mono: { ...t.caption, fontFamily: font.mono.medium, letterSpacing: 0.5 },
 }));

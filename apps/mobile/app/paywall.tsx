@@ -98,32 +98,40 @@ export default function Paywall() {
 
   return (
     <View style={styles.root}>
-      <View style={[styles.hero, { paddingTop: insets.top + space.md }]}>
-        <View style={styles.heroTop}>
-          <Text style={styles.kicker}>Plans</Text>
-          <Touchable
-            onPress={() => router.back()}
-            accessibilityLabel="Close"
-            style={styles.close}
-          >
-            <X size={icon.md} color={c.accentOn} strokeWidth={icon.stroke} />
-          </Touchable>
-        </View>
-        <View style={styles.heroBody}>
-          <Text style={styles.heroTitle}>Get more sounds and schedules</Text>
-          <Pigeon size={56} pose="call" color={c.accentOn} holeColor={c.accent} />
-        </View>
-        {feature ? (
-          <Text style={styles.why}>
-            {FEATURE_LABEL[feature]} comes with {PLAN_LABEL[requiredPlan(feature)]}.
-          </Text>
-        ) : null}
+      {/*
+        The bar is all that stays: one word and the way out, about as tall as
+        a thumb. Everything else about the blue block scrolls away with the
+        cards, because a hero that sits over the prices is a hero that stops
+        somebody buying.
+      */}
+      <View style={[styles.bar, { paddingTop: insets.top + space.sm }]}>
+        <Text style={styles.kicker}>Plans</Text>
+        <Touchable
+          onPress={() => router.back()}
+          accessibilityLabel="Close"
+          style={styles.close}
+        >
+          <X size={icon.md} color={c.accentOn} strokeWidth={icon.stroke} />
+        </Touchable>
       </View>
 
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + space.lg }]}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.hero}>
+          <View style={styles.heroBody}>
+            <Text style={styles.heroTitle}>Get more sounds and schedules</Text>
+            <Pigeon size={56} pose="call" color={c.accentOn} holeColor={c.accent} />
+          </View>
+          {feature ? (
+            <Text style={styles.why}>
+              {FEATURE_LABEL[feature]} comes with {PLAN_LABEL[requiredPlan(feature)]}.
+            </Text>
+          ) : null}
+        </View>
+
         <PlanCard
           name="Free"
           price="$0"
@@ -158,7 +166,7 @@ export default function Paywall() {
 
         <PlanCard
           name="Business"
-          price={`${PRICES.business.monthly.label} a month for each place`}
+          price={`${PRICES.business.monthly.label}/month per location`}
           note="For a team looking after buildings"
           lines={BUSINESS_LINES}
           current={plan === 'business' || plan === 'enterprise'}
@@ -174,7 +182,7 @@ export default function Paywall() {
 
         <View style={styles.talk}>
           <Text style={styles.talkText}>
-            More buildings than that? We will build a price around them.
+            Managing a larger portfolio? Contact us for custom pricing.
           </Text>
           <Button
             label="Talk to us"
@@ -268,16 +276,30 @@ function PlanCard({
 
 const sheet = themed((c, t) => ({
   root: { flex: 1, backgroundColor: c.bg },
-  hero: {
+  /** the compact header the hero collapses to, and the only pinned thing */
+  bar: {
     backgroundColor: c.accent,
-    paddingHorizontal: space.md,
-    paddingBottom: space.md,
-    gap: space.sm,
-  },
-  heroTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: space.md,
+    paddingBottom: space.sm,
+  },
+  /** without this the cards lay out past the bottom of the screen */
+  scroll: { flex: 1 },
+  /**
+   * The blue block, inside the scroll and painted out to both edges. It runs
+   * up under the bar, so the two read as one field of colour until the first
+   * scroll pulls the block away and leaves the bar behind.
+   */
+  hero: {
+    backgroundColor: c.accent,
+    marginHorizontal: -space.md,
+    marginTop: -space.md,
+    paddingHorizontal: space.md,
+    paddingTop: space.sm,
+    paddingBottom: space.md,
+    gap: space.sm,
   },
   heroBody: {
     flexDirection: 'row',

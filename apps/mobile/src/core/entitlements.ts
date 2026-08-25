@@ -87,7 +87,7 @@ export const PRICES = {
       amount: 29,
       currency: 'USD',
       label: '$29',
-      period: 'place, each month',
+      period: 'month per location',
     },
   },
   enterprise: { contact: true as const },

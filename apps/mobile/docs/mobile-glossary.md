@@ -64,8 +64,8 @@ app, not because it is long.
 | --- | --- |
 | Sound | One thing PigeonX can play. |
 | Deterrent | A sound built to move birds on. Used in a sound's name. |
-| Distress call | A real recording of a bird in trouble. The most effective sound we have. |
-| Habituation | Birds learning a sound and ignoring it. What randomised timing is for. |
+| Distress call | A real recording of a bird in trouble. Well studied, and audible. |
+| Predictability | A pattern a bird can learn. What randomised timing makes harder. |
 | Session | One run of a sound, from Start to Stop. |
 | Play | What Start does. |
 | Plays on | Which speaker the sound comes out of. |
@@ -73,9 +73,13 @@ app, not because it is long.
 | Bluetooth speaker | A speaker you already paired in phone settings. |
 | PigeonX speaker | Our hardware. It reaches the highest frequencies. Not out yet. |
 | Test speaker | A pretend speaker so you can try the whole app. |
-| Pitch | How high a sound is. Low, High or Very high. |
+| Pitch | How high a sound is, said as the number: 18 kHz, 15 to 19 kHz. |
 | Loudness | How loud it is. |
 | Audible | This sound sits inside human hearing. People nearby will hear it. |
+| May be audible | 15 to 20 kHz. Phones and ears both vary up there. |
+| Typically inaudible | 22 kHz, out of a PigeonX speaker. Most people hear nothing. |
+| Natural recording | A real bird, recorded by somebody we credit. |
+| Generated tone | Made by the app, not recorded. |
 | Place | A building. |
 | Area | One part of a building, like a roof or a patio. |
 | Schedule | Days and times you want the sound to play. |
@@ -97,13 +101,13 @@ a sound someone already picked has to keep loading.
 | Name | Under it |
 | --- | --- |
 | High-frequency deterrent | Steady 18 kHz tone |
-| Unpredictable beeps | Irregular beeps that prevent habituation |
+| Unpredictable beeps | Harder for birds to predict |
 | Variable pitch sweep | Continuously shifts frequency |
 | Gull deterrent | Steady tone for roofs and docks |
 | Randomized beeps | Random timing for long sessions |
-| Pigeon distress call | Real distress recording. Most effective |
-| Hawk call | Real hawk cry |
-| Falcon call | Real falcon cry |
+| Pigeon distress call | Real pigeon distress recording |
+| Red-tailed hawk scream | Real red-tailed hawk recording |
+| Peregrine alarm call | Real peregrine falcon recording |
 | Maximum frequency | 22 kHz. Needs a PigeonX speaker |
 
 All four bird calls are real recordings. Nothing in the app is a stand-in any
@@ -112,14 +116,18 @@ more, and no screen says one is. Where each recording came from lives in
 
 ## Numbers
 
-Pitch is still a word wherever a person is choosing rather than tuning: Low,
-High, Very high.
+Pitch is the number, everywhere a person reads it: `18 kHz`, `16 kHz`,
+`15 to 19 kHz`, `22 kHz`. LOW, HIGH and VERY HIGH are gone. They told nobody
+anything they could check, and they flattened 15 kHz and 22 kHz into one word.
 
-A frequency in kHz is allowed where it is the useful fact: in a sound's
-description, in the pitch and loudness sheet, in the make your own screen, and
-in the Help answer about speakers. It is never the only thing said.
+A recording is the exception, because a bird call is a spread of pitches and
+not one number. Those read `Low frequency`.
 
-Cut-offs live in `pitchWord()` in `src/core/profiles.ts`.
+A number on a card is never a promise that this phone reproduces it. What a
+speaker can really play is answered by the reach meter in the pitch and
+loudness sheet, and by the audible tag on the card.
+
+Labels live in `pitchLabel()` in `src/core/profiles.ts`.
 
 ## Speaker reach
 
@@ -133,15 +141,30 @@ sentence:
 
 ## The audible tag
 
-A sound inside human hearing carries one small chip: a yellow dot and the word
-`AUDIBLE`. One chip per row, never two, and never a banner.
+Every sound carries one small chip saying who will hear it. Four states, and
+no others:
 
-Tapping it opens the one panel that explains it:
+- `AUDIBLE`. Every recording, and any generated sound under 15 kHz.
+- `MAY BE AUDIBLE`. Generated, 15 to 20 kHz. Phone speakers roll off near the
+  top of that band and hearing up there falls away with age.
+- `TYPICALLY INAUDIBLE`. 22 kHz, and only out of a PigeonX speaker.
+- `NEEDS A PIGEONX SPEAKER`. 22 kHz on a phone. Nothing comes out, so the
+  question of hearing it never arises. The card never says audible or
+  inaudible here.
 
-> This sound is within human hearing range. Guests nearby may hear it.
+The dot is yellow for the first two and muted for the last two: a sound
+nothing can play is a fact, not a warning. Tapping the chip opens the one
+panel that explains the state it is in.
 
-That chip is the only place yellow appears on a row. Locks are muted ink, not
-yellow, because a locked row is not a warning.
+Yellow appears nowhere else on a row. Locks are muted ink, because a locked
+row is not a warning.
+
+## Where a recording came from
+
+Every card says `Natural recording` or `Generated tone`. The four recordings
+are credited by recordist and licence in Settings under About, and from the
+Credits row at the bottom of Sounds. The full detail lives in
+`assets/audio/SOURCES.md`.
 
 ## Business words
 
@@ -184,9 +207,9 @@ the third welcome screen.
 1. Phones cannot reach the highest sounds. A PigeonX speaker can.
    Lives in Help, "Which speaker should I use?".
 2. Sounds inside human hearing carry an Audible tag.
-   Lives on the third welcome screen and one tap behind every Audible chip.
-3. Distress calls work best. They are audible, so people nearby hear them too.
-   Lives in Help, "Getting the best results".
+   Lives on the third welcome screen and one tap behind every audible chip.
+3. Distress calls are well studied. They are audible, so people nearby hear
+   them too. Lives in Help, "Getting the best results".
 
 ## Code names that stay
 

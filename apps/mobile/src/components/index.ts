@@ -1,10 +1,11 @@
-export { AudibleChip, AudibleSheet, AUDIBLE_EXPLAINER, AUDIBLE_TITLE } from './AudibleChip';
+export { AudibleChip, AudibleSheet, AUDIBLE_TITLE } from './AudibleChip';
 export { Banner } from './Banner';
 export { BlockButton } from './BlockButton';
 export { Button } from './Button';
 export { Card } from './Card';
 export { Chip } from './Chip';
 export { ConfirmSheet } from './ConfirmSheet';
+export { CreditsSheet, CREDITS_TITLE } from './CreditsSheet';
 export { Disclosure } from './Disclosure';
 export { Dock, dockClearance, DOCK_HEIGHT } from './Dock';
 export { EmptyState } from './EmptyState';

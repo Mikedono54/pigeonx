@@ -71,3 +71,50 @@ jest.mock('@react-native-async-storage/async-storage', () => {
     },
   };
 });
+
+/**
+ * Reanimated drives the state block and the waveform. Its own jest mock loads
+ * the real package first, which reaches for a native module that does not
+ * exist here, so this stands in for the handful of pieces the app uses: shared
+ * values become plain boxes and every animated view paints once, at rest.
+ */
+jest.mock('react-native-reanimated', () => {
+  const { Text, View } = require('react-native');
+  const rest = (v) => v;
+
+  return {
+    __esModule: true,
+    default: {
+      View,
+      Text,
+      createAnimatedComponent: (component) => component,
+    },
+    useSharedValue: (initial) => ({ value: initial }),
+    useAnimatedStyle: (build) => {
+      try {
+        return build();
+      } catch {
+        return {};
+      }
+    },
+    useReducedMotion: () => true,
+    withTiming: rest,
+    withSpring: rest,
+    withRepeat: rest,
+    withDelay: (_ms, value) => value,
+    withSequence: (...values) => values[0],
+    cancelAnimation: () => {},
+    interpolate: (value, _input, output) => (Array.isArray(output) ? output[0] : value),
+    interpolateColor: (value, _input, output) => (Array.isArray(output) ? output[0] : value),
+    Easing: {
+      linear: rest,
+      ease: rest,
+      quad: rest,
+      cubic: rest,
+      in: (f) => f,
+      out: (f) => f,
+      inOut: (f) => f,
+      bezier: () => rest,
+    },
+  };
+});

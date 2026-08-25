@@ -2,13 +2,15 @@ import { useCallback, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Plus, Trash2 } from 'lucide-react-native';
+import { Music4, Plus, Trash2 } from 'lucide-react-native';
 
 import {
   AudibleChip,
   AudibleSheet,
   Button,
+  CreditsSheet,
   dockClearance,
+  ListRow,
   LockBadge,
   Pigeon,
   Screen,
@@ -18,11 +20,14 @@ import {
   useToast,
 } from '../../src/components';
 import {
-  AUDIBLE_TAG,
+  AUDIBLE_LABEL,
   SYSTEM_PROFILES,
-  guestsMayHear,
-  soundPitch,
+  audibleState,
+  pitchLabel,
+  sourceTag,
+  type AudibleState,
   type AudioProfile,
+  type OutputKind,
 } from '../../src/core/profiles';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { useProfiles } from '../../src/state/useProfiles';
@@ -33,12 +38,16 @@ export default function SoundsScreen() {
   const styles = useThemedStyles(sheet);
   const insets = useSafeAreaInsets();
   const ent = useEntitlement();
-  const [audibleOpen, setAudibleOpen] = useState(false);
+  const [audible, setAudible] = useState<AudibleState | null>(null);
+  const [creditsOpen, setCreditsOpen] = useState(false);
   const toast = useToast();
   const saved = useProfiles((s) => s.saved);
   const remove = useProfiles((s) => s.remove);
   const setProfile = useSession((s) => s.setProfile);
   const activeId = useSession((s) => s.profileId);
+  // Whether a sound can be heard depends on what is playing it, so the rows
+  // answer for the speaker this person actually picked.
+  const output = useSession((s) => s.output);
 
   const savedLimit = ent.limit('savedProfiles');
 
@@ -77,6 +86,9 @@ export default function SoundsScreen() {
       }
     >
       <ScrollView
+        // without this the list lays out at its full height inside a screen
+        // that does not scroll, and everything past the fold is unreachable
+        style={styles.scroll}
         showsVerticalScrollIndicator={false}
         // the dock is pinned, so the last sound needs its height under it
         contentContainerStyle={{ paddingBottom: dockClearance(insets.bottom) }}
@@ -86,10 +98,11 @@ export default function SoundsScreen() {
             <SoundRow
               key={p.id}
               sound={p}
+              output={output}
               active={p.id === activeId}
               locked={p.minPlan !== 'free' && !ent.can('profiles.all')}
               onPress={() => pick(p)}
-              onAudible={() => setAudibleOpen(true)}
+              onAudible={setAudible}
             />
           ))}
         </View>
@@ -102,9 +115,10 @@ export default function SoundsScreen() {
                 <SoundRow
                   key={p.id}
                   sound={p}
+                  output={output}
                   active={p.id === activeId}
                   onPress={() => pick(p)}
-                  onAudible={() => setAudibleOpen(true)}
+                  onAudible={setAudible}
                   onDelete={() => {
                     remove(p.id);
                     toast.show('Sound deleted.');
@@ -114,9 +128,20 @@ export default function SoundsScreen() {
             </View>
           </View>
         ) : null}
+
+        {/* the recordings are somebody's work, and the credit sits with them */}
+        <View style={styles.credits}>
+          <ListRow
+            icon={Music4}
+            title="Credits"
+            meta="Who recorded the bird calls"
+            onPress={() => setCreditsOpen(true)}
+          />
+        </View>
       </ScrollView>
 
-      <AudibleSheet open={audibleOpen} onClose={() => setAudibleOpen(false)} />
+      <AudibleSheet state={audible} onClose={() => setAudible(null)} />
+      <CreditsSheet open={creditsOpen} onClose={() => setCreditsOpen(false)} />
     </Screen>
   );
 }
@@ -125,10 +150,14 @@ export default function SoundsScreen() {
  * One sound.
  *
  * The bird on the left says what the sound is like without a word: it leans
- * away from the very high ones, and opens its beak for a call.
+ * away from the pitches nothing can play, and opens its beak for a call.
+ *
+ * Three tags under the name, in the order a person asks the questions: what
+ * pitch is it, where did it come from, and will anybody hear it.
  */
 function SoundRow({
   sound,
+  output,
   active,
   locked = false,
   onPress,
@@ -136,28 +165,31 @@ function SoundRow({
   onAudible,
 }: {
   sound: AudioProfile;
+  /** what will play it, which decides whether 22 kHz comes out at all */
+  output: OutputKind;
   active: boolean;
   locked?: boolean;
   onPress: () => void;
   onDelete?: () => void;
-  /** opens the one panel on this screen that says what audible means */
-  onAudible?: () => void;
+  /** opens the one panel on this screen that says who can hear a sound */
+  onAudible?: (state: AudibleState) => void;
 }) {
   const styles = useThemedStyles(sheet);
   const { c } = useTheme();
-  const pitch = soundPitch(sound);
-  const heard = guestsMayHear(sound);
+  const pitch = pitchLabel(sound);
+  const source = sourceTag(sound);
+  const heard = audibleState(sound, output);
 
   const pose =
-    sound.kind === 'sample' ? 'call' : pitch === 'Very high' ? 'lean' : 'sit';
+    sound.kind === 'sample' ? 'call' : heard === 'speaker_only' ? 'lean' : 'sit';
 
   return (
     <Touchable
       onPress={onPress}
       feel="offset"
-      accessibilityLabel={`${sound.name}. ${sound.description}. ${pitch} pitch.${
-        heard ? ` ${AUDIBLE_TAG}, people nearby may hear it.` : ''
-      }${locked ? ' Needs Pro.' : ''}`}
+      accessibilityLabel={`${sound.name}. ${sound.description}. ${source}, ${pitch}. ${
+        AUDIBLE_LABEL[heard]
+      }.${locked ? ' Needs Pro.' : ''}`}
       accessibilityState={{ selected: active }}
       style={styles.press}
     >
@@ -181,8 +213,9 @@ function SoundRow({
             {sound.description}
           </Text>
           <View style={styles.tags}>
-            <StatusPill label={pitch} tone={active ? 'scheduled' : 'idle'} />
-            {heard ? <AudibleChip onPress={onAudible} /> : null}
+            <StatusPill label={pitch} tone={active ? 'scheduled' : 'idle'} caps={false} />
+            <StatusPill label={source} tone="idle" />
+            <AudibleChip state={heard} onPress={onAudible} />
           </View>
         </View>
         {onDelete ? (
@@ -200,7 +233,10 @@ function SoundRow({
 }
 
 const sheet = themed((c, t) => ({
+  /** the list takes what the screen has left, and scrolls inside it */
+  scroll: { flex: 1 },
   section: { marginTop: space.lg },
+  credits: { marginTop: space.lg, borderWidth: 1, borderColor: c.border },
   list: { borderWidth: 1, borderColor: c.border },
   press: { minHeight: 0 },
   row: {

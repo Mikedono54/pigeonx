@@ -174,6 +174,9 @@ export default function PlacesScreen() {
         </View>
       ) : (
         <ScrollView
+          // without this the list lays out at its full height inside a screen
+          // that does not scroll, and the last place sits under the dock
+          style={styles.scroll}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             styles.list,
@@ -425,6 +428,8 @@ function NameSheet({
 }
 
 const sheet = themed((c, t) => ({
+  /** the list takes what the screen has left, and scrolls inside it */
+  scroll: { flex: 1 },
   list: { gap: space.sm },
   emptyWrap: { flex: 1, justifyContent: 'center' },
   grow: { flex: 1, gap: 2 },

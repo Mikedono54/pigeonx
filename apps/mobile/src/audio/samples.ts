@@ -14,11 +14,16 @@ export const SAMPLE_ASSETS: Record<SampleAsset, number> = {
   alarm_generic: require('../../assets/audio/alarm_generic.wav'),
 };
 
+/**
+ * What each recording actually is, named the way the recordist named it.
+ * Straight from `assets/audio/SOURCES.md`: a hawk here is a red-tailed hawk,
+ * and the falcon is a peregrine.
+ */
 export const SAMPLE_LABEL: Record<SampleAsset, string> = {
   distress_pigeon: 'Pigeon distress call',
-  predator_hawk: 'Hawk call',
-  predator_falcon: 'Falcon call',
-  alarm_generic: 'Jay alarm call',
+  predator_hawk: 'Red-tailed hawk scream',
+  predator_falcon: 'Peregrine alarm call',
+  alarm_generic: 'Jay alarm chatter',
 };
 
 /** One word each, for a row of choices that has to fit on one line. */
@@ -49,21 +54,21 @@ export const SOUND_CREDITS: SoundCredit[] = [
     ],
   },
   {
-    title: 'Hawk call',
+    title: 'Red-tailed hawk scream',
     lines: [
       'Red-tailed Hawk, recorded by Jonathon Jongsma.',
       'Wikimedia Commons, CC BY-SA 3.0. This clip is shared under the same licence.',
     ],
   },
   {
-    title: 'Falcon call',
+    title: 'Peregrine alarm call',
     lines: [
-      'Peregrine falcon at Bryce Canyon National Park.',
+      'Peregrine falcon at Bryce Canyon National Park, recorded by the National Park Service.',
       'National Park Service sound gallery. Public domain.',
     ],
   },
   {
-    title: 'Jay alarm call',
+    title: 'Jay alarm chatter',
     lines: [
       'Eurasian jay, recorded by Joseph Sardin and Axeline T.',
       'bigsoundbank.com. Public domain, CC0.',

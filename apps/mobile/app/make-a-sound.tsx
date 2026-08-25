@@ -25,9 +25,9 @@ import { getEngine } from '../src/audio';
 import { SAMPLE_LABEL, SAMPLE_SHORT } from '../src/audio/samples';
 import {
   KIND_LABEL,
+  audibleState,
   formatHz,
-  guestsMayHear,
-  pitchWord,
+  type AudibleState,
   type AudioProfile,
   type ProfileKind,
   type PulseParams,
@@ -67,7 +67,7 @@ export default function MakeASound() {
   const [asset, setAsset] = useState<SampleAsset>('distress_pigeon');
   const [previewing, setPreviewing] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [audibleOpen, setAudibleOpen] = useState(false);
+  const [audible, setAudible] = useState<AudibleState | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const draft = buildDraft({
@@ -157,6 +157,9 @@ export default function MakeASound() {
       </View>
 
       <ScrollView
+        // without this the form lays out at its full height and the last
+        // fields sit off the bottom of the screen, out of reach
+        style={styles.scroll}
         contentContainerStyle={[
           styles.body,
           { paddingBottom: dockClearance(insets.bottom) },
@@ -180,9 +183,7 @@ export default function MakeASound() {
               label={previewing ? 'Playing' : 'Ready'}
               tone={previewing ? 'running' : 'idle'}
             />
-            {guestsMayHear(draft) ? (
-              <AudibleChip onPress={() => setAudibleOpen(true)} />
-            ) : null}
+            <AudibleChip state={audibleState(draft, output)} onPress={setAudible} />
           </View>
           <Button
             label={previewing ? 'Stop' : 'Hear 5 seconds'}
@@ -223,11 +224,10 @@ export default function MakeASound() {
                 max={25000}
                 step={100}
                 value={freqHz}
-                readout={pitchWord(freqHz)}
+                readout={formatHz(freqHz)}
                 onChange={setFreqHz}
                 accessibilityHint="Higher pitches are harder for people to hear and harder for speakers to play"
               />
-              <Text style={styles.mono}>{formatHz(freqHz)}</Text>
             </View>
           ) : null}
 
@@ -240,10 +240,9 @@ export default function MakeASound() {
                   max={24000}
                   step={100}
                   value={startHz}
-                  readout={pitchWord(startHz)}
+                  readout={formatHz(startHz)}
                   onChange={setStartHz}
                 />
-                <Text style={styles.mono}>{formatHz(startHz)}</Text>
               </View>
               <View style={styles.field}>
                 <Slider
@@ -252,10 +251,9 @@ export default function MakeASound() {
                   max={25000}
                   step={100}
                   value={endHz}
-                  readout={pitchWord(endHz)}
+                  readout={formatHz(endHz)}
                   onChange={setEndHz}
                 />
-                <Text style={styles.mono}>{formatHz(endHz)}</Text>
               </View>
               <Slider
                 label="How fast it rises and falls"
@@ -300,7 +298,12 @@ export default function MakeASound() {
                   onChange={setAsset}
                   accessibilityLabel="Which call"
                   options={(
-                    ['distress_pigeon', 'predator_hawk', 'predator_falcon'] as SampleAsset[]
+                    [
+                      'distress_pigeon',
+                      'predator_hawk',
+                      'predator_falcon',
+                      'alarm_generic',
+                    ] as SampleAsset[]
                   ).map((a) => ({ value: a, label: SAMPLE_SHORT[a] }))}
                 />
               </Field>
@@ -325,7 +328,7 @@ export default function MakeASound() {
               value={randomizePct}
               readout={`${Math.round(randomizePct)}%`}
               onChange={setRandomizePct}
-              accessibilityHint="Turn this up so birds cannot learn the pattern"
+              accessibilityHint="Turn this up so the timing is harder to predict"
             />
           ) : null}
 
@@ -339,7 +342,7 @@ export default function MakeASound() {
         <Button label="Save this sound" size="lg" onPress={onSave} />
       </Dock>
 
-      <AudibleSheet open={audibleOpen} onClose={() => setAudibleOpen(false)} />
+      <AudibleSheet state={audible} onClose={() => setAudible(null)} />
     </View>
   );
 }
@@ -420,19 +423,19 @@ function describeDraft(p: AudioProfile): string {
   switch (p.kind) {
     case 'tone': {
       const q = p.params as ToneParams;
-      return `${KIND_LABEL.tone}. ${pitchWord(q.freqHz)} pitch.`;
+      return `${KIND_LABEL.tone}. ${formatHz(q.freqHz)}.`;
     }
     case 'pulse': {
       const q = p.params as PulseParams;
       return `Beeps for ${(q.onMs / 1000).toFixed(1)} sec, then rests for ${(
         q.offMs / 1000
-      ).toFixed(1)} sec. ${pitchWord(q.freqHz)} pitch.`;
+      ).toFixed(1)} sec. ${formatHz(q.freqHz)}.`;
     }
     case 'sweep': {
       const q = p.params as SweepParams;
-      return `Slides from ${pitchWord(q.startHz).toLowerCase()} to ${pitchWord(
+      return `Slides from ${formatHz(q.startHz)} to ${formatHz(
         q.endHz
-      ).toLowerCase()} pitch, again and again.`;
+      )}, again and again.`;
     }
     case 'sample': {
       const q = p.params as SampleParams;
@@ -443,6 +446,8 @@ function describeDraft(p: AudioProfile): string {
 
 const sheet = themed((c, t) => ({
   root: { flex: 1, backgroundColor: c.bg },
+  /** the form takes what the head leaves, and scrolls inside it */
+  scroll: { flex: 1 },
   head: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -469,5 +474,4 @@ const sheet = themed((c, t) => ({
   fieldGroup: { gap: space.sm },
   fieldLabel: { ...t.overline },
   note: { ...t.bodySmall },
-  mono: { ...t.caption, letterSpacing: 0.5 },
 }));

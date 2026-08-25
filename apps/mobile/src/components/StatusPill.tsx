@@ -12,6 +12,11 @@ export interface StatusPillProps {
   dot?: boolean;
   /** kept for callers; every tag renders in the mono face */
   mono?: boolean;
+  /**
+   * Tags shout by default. A tag carrying a unit does not, because `18 kHz`
+   * uppercased reads `18 KHZ`, and that is not what a kilohertz is called.
+   */
+  caps?: boolean;
 }
 
 /**
@@ -21,7 +26,7 @@ export interface StatusPillProps {
  * to say that. A tag only ever changes the colour of its edge and its word,
  * so a screen full of tags stays quiet.
  */
-export function StatusPill({ label, tone = 'idle', dot = false }: StatusPillProps) {
+export function StatusPill({ label, tone = 'idle', dot = false, caps = true }: StatusPillProps) {
   const styles = useThemedStyles(sheet);
   const { c } = useTheme();
 
@@ -41,7 +46,10 @@ export function StatusPill({ label, tone = 'idle', dot = false }: StatusPillProp
       style={[styles.tag, { borderColor: p.border }]}
     >
       {dot ? <View style={[styles.dot, { backgroundColor: p.fg }]} /> : null}
-      <Text style={[styles.label, { color: p.fg }]} numberOfLines={1}>
+      <Text
+        style={[styles.label, caps ? null : styles.exact, { color: p.fg }]}
+        numberOfLines={1}
+      >
         {label}
       </Text>
     </View>
@@ -66,4 +74,6 @@ const sheet = themed((c) => ({
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
+  /** said exactly as it is written, units and all */
+  exact: { textTransform: 'none', letterSpacing: 0.5 },
 }));

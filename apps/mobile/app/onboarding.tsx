@@ -41,7 +41,7 @@ const PAGES: {
     pose: 'lean',
     title: 'Some sounds are audible',
     lines: [
-      'The most effective sounds sit inside human hearing.',
+      'The best studied sounds sit inside human hearing.',
       'Every one of those carries an Audible tag, so you always know.',
     ],
   },

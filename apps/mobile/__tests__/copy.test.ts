@@ -1,24 +1,28 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 import {
-  AUDIBLE_TAG,
+  AUDIBLE_EXPLAINER,
+  AUDIBLE_LABEL,
   EFFECTIVENESS_COPY,
   KIND_LABEL,
   SPEAKER_HINT,
   SPEAKER_LABEL,
   REACH_QUESTION,
   SYSTEM_PROFILES,
-  pitchWord,
+  audibleState,
+  pitchLabel,
   reachSentence,
-  soundPitch,
+  sourceTag,
   findSystemProfile,
 } from '../src/core/profiles';
-import { FEATURE_LABEL, PLAN_LABEL } from '../src/core/entitlements';
+import { FEATURE_LABEL, PLAN_LABEL, PRICES } from '../src/core/entitlements';
 import { ROLE_HINT, ROLE_LABEL } from '../src/services/business';
 import { liveLabel } from '../src/core/places';
 import { plainMessage } from '../src/services/supabase';
 import { describeLinkProblem } from '../src/services/auth';
 import { describeDays, describeSchedule } from '../src/state/useSchedules';
 import { SAMPLE_LABEL, SAMPLE_SHORT, SOUND_CREDITS } from '../src/audio/samples';
-import { AUDIBLE_EXPLAINER } from '../src/components/AudibleChip';
 
 /**
  * Code words a person should never have to read. See docs/mobile-glossary.md.
@@ -63,21 +67,21 @@ describe('sound names and descriptions', () => {
     expect(named.sys_gull_17k).toBe('Gull deterrent');
     expect(named.sys_random_pulse).toBe('Randomized beeps');
     expect(named.sys_distress_pigeon).toBe('Pigeon distress call');
-    expect(named.sys_predator_hawk).toBe('Hawk call');
-    expect(named.sys_predator_falcon).toBe('Falcon call');
+    expect(named.sys_predator_hawk).toBe('Red-tailed hawk scream');
+    expect(named.sys_predator_falcon).toBe('Peregrine alarm call');
     expect(named.sys_max_22k).toBe('Maximum frequency');
   });
 
   it('reads the way the sounds screen shows them', () => {
     const said = Object.fromEntries(SYSTEM_PROFILES.map((p) => [p.id, p.description]));
     expect(said.sys_pigeon_18k).toBe('Steady 18 kHz tone');
-    expect(said.sys_pulse_16k).toBe('Irregular beeps that prevent habituation');
+    expect(said.sys_pulse_16k).toBe('Harder for birds to predict');
     expect(said.sys_sweep_15_19k).toBe('Continuously shifts frequency');
     expect(said.sys_gull_17k).toBe('Steady tone for roofs and docks');
     expect(said.sys_random_pulse).toBe('Random timing for long sessions');
-    expect(said.sys_distress_pigeon).toBe('Real distress recording. Most effective');
-    expect(said.sys_predator_hawk).toBe('Real hawk cry');
-    expect(said.sys_predator_falcon).toBe('Real falcon cry');
+    expect(said.sys_distress_pigeon).toBe('Real pigeon distress recording');
+    expect(said.sys_predator_hawk).toBe('Real red-tailed hawk recording');
+    expect(said.sys_predator_falcon).toBe('Real peregrine falcon recording');
     expect(said.sys_max_22k).toBe('22 kHz. Needs a PigeonX speaker');
   });
 
@@ -118,18 +122,68 @@ describe('the recordings are real', () => {
   });
 });
 
-describe('pitchWord()', () => {
-  it('turns a number into a word a ten-year-old reads', () => {
-    expect(pitchWord(12000)).toBe('Low');
-    expect(pitchWord(14999)).toBe('Low');
-    expect(pitchWord(15000)).toBe('High');
-    expect(pitchWord(18000)).toBe('High');
-    expect(pitchWord(19000)).toBe('Very high');
-    expect(pitchWord(22000)).toBe('Very high');
+describe('pitchLabel()', () => {
+  const label = (id: string) => pitchLabel(findSystemProfile(id)!);
+
+  it('says the number a generated sound generates', () => {
+    expect(label('sys_pigeon_18k')).toBe('18 kHz');
+    expect(label('sys_pulse_16k')).toBe('16 kHz');
+    expect(label('sys_gull_17k')).toBe('17 kHz');
+    expect(label('sys_max_22k')).toBe('22 kHz');
   });
 
-  it('calls a bird call low, because you can hear it', () => {
-    expect(soundPitch(findSystemProfile('sys_predator_hawk')!)).toBe('Low');
+  it('says both ends of a sweep', () => {
+    expect(label('sys_sweep_15_19k')).toBe('15 to 19 kHz');
+  });
+
+  it('says a range for a recording, because a call is not one number', () => {
+    expect(label('sys_distress_pigeon')).toBe('Low frequency');
+    expect(label('sys_predator_hawk')).toBe('Low frequency');
+  });
+
+  it('never falls back on a word that says nothing', () => {
+    for (const p of SYSTEM_PROFILES) {
+      expect(pitchLabel(p)).not.toMatch(/^(Low|High|Very high)$/);
+      expect(pitchLabel(p)).not.toMatch(/\bvery high\b/i);
+    }
+  });
+});
+
+describe('sourceTag()', () => {
+  it('says whether a bird or a synthesiser made it', () => {
+    expect(sourceTag(findSystemProfile('sys_predator_hawk')!)).toBe('Natural recording');
+    expect(sourceTag(findSystemProfile('sys_pigeon_18k')!)).toBe('Generated tone');
+  });
+});
+
+describe('audibleState()', () => {
+  const state = (id: string, output: Parameters<typeof audibleState>[1] = 'phone') =>
+    audibleState(findSystemProfile(id)!, output);
+
+  it('calls every recording audible, because everybody hears a bird', () => {
+    expect(state('sys_distress_pigeon')).toBe('audible');
+    expect(state('sys_predator_hawk')).toBe('audible');
+    expect(state('sys_predator_falcon')).toBe('audible');
+  });
+
+  it('hedges inside the band where phones and ears both wobble', () => {
+    expect(state('sys_pulse_16k')).toBe('maybe');
+    expect(state('sys_gull_17k')).toBe('maybe');
+    expect(state('sys_pigeon_18k')).toBe('maybe');
+    expect(state('sys_sweep_15_19k')).toBe('maybe');
+    expect(state('sys_random_pulse')).toBe('maybe');
+  });
+
+  it('never calls 22 kHz audible or inaudible on a phone', () => {
+    expect(state('sys_max_22k', 'phone')).toBe('speaker_only');
+    expect(state('sys_max_22k', 'bt_speaker')).toBe('speaker_only');
+    expect(AUDIBLE_LABEL[state('sys_max_22k', 'phone')]).toBe('Needs a PigeonX speaker');
+    expect(AUDIBLE_LABEL[state('sys_max_22k', 'phone')]).not.toMatch(/audible/i);
+  });
+
+  it('says typically inaudible only when a PigeonX speaker plays it', () => {
+    expect(state('sys_max_22k', 'pigeonx_emitter')).toBe('inaudible');
+    expect(AUDIBLE_LABEL.inaudible).toBe('Typically inaudible');
   });
 });
 
@@ -177,22 +231,26 @@ describe('labels people read', () => {
       ...Object.values(PLAN_LABEL),
       ...Object.values(ROLE_LABEL),
       ...Object.values(ROLE_HINT),
-      AUDIBLE_TAG,
+      ...Object.values(AUDIBLE_LABEL),
       REACH_QUESTION,
     ]) {
       checkString(s);
     }
   });
 
-  it('marks a sound people can hear with one word', () => {
-    expect(AUDIBLE_TAG).toBe('Audible');
+  it('marks a sound people can hear with one short label', () => {
+    expect(AUDIBLE_LABEL.audible).toBe('Audible');
+    expect(AUDIBLE_LABEL.maybe).toBe('May be audible');
   });
 
-  it('says what that one word means, one tap away', () => {
-    expect(AUDIBLE_EXPLAINER).toBe(
-      'This sound is within human hearing range. Guests nearby may hear it.',
+  it('says what each of those labels means, one tap away', () => {
+    for (const line of Object.values(AUDIBLE_EXPLAINER)) {
+      checkString(line);
+      expect(line.length).toBeGreaterThan(20);
+    }
+    expect(AUDIBLE_EXPLAINER.audible).toBe(
+      'This sound sits inside human hearing. People nearby will hear it.',
     );
-    checkString(AUDIBLE_EXPLAINER);
   });
 });
 
@@ -206,7 +264,7 @@ describe('no section counts itself out loud', () => {
       ...Object.values(FEATURE_LABEL),
       ...Object.values(PLAN_LABEL),
       ...Object.values(ROLE_LABEL),
-      AUDIBLE_TAG,
+      ...Object.values(AUDIBLE_LABEL),
       REACH_QUESTION,
     ]) {
       expect(s).not.toMatch(INDEX_LABEL);
@@ -269,5 +327,70 @@ describe('describeSchedule()', () => {
     expect(describeDays([0, 1, 2, 3, 4, 5, 6])).toBe('Every day');
     expect(describeDays([0, 6])).toBe('Weekends');
     expect(describeDays([])).toBe('No days picked');
+  });
+});
+
+/**
+ * Every line a person can read, swept for a promise we cannot keep.
+ *
+ * The claims are the kind that creep back in one screen at a time, so this
+ * reads the source rather than a list somebody has to remember to update.
+ */
+describe('nothing the app says is a promise we cannot keep', () => {
+  const root = path.join(__dirname, '..');
+
+  function sources(dir: string, found: string[] = []): string[] {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) sources(full, found);
+      else if (/\.tsx?$/.test(entry.name)) found.push(full);
+    }
+    return found;
+  }
+
+  const files = [...sources(path.join(root, 'app')), ...sources(path.join(root, 'src'))];
+
+  const CLAIMS: [RegExp, string][] = [
+    [/most effective/i, 'no sound is the most effective one'],
+    [/works? best/i, 'nothing works best'],
+    [/prevents? habituation/i, 'randomised timing does not prevent habituation'],
+    [/(cannot|can not|can't|never) (learn|adapt|predict|get used to)/i, 'birds are not promised to fail'],
+    [/guarantee/i, 'nothing is guaranteed'],
+  ];
+
+  it('reads every screen and finds no claim', () => {
+    expect(files.length).toBeGreaterThan(20);
+    const offences: string[] = [];
+    for (const file of files) {
+      const text = fs.readFileSync(file, 'utf8');
+      for (const [claim, why] of CLAIMS) {
+        const hit = text.match(claim);
+        if (hit) offences.push(`${path.relative(root, file)}: "${hit[0]}" (${why})`);
+      }
+    }
+    expect(offences).toEqual([]);
+  });
+
+  it('has no LOW, HIGH or VERY HIGH pitch tag left anywhere', () => {
+    for (const file of files) {
+      const text = fs.readFileSync(file, 'utf8');
+      expect(text).not.toMatch(/pitchWord|soundPitch|PitchWord/);
+      expect(text).not.toMatch(/'Very high'/);
+    }
+  });
+
+  it('prices a location the way the business page does', () => {
+    const paywall = fs.readFileSync(path.join(root, 'app/paywall.tsx'), 'utf8');
+    expect(paywall).toContain('/month per location');
+    expect(paywall).toContain('Managing a larger portfolio? Contact us for custom pricing.');
+    expect(paywall).not.toMatch(/a month for each place/);
+    expect(PRICES.business.monthly.label).toBe('$29');
+    expect(PRICES.business.monthly.period).toBe('month per location');
+  });
+
+  it('says randomised timing makes a pattern harder to predict, and no more', () => {
+    const said = Object.fromEntries(SYSTEM_PROFILES.map((p) => [p.id, p.description]));
+    expect(said.sys_pulse_16k).toBe('Harder for birds to predict');
   });
 });

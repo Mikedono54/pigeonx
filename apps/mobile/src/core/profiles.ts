@@ -29,7 +29,7 @@ export interface PulseParams {
   freqHz: number;
   onMs: number;
   offMs: number;
-  /** 0 to 100: how much the on/off timing wanders, so birds cannot learn it */
+  /** 0 to 100: how much the on/off timing wanders, so it is harder to predict */
   randomizePct: number;
 }
 export interface SampleParams {
@@ -71,7 +71,7 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   {
     id: 'sys_pulse_16k',
     name: 'Unpredictable beeps',
-    description: 'Irregular beeps that prevent habituation',
+    description: 'Harder for birds to predict',
     kind: 'pulse',
     params: { freqHz: 16000, onMs: 400, offMs: 600, randomizePct: 20 },
     minPlan: 'free',
@@ -107,7 +107,7 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   {
     id: 'sys_distress_pigeon',
     name: 'Pigeon distress call',
-    description: 'Real distress recording. Most effective',
+    description: 'Real pigeon distress recording',
     kind: 'sample',
     params: { asset: 'distress_pigeon', gapMs: 8000, randomizePct: 40 },
     minPlan: 'pro',
@@ -115,8 +115,8 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   },
   {
     id: 'sys_predator_hawk',
-    name: 'Hawk call',
-    description: 'Real hawk cry',
+    name: 'Red-tailed hawk scream',
+    description: 'Real red-tailed hawk recording',
     kind: 'sample',
     params: { asset: 'predator_hawk', gapMs: 15000, randomizePct: 50 },
     minPlan: 'pro',
@@ -124,8 +124,8 @@ export const SYSTEM_PROFILES: AudioProfile[] = [
   },
   {
     id: 'sys_predator_falcon',
-    name: 'Falcon call',
-    description: 'Real falcon cry',
+    name: 'Peregrine alarm call',
+    description: 'Real peregrine falcon recording',
     kind: 'sample',
     params: { asset: 'predator_falcon', gapMs: 15000, randomizePct: 50 },
     minPlan: 'pro',
@@ -181,32 +181,92 @@ export function lowFreqHz(p: AudioProfile): number {
   }
 }
 
-export type PitchWord = 'Low' | 'High' | 'Very high';
-
-/** Pitch as a word. Numbers stay off the main screens. */
-export function pitchWord(hz: number): PitchWord {
-  if (hz < 15000) return 'Low';
-  if (hz < 19000) return 'High';
-  return 'Very high';
-}
-
-/** The pitch word for a whole sound. */
-export function soundPitch(p: AudioProfile): PitchWord {
-  return pitchWord(peakFreqHz(p));
-}
-
-/** True when people nearby can hear this sound. */
-export function guestsMayHear(p: AudioProfile): boolean {
-  return peakFreqHz(p) > 17000 || p.kind === 'sample';
+/**
+ * The pitch of a sound, said the only honest way: as the number itself.
+ *
+ * Words like LOW, HIGH and VERY HIGH told a person nothing they could check,
+ * and they flattened 15 kHz and 22 kHz into the same shrug. A generated sound
+ * says what it generates. A recording of a bird says the range a bird sings
+ * in, because a call is a spread of pitches and not one number.
+ */
+export function pitchLabel(p: AudioProfile): string {
+  if (p.kind === 'sample') return 'Low frequency';
+  const low = lowFreqHz(p);
+  const high = peakFreqHz(p);
+  if (low === high) return formatHz(high);
+  return `${formatHz(low).replace(' kHz', '')} to ${formatHz(high)}`;
 }
 
 /**
- * The tag on a sound that sits inside human hearing.
- *
- * One word, on the same small bordered chip every other tag uses. What it
- * means lives one tap away, in `AUDIBLE_EXPLAINER`.
+ * Where a sound comes from. Two words on a card, so nobody has to guess
+ * whether they are about to hear a bird or a synthesiser.
  */
-export const AUDIBLE_TAG = 'Audible';
+export function sourceTag(p: AudioProfile): string {
+  return p.kind === 'sample' ? 'Natural recording' : 'Generated tone';
+}
+
+/**
+ * The band where a generated sound stops being a promise.
+ *
+ * Under 15 kHz every phone plays it and nearly everybody hears it. From 15 to
+ * 20 kHz both halves wobble: phone speakers roll off around 18 kHz and hearing
+ * at the top of the band falls away with age. Above 20 kHz no phone reaches it
+ * at all.
+ */
+export const AUDIBLE_BAND_LOW_HZ = 15000;
+export const AUDIBLE_BAND_TOP_HZ = 20000;
+
+/**
+ * What we are willing to say about whether a person will hear this.
+ *
+ * `speaker_only` is not a fourth guess about ears. It is the honest answer for
+ * 22 kHz on a phone: the question of hearing it never comes up, because
+ * nothing comes out.
+ */
+export type AudibleState = 'audible' | 'maybe' | 'inaudible' | 'speaker_only';
+
+export const AUDIBLE_LABEL: Record<AudibleState, string> = {
+  audible: 'Audible',
+  maybe: 'May be audible',
+  inaudible: 'Typically inaudible',
+  speaker_only: 'Needs a PigeonX speaker',
+};
+
+/** What each of those four words means, one tap away from the tag. */
+export const AUDIBLE_EXPLAINER: Record<AudibleState, string> = {
+  audible: 'This sound sits inside human hearing. People nearby will hear it.',
+  maybe:
+    'This sound sits between 15 and 20 kHz. Phone speakers roll off near the top of that, and hearing up there falls away with age, so some people nearby will hear it and some will not.',
+  inaudible:
+    'At 22 kHz most people hear nothing at all. A PigeonX speaker is what plays it.',
+  speaker_only:
+    'This sound is higher than the speaker you picked can play. A PigeonX speaker plays it.',
+};
+
+/**
+ * Whether a person nearby will hear this sound, out of this speaker.
+ *
+ * The output matters for one sound only, and it matters absolutely: 22 kHz is
+ * typically inaudible when a PigeonX speaker plays it, and simply silent when
+ * a phone tries to.
+ */
+export function audibleState(p: AudioProfile, output: OutputKind): AudibleState {
+  if (p.kind === 'sample') return 'audible';
+  const peak = peakFreqHz(p);
+  if (peak > AUDIBLE_BAND_TOP_HZ) {
+    return OUTPUT_CEILING_HZ[output] >= peak ? 'inaudible' : 'speaker_only';
+  }
+  if (peak >= AUDIBLE_BAND_LOW_HZ) return 'maybe';
+  return 'audible';
+}
+
+/**
+ * True when people nearby may hear this sound at all: every recording, and
+ * every generated sound up to the top of the wobbly band.
+ */
+export function guestsMayHear(p: AudioProfile): boolean {
+  return p.kind === 'sample' || peakFreqHz(p) <= AUDIBLE_BAND_TOP_HZ;
+}
 
 export type OutputKind = 'phone' | 'bt_speaker' | 'pigeonx_emitter' | 'simulated';
 

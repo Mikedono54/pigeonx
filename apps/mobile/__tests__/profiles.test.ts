@@ -46,14 +46,15 @@ describe('peakFreqHz / lowFreqHz', () => {
 });
 
 describe('guestsMayHear()', () => {
-  it('is false below the 17 kHz threshold', () => {
-    expect(guestsMayHear(get('sys_pulse_16k'))).toBe(false);
-  });
-
-  it('is false exactly at 17 kHz and true above it', () => {
-    expect(guestsMayHear(get('sys_gull_17k'))).toBe(false);
+  it('is true anywhere inside the band where hearing is possible', () => {
+    expect(guestsMayHear(get('sys_pulse_16k'))).toBe(true);
+    expect(guestsMayHear(get('sys_gull_17k'))).toBe(true);
     expect(guestsMayHear(get('sys_pigeon_18k'))).toBe(true);
     expect(guestsMayHear(get('sys_random_pulse'))).toBe(true);
+  });
+
+  it('is false above the band, where nothing carries', () => {
+    expect(guestsMayHear(get('sys_max_22k'))).toBe(false);
   });
 
   it('is always true for recorded calls', () => {
