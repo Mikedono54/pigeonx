@@ -13,6 +13,7 @@ const Overview = lazy(() => import('./routes/Overview'));
 const Places = lazy(() => import('./routes/Places'));
 const PlaceDetail = lazy(() => import('./routes/PlaceDetail'));
 const Schedules = lazy(() => import('./routes/Schedules'));
+const History = lazy(() => import('./routes/History'));
 const Team = lazy(() => import('./routes/Team'));
 const Billing = lazy(() => import('./routes/Billing'));
 const Settings = lazy(() => import('./routes/Settings'));
@@ -106,6 +107,14 @@ function Shell() {
           element={
             <Guard>
               <Schedules />
+            </Guard>
+          }
+        />
+        <Route
+          path="history"
+          element={
+            <Guard>
+              <History />
             </Guard>
           }
         />

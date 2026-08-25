@@ -7,6 +7,7 @@ import {
   CreditCard,
   LayoutGrid,
   Menu,
+  ScrollText,
   Settings,
   Users,
   X,
@@ -18,8 +19,9 @@ import { leaveDemo } from '../lib/demo';
 
 const NAV = [
   { to: '/app', label: 'Overview', icon: LayoutGrid, end: true },
-  { to: '/app/places', label: 'Places', icon: Building2, end: false },
+  { to: '/app/places', label: 'Locations', icon: Building2, end: false },
   { to: '/app/schedules', label: 'Schedules', icon: CalendarClock, end: false },
+  { to: '/app/history', label: 'History', icon: ScrollText, end: false },
   { to: '/app/team', label: 'Team', icon: Users, end: false },
   { to: '/app/billing', label: 'Billing', icon: CreditCard, end: false },
   { to: '/app/settings', label: 'Settings', icon: Settings, end: false },
@@ -113,7 +115,8 @@ function DemoBanner() {
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-alt px-4 py-2.5 lg:px-8">
       <p className="text-[14px] text-ink">
         <span className="px-label mr-2 border border-line px-2 py-1">Sample data</span>
-        Nothing here is real. It shows what the dashboard looks like with a few places running.
+        Nothing here is real. It shows what the dashboard looks like with a few locations
+        running.
       </p>
       <Link
         to="/app/sign-in"
