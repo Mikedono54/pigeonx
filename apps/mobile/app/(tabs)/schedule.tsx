@@ -45,7 +45,6 @@ import {
   DAY_NAMES,
   describeDays,
   describeSchedule,
-  EXECUTOR_LABEL,
   formatMinutes,
   useSchedules,
   type Executor,
