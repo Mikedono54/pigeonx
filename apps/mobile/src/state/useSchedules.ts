@@ -18,6 +18,9 @@ import { persistStorage, STORAGE_KEYS, uid } from './storage';
 /** Who actually starts the sound: this phone, or a PigeonX speaker. */
 export type Executor = 'reminder' | 'device';
 
+/** Whose time it is: one person's own, or one a business keeps. */
+export type ScheduleScope = 'user' | 'org';
+
 export interface Schedule {
   id: string;
   name: string;
@@ -40,6 +43,17 @@ export interface Schedule {
   /** the protection plan it runs, when it runs one rather than one sound */
   planId: string | null;
   planName: string | null;
+  /** "22:00", the hours this run holds off through. null when it has none. */
+  quietStart: string | null;
+  quietEnd: string | null;
+  /**
+   * Whose time this is.
+   *
+   * A person's own runs and the runs a business keeps for its areas sit in one
+   * list on this phone and in two different tables in the account. The word
+   * says which, so a pass over one never rewrites the other.
+   */
+  scope: ScheduleScope;
   zoneId: string | null;
   deviceId: string | null;
   notificationIds: string[];
@@ -110,6 +124,9 @@ export type ScheduleInput = Omit<
   | 'placeName'
   | 'planId'
   | 'planName'
+  | 'quietStart'
+  | 'quietEnd'
+  | 'scope'
 > & {
   id?: string;
   enabled?: boolean;
@@ -120,6 +137,9 @@ export type ScheduleInput = Omit<
   placeName?: string | null;
   planId?: string | null;
   planName?: string | null;
+  quietStart?: string | null;
+  quietEnd?: string | null;
+  scope?: ScheduleScope;
 };
 
 /** What a schedule nobody has described yet looks like. */
@@ -130,6 +150,9 @@ export const SCHEDULE_DEFAULTS = {
   placeName: null,
   planId: null,
   planName: null,
+  quietStart: null,
+  quietEnd: null,
+  scope: 'user' as ScheduleScope,
 };
 
 interface SchedulesState {
@@ -235,7 +258,7 @@ export const useSchedules = create<SchedulesState>()(
       name: STORAGE_KEYS.schedules,
       storage: persistStorage,
       partialize: (s) => ({ schedules: s.schedules }),
-      version: 3,
+      version: 4,
       migrate: (state) => {
         const s = state as { schedules?: Schedule[] } | undefined;
         if (!s?.schedules) return state as never;

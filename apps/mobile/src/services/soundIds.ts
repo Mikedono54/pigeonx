@@ -78,8 +78,26 @@ export function localPlaceId(remoteId: string | null | undefined): string | null
   return usePlacesHome.getState().places.find((p) => p.remoteId === remoteId)?.id ?? null;
 }
 
+/**
+ * An id the account made itself.
+ *
+ * Everything one phone writes is `pln_` and a random tail until it goes up.
+ * Everything a business keeps is read from the account and never written
+ * locally, so its id is the account's own from the first time it is seen.
+ */
+const ACCOUNT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** The account's id for one protection plan, or null while it has none. */
 export function remotePlanId(localId: string | null | undefined): string | null {
   if (!localId) return null;
-  return useProtectionPlans.getState().byId(localId)?.remoteId ?? null;
+  const mine = useProtectionPlans.getState().byId(localId);
+  if (mine) return mine.remoteId;
+  return ACCOUNT_ID.test(localId) ? localId : null;
+}
+
+/** The protection plan on this phone an account id belongs to. */
+export function localPlanId(remoteId: string | null | undefined): string | null {
+  if (!remoteId) return null;
+  const mine = useProtectionPlans.getState().plans.find((p) => p.remoteId === remoteId);
+  return mine ? mine.id : remoteId;
 }

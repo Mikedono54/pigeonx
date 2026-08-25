@@ -120,3 +120,21 @@ export function slotMs(sessionMinutes: number, sounds: number): number {
   if (sounds <= 0) return sessionMinutes * 60_000;
   return Math.max(30_000, Math.round((sessionMinutes * 60_000) / sounds));
 }
+
+/* ── the times a plan holds ───────────────────────────────────────────────── */
+
+/** "22:00:00" from the account reads as "22:00" on a card. */
+export function trimSeconds(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const [h, m] = value.split(':');
+  if (h === undefined || m === undefined) return null;
+  return `${h}:${m}`;
+}
+
+/** "22:00" from a card goes back to the account as a whole clock time. */
+export function padSeconds(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const [h, m, s] = value.split(':');
+  if (h === undefined || m === undefined) return null;
+  return `${h.padStart(2, '0')}:${m.padStart(2, '0')}:${s ?? '00'}`;
+}

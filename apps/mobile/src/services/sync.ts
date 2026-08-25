@@ -7,6 +7,9 @@ import {
   type PlaceKind,
   type SessionResult,
 } from '../core/personalization';
+import { padSeconds, trimSeconds } from '../core/protectionPlans';
+import type { ScheduleTrigger } from '../core/scheduleTimeline';
+import { can } from '../core/team';
 import {
   SYSTEM_PROFILES,
   type AudioProfile,
@@ -16,6 +19,8 @@ import {
 import type { OutputKind } from '../core/profiles';
 import { useAccount, type SimulatedDevice, type SpeakerKind } from '../state/useAccount';
 import { useHistory, type SessionEntry, type SessionSource } from '../state/useHistory';
+import { useOrgPlans } from '../state/useOrgPlans';
+import { usePlaces } from '../state/usePlaces';
 import { usePlacesHome, type HomePlace } from '../state/usePlacesHome';
 import { useProfiles } from '../state/useProfiles';
 import { useProtectionPlans, type ProtectionPlan } from '../state/useProtectionPlans';
@@ -25,8 +30,10 @@ import { sessionRecorder } from './sessionRecorder';
 import {
   loadBuiltInSoundIds,
   localPlaceId,
+  localPlanId,
   localSoundId,
   remotePlaceId,
+  remotePlanId,
   remoteSoundId,
 } from './soundIds';
 import { callFunction, getSupabase, isMissingOnServer } from './supabase';
@@ -63,6 +70,10 @@ export interface MergeResult<L> {
   /** the rows the account still has to be told about */
   push: L[];
 }
+
+// The two clock helpers moved next to the plan they belong to. Everything
+// that already asks this file for them keeps working.
+export { padSeconds, trimSeconds };
 
 /** The moment a remote row last changed, as a number. */
 export function remoteTime(row: RemoteRow): number {
@@ -209,6 +220,13 @@ export function timeToMinutes(value: string | null | undefined): number {
   return (Number.parseInt(h ?? '0', 10) || 0) * 60 + (Number.parseInt(m ?? '0', 10) || 0);
 }
 
+/**
+ * One schedule row, as both tables write it.
+ *
+ * `user_schedules` is one person's own times and `schedules` is a business's,
+ * and every column below is on both of them. One shape, one mapper, so a time
+ * anchored to sunrise means the same thing whichever list it came out of.
+ */
 export interface ScheduleRow extends RemoteRow {
   zone_id?: string | null;
   profile_id?: string | null;
@@ -217,26 +235,50 @@ export interface ScheduleRow extends RemoteRow {
   end_time?: string | null;
   enabled?: boolean | null;
   executor?: string | null;
+  trigger?: string | null;
+  offset_minutes?: number | null;
+  plan_id?: string | null;
+  quiet_start?: string | null;
+  quiet_end?: string | null;
+}
+
+const TRIGGERS: ScheduleTrigger[] = ['time', 'sunrise', 'sunset'];
+
+/** What a row cannot tell us on its own: the sound and the plan, by name. */
+export interface ScheduleLookups {
+  soundFor: (remoteProfileId: string | null) => { id: string; name: string };
+  planFor: (remotePlanId: string | null) => { id: string; name: string } | null;
 }
 
 export function scheduleFromRow(
   row: ScheduleRow,
   match: Schedule | undefined,
-  nameFor: (remoteProfileId: string | null) => { id: string; name: string },
+  lookups: ScheduleLookups,
 ): Schedule {
-  const sound = nameFor(row.profile_id ?? null);
+  const sound = lookups.soundFor(row.profile_id ?? null);
+  const plan = lookups.planFor(row.plan_id ?? null);
+  // A column the account has an answer for wins. A column it has nothing in
+  // keeps whatever this phone already knew, so a phone that set a schedule up
+  // before the account could hold the whole of it does not lose the half it
+  // cannot carry yet.
+  const trigger = TRIGGERS.includes(row.trigger as ScheduleTrigger)
+    ? (row.trigger as ScheduleTrigger)
+    : (match?.trigger ?? 'time');
+
   return {
-    // The trigger, the place and the plan live on this phone until the
-    // schedules table carries them, so a row from the account keeps whatever
-    // the phone already knew rather than blanking it.
-    trigger: match?.trigger ?? 'time',
-    offsetMinutes: match?.offsetMinutes ?? 0,
+    trigger,
+    offsetMinutes: row.offset_minutes ?? match?.offsetMinutes ?? 0,
+    // The place a run looks after is still only on this phone: the account
+    // knows the area, and the building it sits in comes with it.
     placeId: match?.placeId ?? null,
     placeName: match?.placeName ?? null,
-    planId: match?.planId ?? null,
-    planName: match?.planName ?? null,
+    planId: plan?.id ?? match?.planId ?? null,
+    planName: plan?.name ?? match?.planName ?? null,
+    quietStart: trimSeconds(row.quiet_start) ?? match?.quietStart ?? null,
+    quietEnd: trimSeconds(row.quiet_end) ?? match?.quietEnd ?? null,
+    scope: match?.scope ?? 'user',
     id: match?.id ?? `sch_${row.id}`,
-    name: match?.name ?? sound.name,
+    name: match?.name ?? plan?.name ?? sound.name,
     profileId: sound.id,
     profileName: sound.name,
     days: row.days ?? [],
@@ -250,6 +292,39 @@ export function scheduleFromRow(
     updatedAt: remoteTime(row),
     remoteId: row.id,
   };
+}
+
+/** The same row, going the other way. Both tables take exactly this. */
+export function scheduleToRow(
+  schedule: Schedule,
+  remoteProfileId: string,
+  remotePlan: string | null,
+): ScheduleRow {
+  return {
+    id: schedule.remoteId ?? '',
+    zone_id: schedule.zoneId,
+    profile_id: remoteProfileId,
+    days: schedule.days,
+    start_time: minutesToTime(schedule.startMinutes),
+    end_time: minutesToTime(schedule.endMinutes),
+    enabled: schedule.enabled,
+    executor: schedule.executor,
+    trigger: schedule.trigger,
+    offset_minutes: schedule.offsetMinutes,
+    plan_id: remotePlan,
+    quiet_start: padSeconds(schedule.quietStart),
+    quiet_end: padSeconds(schedule.quietEnd),
+  };
+}
+
+/** The columns both schedule tables answer with. */
+const SCHEDULE_COLUMNS =
+  'id, zone_id, profile_id, days, start_time, end_time, enabled, executor, trigger, offset_minutes, plan_id, quiet_start, quiet_end, updated_at, created_at';
+
+/** What a write sends: everything but the id the account owns. */
+function schedulePayload(row: ScheduleRow): Record<string, unknown> {
+  const { id: _id, updated_at: _u, created_at: _c, ...rest } = row;
+  return rest;
 }
 
 export interface DeviceRow extends RemoteRow {
@@ -380,14 +455,6 @@ export interface ProtectionPlanRow extends RemoteRow {
   ends_on?: string | null;
 }
 
-/** "22:00:00" from the server reads as "22:00" on a card. */
-export function trimSeconds(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const [h, m] = value.split(':');
-  if (h === undefined || m === undefined) return null;
-  return `${h}:${m}`;
-}
-
 export function planFromRow(
   row: ProtectionPlanRow,
   match: ProtectionPlan | undefined,
@@ -507,6 +574,7 @@ async function runOnce(): Promise<SyncReport> {
   await syncPlaces(sb, userId, report);
   await syncPlans(sb, userId, report);
   await syncSchedules(sb, userId, report);
+  await syncOrgSchedules(sb, report);
   await syncSpeakers(sb, userId, report);
   await pushPlays(sb, userId, report);
 
@@ -702,18 +770,48 @@ async function syncPlans(sb: SupabaseClient, userId: string, report: SyncReport)
 
 /* ── schedules ────────────────────────────────────────────────────────────── */
 
+/** The sound and the plan a schedule row points at, by name, on this phone. */
+export function scheduleLookups(): ScheduleLookups {
+  return {
+    soundFor: (remoteId) => {
+      const sound = useProfiles.getState().byId(localSoundId(remoteId) ?? '');
+      return sound
+        ? { id: sound.id, name: sound.name }
+        : { id: SYSTEM_PROFILES[0].id, name: SYSTEM_PROFILES[0].name };
+    },
+    planFor: (remoteId) => {
+      const id = localPlanId(remoteId);
+      if (!id) return null;
+      const mine = useProtectionPlans.getState().byId(id);
+      if (mine) return { id: mine.id, name: mine.name };
+      const theirs = useOrgPlans.getState().byId(id);
+      return theirs ? { id: theirs.id, name: theirs.name } : null;
+    },
+  };
+}
+
+/**
+ * Puts the merged half of one list back without touching the other half.
+ *
+ * A person's own times and a business's times live in the same list on this
+ * phone and in two different tables in the account, so each pass replaces only
+ * the rows it is responsible for.
+ */
+function keepSchedules(scope: Schedule['scope'], merged: Schedule[]): void {
+  const others = useSchedules.getState().schedules.filter((s) => s.scope !== scope);
+  useSchedules.getState().setAll([...merged, ...others]);
+}
+
 async function syncSchedules(
   sb: SupabaseClient,
   userId: string,
   report: SyncReport,
 ): Promise<void> {
-  const local = useSchedules.getState().schedules;
+  const local = useSchedules.getState().schedules.filter((s) => s.scope === 'user');
 
   const { data, error } = await sb
     .from('user_schedules')
-    .select(
-      'id, zone_id, profile_id, days, start_time, end_time, enabled, executor, updated_at, created_at',
-    )
+    .select(SCHEDULE_COLUMNS)
     .eq('user_id', userId);
 
   if (error) {
@@ -721,18 +819,12 @@ async function syncSchedules(
     return;
   }
 
-  const nameFor = (remoteId: string | null) => {
-    const sound = useProfiles.getState().byId(localSoundId(remoteId) ?? '');
-    return sound
-      ? { id: sound.id, name: sound.name }
-      : { id: SYSTEM_PROFILES[0].id, name: SYSTEM_PROFILES[0].name };
-  };
-
+  const lookups = scheduleLookups();
   const merged = mergeCollections(local, (data ?? []) as ScheduleRow[], (row, match) =>
-    scheduleFromRow(row, match, nameFor),
+    scheduleFromRow(row, match, lookups),
   );
 
-  useSchedules.getState().setAll(merged.keep);
+  keepSchedules('user', merged.keep);
   report.pulled += Math.max(0, merged.keep.length - local.length);
 
   for (const schedule of merged.push) {
@@ -740,13 +832,7 @@ async function syncSchedules(
     if (!profileId) continue; // the sound has not reached the account yet
     const payload = {
       user_id: userId,
-      zone_id: schedule.zoneId,
-      profile_id: profileId,
-      days: schedule.days,
-      start_time: minutesToTime(schedule.startMinutes),
-      end_time: minutesToTime(schedule.endMinutes),
-      enabled: schedule.enabled,
-      executor: schedule.executor,
+      ...schedulePayload(scheduleToRow(schedule, profileId, remotePlanId(schedule.planId))),
     };
     if (schedule.remoteId) {
       const { error: e } = await sb
@@ -757,6 +843,67 @@ async function syncSchedules(
     } else {
       const { data: created, error: e } = await sb
         .from('user_schedules')
+        .insert(payload)
+        .select('id')
+        .single();
+      if (!e && created) {
+        useSchedules.getState().markSaved(schedule.id, (created as { id: string }).id);
+        report.pushed += 1;
+      }
+    }
+  }
+}
+
+/**
+ * The times a business runs on, which belong to the areas rather than to one
+ * person's phone.
+ *
+ * Everyone on the team reads them. Only a manager may change one, which is
+ * what the account already says, so a teammate's phone takes what it is given
+ * and sends nothing back.
+ */
+async function syncOrgSchedules(sb: SupabaseClient, report: SyncReport): Promise<void> {
+  const { mode, orgId, places } = usePlaces.getState();
+  if (mode !== 'business' || !orgId) return;
+
+  const areaIds = places.flatMap((p) => p.areas.map((a) => a.id));
+  if (areaIds.length === 0) return;
+
+  const local = useSchedules.getState().schedules.filter((s) => s.scope === 'org');
+
+  const { data, error } = await sb.from('schedules').select(SCHEDULE_COLUMNS).in('zone_id', areaIds);
+
+  if (error) {
+    if (isMissingOnServer(error)) report.skipped.push('business schedules');
+    return;
+  }
+
+  const lookups = scheduleLookups();
+  const merged = mergeCollections(local, (data ?? []) as ScheduleRow[], (row, match) =>
+    scheduleFromRow(row, match, lookups),
+  );
+
+  keepSchedules(
+    'org',
+    merged.keep.map((s) => ({ ...s, scope: 'org' as const })),
+  );
+  report.pulled += Math.max(0, merged.keep.length - local.length);
+
+  if (!can(useAccount.getState().activeOrgRole, 'schedules')) return;
+
+  for (const schedule of merged.push) {
+    const profileId = remoteSoundId(schedule.profileId);
+    // A business time belongs to an area. One with no area has nowhere to go.
+    if (!profileId || !schedule.zoneId) continue;
+    const payload = schedulePayload(
+      scheduleToRow(schedule, profileId, remotePlanId(schedule.planId)),
+    );
+    if (schedule.remoteId) {
+      const { error: e } = await sb.from('schedules').update(payload).eq('id', schedule.remoteId);
+      if (!e) report.pushed += 1;
+    } else {
+      const { data: created, error: e } = await sb
+        .from('schedules')
         .insert(payload)
         .select('id')
         .single();
