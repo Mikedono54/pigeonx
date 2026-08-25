@@ -19,6 +19,10 @@ export interface TimelineItem {
   profileName: string;
   placeId: string | null;
   placeName: string | null;
+  /** the building a business run happened in, and the part of it */
+  locationId?: string | null;
+  locationName?: string | null;
+  areaName?: string | null;
   outputKind: string;
   result: SessionResult | null;
 }
@@ -72,6 +76,19 @@ export function itemName(item: TimelineItem): string {
   return item.planName ?? item.profileName;
 }
 
+/**
+ * Where it played: "Main Street Hotel · Roof".
+ *
+ * A business has buildings with parts inside them, and a run in one of them is
+ * only placed by saying both. One person's own place is one name, and a run
+ * that belonged to nowhere says nothing rather than an empty gap.
+ */
+export function itemWhere(item: TimelineItem): string | null {
+  const both = [item.locationName, item.areaName].filter(Boolean);
+  if (both.length > 0) return both.join(' · ');
+  return item.placeName;
+}
+
 /** "15 min", or the honest answer for a run that never finished. */
 export function durationLabel(item: TimelineItem): string {
   if (item.endedAt === null) return 'Still going';
@@ -91,15 +108,18 @@ export type ResultFilter = SessionResult | 'none';
 export interface TimelineFilters {
   /** null means every place, including runs that belonged to none */
   placeId?: string | null;
+  /** the building a business is looking at, for a team's own list */
+  locationId?: string | null;
   result?: ResultFilter | null;
 }
 
 export function filterTimeline<T extends TimelineItem>(
   items: T[],
-  { placeId = null, result = null }: TimelineFilters = {},
+  { placeId = null, locationId = null, result = null }: TimelineFilters = {},
 ): T[] {
   return items.filter((item) => {
     if (placeId && item.placeId !== placeId) return false;
+    if (locationId && item.locationId !== locationId) return false;
     if (result === 'none') return item.result === null;
     if (result && item.result !== result) return false;
     return true;

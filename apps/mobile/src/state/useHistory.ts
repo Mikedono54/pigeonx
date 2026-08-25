@@ -21,6 +21,11 @@ export interface SessionEntry {
   /** the place on this phone this run looked after */
   placeId: string | null;
   placeName: string | null;
+  /** the building in a business this run happened in, when it was one */
+  locationId: string | null;
+  locationName: string | null;
+  /** the part of that building: a roof, a patio */
+  areaName: string | null;
   /** the protection plan that ran it, when a plan did */
   planId: string | null;
   planName: string | null;
@@ -62,8 +67,22 @@ interface HistoryState {
       | 'placeName'
       | 'planId'
       | 'planName'
+      | 'locationId'
+      | 'locationName'
+      | 'areaName'
     > &
-      Partial<Pick<SessionEntry, 'placeId' | 'placeName' | 'planId' | 'planName'>>
+      Partial<
+        Pick<
+          SessionEntry,
+          | 'placeId'
+          | 'placeName'
+          | 'planId'
+          | 'planName'
+          | 'locationId'
+          | 'locationName'
+          | 'areaName'
+        >
+      >
   ) => SessionEntry;
   closeEntry: (id: string, endedAt: number) => SessionEntry | undefined;
   /** Records what a person said happened, once. */
@@ -101,6 +120,9 @@ export const useHistory = create<HistoryState>()(
           placeName: e.placeName ?? null,
           planId: e.planId ?? null,
           planName: e.planName ?? null,
+          locationId: e.locationId ?? null,
+          locationName: e.locationName ?? null,
+          areaName: e.areaName ?? null,
           id: uid('ses'),
           endedAt: null,
           remoteId: null,
@@ -200,7 +222,7 @@ export const useHistory = create<HistoryState>()(
       name: STORAGE_KEYS.history,
       storage: persistStorage,
       partialize: (s) => ({ entries: s.entries, queue: s.queue }),
-      version: 2,
+      version: 3,
       // Every run somebody already has on their phone predates places, plans
       // and the question. It keeps its place in the timeline and reads as a
       // session nobody was asked about, which is exactly what it is.
@@ -215,6 +237,9 @@ export const useHistory = create<HistoryState>()(
             placeName: e.placeName ?? null,
             planId: e.planId ?? null,
             planName: e.planName ?? null,
+            locationId: e.locationId ?? null,
+            locationName: e.locationName ?? null,
+            areaName: e.areaName ?? null,
             result: e.result ?? null,
             resultAsked: e.resultAsked ?? true,
           })),

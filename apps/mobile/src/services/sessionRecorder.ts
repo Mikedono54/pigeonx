@@ -133,6 +133,9 @@ export class SessionRecorder {
     placeName?: string | null;
     planId?: string | null;
     planName?: string | null;
+    locationId?: string | null;
+    locationName?: string | null;
+    areaName?: string | null;
   }): Promise<SessionEntry> {
     const h = useHistory.getState();
     const entry = h.addEntry({
@@ -148,6 +151,9 @@ export class SessionRecorder {
       placeName: args.placeName ?? null,
       planId: args.planId ?? null,
       planName: args.planName ?? null,
+      locationId: args.locationId ?? null,
+      locationName: args.locationName ?? null,
+      areaName: args.areaName ?? null,
     });
 
     if (!this.sink.isAvailable()) {

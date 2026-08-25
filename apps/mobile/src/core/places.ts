@@ -9,9 +9,18 @@
  * at.
  */
 
+import type { BirdTarget } from './personalization';
+import type { FleetStatus } from './speakerStatus';
+
 export interface Speaker {
   id: string;
   name: string;
+  /**
+   * What the account says about it: online, offline, or nobody has heard from
+   * it yet. Only a speaker a business keeps has one, because only that one is
+   * a row somewhere that reports in.
+   */
+  status?: FleetStatus;
 }
 
 export interface Area {
@@ -27,6 +36,10 @@ export interface Place {
   id: string;
   name: string;
   areas: Area[];
+  /** the birds this building is protecting against, when somebody answered */
+  target?: BirdTarget | null;
+  /** true when a sound people can hear would be a problem here */
+  limitAudible?: boolean;
 }
 
 /** Whether an area is playing right now, and since when. */

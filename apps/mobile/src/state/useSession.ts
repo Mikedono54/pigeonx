@@ -31,6 +31,9 @@ interface SessionState {
   /** the area this phone plays into, when the business has areas */
   zoneId: string | null;
   zoneName: string | null;
+  /** the building that area is part of */
+  locationId: string | null;
+  locationName: string | null;
 
   /**
    * True once somebody picked one sound by hand.
@@ -72,7 +75,11 @@ interface SessionState {
   setOutput: (output: OutputKind, deviceId?: string | null, deviceName?: string | null) => void;
   setVolume: (v: number) => void;
   setDuration: (d: DurationChoice) => void;
-  setArea: (zoneId: string | null, zoneName?: string | null) => void;
+  setArea: (
+    zoneId: string | null,
+    zoneName?: string | null,
+    place?: { id: string; name: string } | null,
+  ) => void;
   setParam: (key: string, value: number) => void;
   /** Puts the place's plan back in charge of what plays. */
   usePlanAgain: () => void;
@@ -153,6 +160,8 @@ export const useSession = create<SessionState>()(
       deviceName: null,
       zoneId: null,
       zoneName: null,
+      locationId: null,
+      locationName: null,
       soundOverride: false,
 
       engineState: 'idle',
@@ -233,7 +242,13 @@ export const useSession = create<SessionState>()(
         getEngine().setVolume(v);
       },
       setDuration: (d) => set({ duration: d }),
-      setArea: (zoneId, zoneName) => set({ zoneId, zoneName: zoneName ?? null }),
+      setArea: (zoneId, zoneName, place) =>
+        set({
+          zoneId,
+          zoneName: zoneName ?? null,
+          locationId: place?.id ?? null,
+          locationName: place?.name ?? null,
+        }),
       setParam: (key, value) => {
         getEngine().setParam(key, value);
       },
@@ -329,6 +344,9 @@ export const useSession = create<SessionState>()(
           placeName: place?.name ?? null,
           planId: plan?.id ?? null,
           planName: plan?.name ?? null,
+          locationId: get().locationId,
+          locationName: get().locationName,
+          areaName: get().zoneName,
         });
 
         const notificationId = await presentRunningNotification({
@@ -406,6 +424,8 @@ export const useSession = create<SessionState>()(
         deviceName: s.deviceName,
         zoneId: s.zoneId,
         zoneName: s.zoneName,
+        locationId: s.locationId,
+        locationName: s.locationName,
         soundOverride: s.soundOverride,
       }),
     },

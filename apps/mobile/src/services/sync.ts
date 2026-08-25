@@ -152,6 +152,12 @@ export interface HistoryRow extends RemoteRow {
   place_name?: string | null;
   user_place_id?: string | null;
   plan_id?: string | null;
+  /** the building and the part of it, for a run inside a business */
+  location_id?: string | null;
+  location_name?: string | null;
+  zone_name?: string | null;
+  /** who ran it. Only they may say how it went. */
+  user_id?: string | null;
 }
 
 const OUTPUT_KINDS: OutputKind[] = ['phone', 'bt_speaker', 'pigeonx_emitter', 'simulated'];
@@ -186,6 +192,9 @@ export function historyRowToEntry(
     deviceId: null,
     placeId: null,
     placeName: row.place_name ?? null,
+    locationId: row.location_id ?? null,
+    locationName: row.location_name ?? null,
+    areaName: row.zone_name ?? null,
     planId: null,
     planName: row.plan_name ?? null,
     result,

@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { BirdTarget } from '../core/personalization';
 import type { Area, Place, Speaker } from '../core/places';
+import { fleetStatus } from '../core/speakerStatus';
 import { getSupabase, isMissingOnServer, plainMessage } from './supabase';
 
 /**
@@ -27,7 +29,25 @@ function str(row: Row, key: string): string | null {
 }
 
 export function speakerFromRow(row: Row): Speaker {
-  return { id: str(row, 'id') ?? '', name: str(row, 'name') ?? 'Speaker' };
+  return {
+    id: str(row, 'id') ?? '',
+    name: str(row, 'name') ?? 'Speaker',
+    status: fleetStatus(row.status),
+  };
+}
+
+const BIRD_TARGETS: BirdTarget[] = [
+  'pigeons',
+  'gulls',
+  'starlings',
+  'corvids',
+  'mixed_small',
+  'unsure',
+];
+
+/** The birds a building answered for, or nothing when nobody has. */
+export function targetFromRow(row: Row): BirdTarget | null {
+  return BIRD_TARGETS.includes(row.target as BirdTarget) ? (row.target as BirdTarget) : null;
 }
 
 export function areaFromRow(row: Row, speakers: Speaker[]): Area {
@@ -63,6 +83,8 @@ export function buildPlaces(locations: Row[], zones: Row[], devices: Row[]): Pla
     id: str(location, 'id') ?? '',
     name: str(location, 'name') ?? 'Place',
     areas: areasByLocation.get(str(location, 'id') ?? '') ?? [],
+    target: targetFromRow(location),
+    limitAudible: location.limit_audible === true,
   }));
 }
 
@@ -72,7 +94,11 @@ export async function fetchPlaces(orgId: string): Promise<RemoteOutcome<Place[]>
   const sb = getSupabase();
   if (!sb) return { ok: false, message: NO_ACCOUNT };
 
-  const locations = await sb.from('locations').select('id, name').eq('org_id', orgId).order('name');
+  const locations = await sb
+    .from('locations')
+    .select('id, name, target, limit_audible')
+    .eq('org_id', orgId)
+    .order('name');
   if (locations.error) {
     return {
       ok: false,
@@ -96,7 +122,7 @@ export async function fetchPlaces(orgId: string): Promise<RemoteOutcome<Place[]>
   const devices =
     zoneIds.length === 0
       ? { data: [], error: null }
-      : await sb.from('devices').select('id, name, zone_id').in('zone_id', zoneIds);
+      : await sb.from('devices').select('id, name, zone_id, status').in('zone_id', zoneIds);
 
   return {
     ok: true,
