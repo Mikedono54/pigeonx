@@ -17,6 +17,7 @@ export type Feature =
   | 'schedules.device'
   | 'bluetooth.remember'
   | 'history.unlimited'
+  | 'places.multiple'
   | 'zones'
   | 'team'
   | 'dashboard'
@@ -41,6 +42,7 @@ export const FEATURE_MIN_PLAN: Record<Feature, Plan> = {
   'schedules.device': 'business',
   'bluetooth.remember': 'pro',
   'history.unlimited': 'pro',
+  'places.multiple': 'pro',
   zones: 'business',
   team: 'business',
   dashboard: 'business',
@@ -51,6 +53,7 @@ export const FEATURE_MIN_PLAN: Record<Feature, Plan> = {
 /** Numeric caps. `null` means unlimited; `0` means the feature is off entirely. */
 export const LIMITS = {
   savedProfiles: { free: 1, pro: null, business: null, enterprise: null },
+  places: { free: 1, pro: null, business: null, enterprise: null },
   sessionMinutes: { free: 15, pro: null, business: null, enterprise: null },
   historyDays: { free: 7, pro: null, business: null, enterprise: null },
   teamMembers: { free: 0, pro: 0, business: 5, enterprise: null },

@@ -113,3 +113,16 @@ describe('FREE_SYSTEM_PROFILE_IDS', () => {
     expect(new Set(FREE_SYSTEM_PROFILE_IDS).size).toBe(3);
   });
 });
+
+describe('places', () => {
+  it('free users get one place and no multi-place feature', () => {
+    expect(can('free', 'places.multiple')).toBe(false);
+    expect(limit('free', 'places')).toBe(1);
+  });
+  it('pro and up get multiple places', () => {
+    expect(can('pro', 'places.multiple')).toBe(true);
+    expect(limit('pro', 'places')).toBeNull();
+    expect(can('business', 'places.multiple')).toBe(true);
+    expect(limit('enterprise', 'places')).toBeNull();
+  });
+});
