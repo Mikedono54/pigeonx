@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Share, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { ChevronLeft, Share2, Trash2, UserPlus } from 'lucide-react-native';
+import { ChevronLeft, HelpCircle, Share2, Trash2, UserPlus } from 'lucide-react-native';
 
 import {
   Button,
   EmptyState,
+  ListRow,
   Screen,
   SectionHeader,
   Segmented,
@@ -14,6 +15,7 @@ import {
   Touchable,
   useToast,
 } from '../src/components';
+import { ROLE_POWERS, TEAM_ROLES, WHO_CAN_DO_WHAT } from '../src/core/team';
 import { looksLikeEmail } from '../src/services/auth';
 import {
   inviteTeammate,
@@ -37,6 +39,7 @@ export default function TeamScreen() {
 
   const [team, setTeam] = useState<Teammate[]>([]);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [powersOpen, setPowersOpen] = useState(false);
   const [link, setLink] = useState<string | null>(null);
 
   const owner = myRole === 'owner';
@@ -119,6 +122,15 @@ export default function TeamScreen() {
         </View>
       )}
 
+      <View style={styles.powers}>
+        <ListRow
+          title={WHO_CAN_DO_WHAT}
+          meta="Owner, Manager and Staff, in three sentences."
+          icon={HelpCircle}
+          onPress={() => setPowersOpen(true)}
+        />
+      </View>
+
       {link ? (
         <View style={styles.linkBlock}>
           <SectionHeader title="Send them this link" />
@@ -142,6 +154,19 @@ export default function TeamScreen() {
           icon={UserPlus}
         />
       </View>
+
+      <Sheet open={powersOpen} title={WHO_CAN_DO_WHAT} onClose={() => setPowersOpen(false)}>
+        {TEAM_ROLES.slice()
+          .reverse()
+          .map((role) => (
+            <Text key={role} style={styles.power}>
+              {ROLE_POWERS[role]}
+            </Text>
+          ))}
+        <Text style={styles.hint}>
+          Everyone on the team sees the same places, the same speakers and the same history.
+        </Text>
+      </Sheet>
 
       <InviteSheet
         open={inviteOpen}
@@ -266,6 +291,8 @@ const sheet = themed((c, t) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  powers: { marginTop: space.lg, borderWidth: 1, borderColor: c.border },
+  power: { ...t.body, color: c.ink },
   linkBlock: { marginTop: space.lg, gap: space.sm },
   link: {
     ...t.caption,

@@ -13,12 +13,14 @@ import {
   groupTimeline,
   itemName,
   itemTime,
+  itemWhere,
   resultLabel,
   type ResultFilter,
 } from '../src/core/timeline';
 import { useEntitlement } from '../src/hooks/useEntitlement';
 import { fetchRemoteHistory, mergeHistory } from '../src/services/sync';
 import { useHistory, type SessionEntry } from '../src/state/useHistory';
+import { usePlaces } from '../src/state/usePlaces';
 import { usePlacesHome } from '../src/state/usePlacesHome';
 import { font, icon, space, themed, useTheme, useThemedStyles } from '../src/theme';
 
@@ -37,6 +39,11 @@ export default function HistoryScreen() {
   const ent = useEntitlement();
   const entries = useHistory((s) => s.entries);
   const places = usePlacesHome((s) => s.places);
+  // A business looks after buildings, and every run in any of them belongs on
+  // this screen. The chips are those buildings; a person with no business
+  // filters by their own places instead.
+  const business = usePlaces((s) => s.mode) === 'business';
+  const locations = usePlaces((s) => s.places);
   const historyDays = ent.limit('historyDays');
   const [elsewhere, setElsewhere] = useState<SessionEntry[]>([]);
   const [placeFilter, setPlaceFilter] = useState<string | null>(null);
@@ -63,15 +70,21 @@ export default function HistoryScreen() {
   }, [elsewhere, entries, historyDays]);
 
   const shown = useMemo(
-    () => filterTimeline(visible, { placeId: placeFilter, result: resultFilter }),
-    [placeFilter, resultFilter, visible],
+    () =>
+      filterTimeline(visible, {
+        placeId: business ? null : placeFilter,
+        locationId: business ? placeFilter : null,
+        result: resultFilter,
+      }),
+    [business, placeFilter, resultFilter, visible],
   );
 
   const days = useMemo(() => groupTimeline(shown), [shown]);
 
   // A filter row nobody can use is noise. Places show up once there is more
   // than one, results once anybody has answered the question.
-  const showPlaces = places.length > 1;
+  const chips = business ? locations : places;
+  const showPlaces = business ? locations.length > 0 : places.length > 1;
   const showResults = visible.some((e) => e.result !== null);
   const filtered = placeFilter !== null || resultFilter !== null;
 
@@ -102,7 +115,7 @@ export default function HistoryScreen() {
                 selected={placeFilter === null}
                 onPress={() => setPlaceFilter(null)}
               />
-              {places.map((p) => (
+              {chips.map((p) => (
                 <Chip
                   key={p.id}
                   label={p.name}
@@ -189,7 +202,7 @@ export default function HistoryScreen() {
                         </Text>
                         <Text style={styles.where} numberOfLines={1}>
                           {[
-                            item.placeName,
+                            itemWhere(item),
                             SPEAKER_LABEL[item.outputKind as OutputKind] ?? item.outputKind,
                             durationLabel(item),
                           ]

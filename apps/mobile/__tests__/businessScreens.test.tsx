@@ -38,13 +38,39 @@ jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
 jest.mock('../src/services/activity', () => ({ refreshPlaceActivity: async () => {} }));
 jest.mock('../src/services/live', () => ({ watchLive: () => () => {} }));
 
+// What played somewhere else comes down the same pipe as everything else. The
+// rows are put straight into the list instead.
+jest.mock('../src/services/business', () => ({
+  ...jest.requireActual('../src/services/business'),
+  listTeam: async () => [
+    { id: 'm1', userId: 'u1', role: 'owner', label: 'You', addedAt: null, you: true },
+    {
+      id: 'm2',
+      userId: 'u2',
+      role: 'manager',
+      label: 'dana@example.com',
+      addedAt: null,
+      you: false,
+    },
+    { id: 'm3', userId: 'u3', role: 'staff', label: 'sam@example.com', addedAt: null, you: false },
+  ],
+}));
+
+jest.mock('../src/services/sync', () => ({
+  ...jest.requireActual('../src/services/sync'),
+  fetchRemoteHistory: async () => [],
+}));
+
+import HistoryScreen from '../app/history';
 import LocationScreen from '../app/location';
+import TeamScreen from '../app/team';
 import PlacesScreen from '../app/(tabs)/places';
 import { ToastProvider } from '../src/components';
 import type { OrgPlan } from '../src/state/useOrgPlans';
 import { useAccount } from '../src/state/useAccount';
 import { useOrgPlans } from '../src/state/useOrgPlans';
 import { usePlaces } from '../src/state/usePlaces';
+import { useHistory, type SessionEntry } from '../src/state/useHistory';
 import { useSchedules } from '../src/state/useSchedules';
 import { useSession } from '../src/state/useSession';
 
@@ -132,8 +158,36 @@ function aBusiness(over: { role?: 'owner' | 'manager' | 'staff' } = {}) {
   useSession.setState({ zoneId: null, engineState: 'idle', startedAt: null });
 }
 
+function aRun(over: Partial<SessionEntry> = {}): SessionEntry {
+  return {
+    id: `ses_${Math.random()}`,
+    profileId: 'sys_pigeon_18k',
+    profileName: 'High-frequency deterrent',
+    outputKind: 'phone',
+    peakFreqHz: 18000,
+    startedAt: Date.now() - 60 * 60 * 1000,
+    endedAt: Date.now() - 45 * 60 * 1000,
+    source: 'manual',
+    zoneId: 'zone_roof',
+    deviceId: null,
+    placeId: null,
+    placeName: null,
+    locationId: 'loc_1',
+    locationName: 'Main Street Hotel',
+    areaName: 'Roof',
+    planId: null,
+    planName: 'Roof Rotation',
+    result: null,
+    resultAsked: true,
+    remoteId: 'r1',
+    synced: true,
+    ...over,
+  };
+}
+
 beforeEach(() => {
   params.current = {};
+  useHistory.setState({ entries: [], queue: [] });
   aBusiness();
 });
 
@@ -259,5 +313,60 @@ describe('one building, opened up', () => {
   it('says so plainly when the place is not there any more', async () => {
     params.current = { id: 'gone' };
     expect(words(await paint(<LocationScreen />))).toContain('That place is gone');
+  });
+});
+
+describe('what played, everywhere the team looks after', () => {
+  it('names the building and the area on every line', async () => {
+    useHistory.setState({ entries: [aRun()], queue: [] });
+
+    const said = words(await paint(<HistoryScreen />)).join('|');
+    expect(said).toContain('Roof Rotation');
+    expect(said).toContain('Main Street Hotel · Roof');
+  });
+
+  it('offers one chip a building, and Everywhere', async () => {
+    usePlaces.setState({
+      places: [
+        ...usePlaces.getState().places,
+        { id: 'loc_2', name: 'Harbour Dock', areas: [] },
+      ],
+    });
+    useHistory.setState({ entries: [aRun()], queue: [] });
+
+    const said = words(await paint(<HistoryScreen />));
+    expect(said).toContain('Everywhere');
+    expect(said).toContain('Main Street Hotel');
+    expect(said).toContain('Harbour Dock');
+  });
+
+  it('says which run it could not place rather than leaving a gap', async () => {
+    useHistory.setState({
+      entries: [aRun({ locationId: null, locationName: null, areaName: null })],
+      queue: [],
+    });
+
+    const said = words(await paint(<HistoryScreen />)).join('|');
+    expect(said).toContain('Roof Rotation');
+    expect(said).not.toContain('· ·');
+  });
+});
+
+describe('the team, and what each of them may do', () => {
+  it('names every role the way the account does', async () => {
+    const said = words(await paint(<TeamScreen />));
+
+    expect(said).toContain('Owner');
+    expect(said).toContain('Manager');
+    expect(said).toContain('Staff');
+    expect(said).not.toContain('Teammate');
+  });
+
+  it('puts who can do what one tap away', async () => {
+    expect(words(await paint(<TeamScreen />))).toContain('Who can do what');
+  });
+
+  it('still invites by email', async () => {
+    expect(words(await paint(<TeamScreen />))).toContain('Invite by email');
   });
 });
