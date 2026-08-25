@@ -3,13 +3,23 @@ import { Linking, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Music, Play, SlidersHorizontal, Speaker, Square } from 'lucide-react-native';
+import {
+  ChevronDown,
+  ListMusic,
+  Music,
+  Play,
+  Plus,
+  SlidersHorizontal,
+  Speaker,
+  Square,
+} from 'lucide-react-native';
 
 import {
   Banner,
   BlockButton,
   Chip,
   ListRow,
+  ResultSheet,
   Sheet,
   Slider,
   SpeakerReach,
@@ -20,6 +30,18 @@ import {
 } from '../../src/components';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { useElapsed } from '../../src/hooks/useElapsed';
+import {
+  HOME_ATTENTION_LINE,
+  HOME_OFF_LINE,
+  homeState,
+  nextSessionLine,
+} from '../../src/core/homeState';
+import {
+  BIRD_TARGET_LABELS,
+  summaryLine,
+  tallyResults,
+  type SessionResult,
+} from '../../src/core/personalization';
 import {
   AUDIBLE_LABEL,
   SPEAKER_HINT,
@@ -33,10 +55,13 @@ import {
   type SweepParams,
   type ToneParams,
 } from '../../src/core/profiles';
-import { nextRun } from '../../src/core/scheduler';
+import { sessionRecorder } from '../../src/services/sessionRecorder';
 import { useAccount } from '../../src/state/useAccount';
+import { useHistory } from '../../src/state/useHistory';
+import { usePlacesHome, type HomePlace } from '../../src/state/usePlacesHome';
 import { useProfiles } from '../../src/state/useProfiles';
-import { formatMinutes, useSchedules } from '../../src/state/useSchedules';
+import { describePlan, useProtectionPlans } from '../../src/state/useProtectionPlans';
+import { useSchedules } from '../../src/state/useSchedules';
 import { formatElapsed, useSession } from '../../src/state/useSession';
 import type { DurationChoice } from '../../src/state/useSession';
 import { space, themed, useTheme, useThemedStyles } from '../../src/theme';
@@ -50,13 +75,7 @@ const HOW_LONG: { value: DurationChoice; label: string }[] = [
 
 const SPEAKERS: OutputKind[] = ['phone', 'bt_speaker', 'pigeonx_emitter', 'simulated'];
 
-/** Ninety minutes. Any further off and the block stays plain paper. */
-const SOON_MS = 90 * 60 * 1000;
-
 const BLUETOOTH_NOTE = 'Pair it in your phone settings first.';
-
-/** What PigeonX is, in four words, under the word Off. */
-const BRAND_LINE = 'Press Start. Birds leave.';
 
 /**
  * The share of the screen the state block takes.
@@ -85,6 +104,8 @@ export default function HomeScreen() {
   const toast = useToast();
   const [speakerOpen, setSpeakerOpen] = useState(false);
   const [adjustOpen, setAdjustOpen] = useState(false);
+  const [placesOpen, setPlacesOpen] = useState(false);
+  const [playsOpen, setPlaysOpen] = useState(false);
 
   const profileId = useSession((s) => s.profileId);
   const playsOn = useSession((s) => s.output);
@@ -93,8 +114,12 @@ export default function HomeScreen() {
   const startedAt = useSession((s) => s.startedAt);
   const error = useSession((s) => s.error);
   const hitPlanCap = useSession((s) => s.hitPlanCap);
+  const soundOverride = useSession((s) => s.soundOverride);
+  const livePlanName = useSession((s) => s.planName);
+  const rotationAt = useSession((s) => s.rotationAt);
   const setPlaysOn = useSession((s) => s.setOutput);
   const setDuration = useSession((s) => s.setDuration);
+  const usePlanAgain = useSession((s) => s.usePlanAgain);
   const start = useSession((s) => s.start);
   const stop = useSession((s) => s.stop);
 
@@ -102,12 +127,34 @@ export default function HomeScreen() {
   const sound = byId(profileId);
 
   const speakers = useAccount((s) => s.devices);
+  const deviceId = useSession((s) => s.deviceId);
   const addTestSpeaker = useAccount((s) => s.addSimulatedDevice);
   const schedules = useSchedules((s) => s.schedules);
+  const nextUp = useSchedules((s) => s.nextUp);
+
+  const places = usePlacesHome((s) => s.places);
+  const activePlaceId = usePlacesHome((s) => s.activeId);
+  const setActivePlace = usePlacesHome((s) => s.setActive);
+  const canAddPlace = usePlacesHome((s) => s.canAdd);
+  const place = usePlacesHome((s) => s.active());
+
+  const plans = useProtectionPlans((s) => s.plans);
+  const activeByPlace = useProtectionPlans((s) => s.activeByPlace);
+  const plan = useMemo(() => {
+    const id = place ? activeByPlace[place.id] : undefined;
+    return id ? plans.find((p) => p.id === id) : undefined;
+  }, [activeByPlace, place, plans]);
+
+  const entries = useHistory((s) => s.entries);
+  const pending = useHistory((s) => s.entries.find((e) => e.endedAt !== null && !e.resultAsked));
+  const markAsked = useHistory((s) => s.markAsked);
 
   const elapsed = useElapsed(startedAt);
   const playing = engineState === 'running';
   const busy = engineState === 'loading';
+
+  /** What this Start will run: the place's plan, unless somebody said not this time. */
+  const runsPlan = plan !== undefined && !soundOverride;
 
   // A time a person already set, close enough to say out loud.
   const [minute, setMinute] = useState(() => Date.now());
@@ -117,12 +164,38 @@ export default function HomeScreen() {
     return () => clearInterval(tick);
   }, [schedules.length]);
 
-  const upNext = useMemo(() => {
-    const from = new Date(minute);
-    const found = nextRun(schedules, from);
-    if (!found || found.at.getTime() - from.getTime() > SOON_MS) return null;
-    return formatMinutes(found.window.startMinutes);
-  }, [minute, schedules]);
+  const nextAt = useMemo(() => {
+    void minute;
+    return nextUp()?.at ?? null;
+  }, [minute, nextUp]);
+
+  /**
+   * The speaker this place plays through is gone.
+   *
+   * We have no live speaker health, so this is the only version of it we can
+   * say honestly: you picked a speaker of your own, and the phone no longer
+   * has it. A place playing out of the phone is never in this state.
+   */
+  const speakerMissing = useMemo(() => {
+    if (playsOn === 'phone' || playsOn === 'bt_speaker') return false;
+    if (deviceId) return !speakers.some((d) => d.id === deviceId);
+    return speakers.length === 0;
+  }, [deviceId, playsOn, speakers]);
+
+  const state = homeState({ playing, speakerMissing, nextAt });
+
+  /** One line of counting, from what this person told us about this place. */
+  const reported = useMemo(() => {
+    if (!place) return null;
+    return summaryLine(
+      tallyResults(entries.filter((e) => e.placeId === place.id).map((e) => e.result)),
+    );
+  }, [entries, place]);
+
+  const upNextName = useMemo(() => {
+    void rotationAt;
+    return useSession.getState().upNext();
+  }, [rotationAt]);
 
   const pickSpeaker = useCallback(
     (o: OutputKind) => {
@@ -136,7 +209,7 @@ export default function HomeScreen() {
       setPlaysOn(o, o === 'simulated' ? (speakers[0]?.id ?? null) : null);
       setSpeakerOpen(false);
     },
-    [addTestSpeaker, setPlaysOn, speakers, toast]
+    [addTestSpeaker, setPlaysOn, speakers, toast],
   );
 
   const pickHowLong = useCallback(
@@ -144,44 +217,94 @@ export default function HomeScreen() {
       if (d === null && !ent.guard('session.unlimited')) return;
       setDuration(d);
     },
-    [ent, setDuration]
+    [ent, setDuration],
   );
 
   const onBigButton = useCallback(() => {
     if (playing) void stop();
-    else void start();
-  }, [playing, start, stop]);
+    else void start({ plan: runsPlan ? plan : null });
+  }, [plan, playing, runsPlan, start, stop]);
+
+  const addPlace = useCallback(() => {
+    setPlacesOpen(false);
+    if (!canAddPlace()) {
+      ent.guard('places.multiple');
+      return;
+    }
+    router.push('/place-setup');
+  }, [canAddPlace, ent]);
+
+  const answer = useCallback(
+    (result: SessionResult) => {
+      if (!pending) return;
+      void sessionRecorder.report(pending.id, result);
+    },
+    [pending],
+  );
 
   const room = frame || windowHeight - 90;
   const blockHeight = Math.max(
     STATE_BLOCK_MIN,
-    Math.min(Math.round(room * STATE_BLOCK_SHARE), room - CONTROLS_MIN)
+    Math.min(Math.round(room * STATE_BLOCK_SHARE), room - CONTROLS_MIN),
   );
 
+  const headline = playing
+    ? formatElapsed(elapsed)
+    : state === 'attention'
+      ? 'Check speaker'
+      : state === 'scheduled'
+        ? 'Ready'
+        : 'Off';
+
+  const line = playing
+    ? (upNextName ? `Up next: ${upNextName}` : 'You can lock the phone. The sound keeps going.')
+    : state === 'attention'
+      ? HOME_ATTENTION_LINE
+      : state === 'scheduled' && nextAt
+        ? nextSessionLine(nextAt, new Date(minute))
+        : HOME_OFF_LINE;
+
   return (
-    <View
-      style={styles.root}
-      onLayout={(e) => setFrame(e.nativeEvent.layout.height)}
-    >
+    <View style={styles.root} onLayout={(e) => setFrame(e.nativeEvent.layout.height)}>
       <StatusBar style={playing || dark ? 'light' : 'dark'} />
 
       <StateBlock
-        state={playing ? 'playing' : upNext ? 'soon' : 'off'}
-        label={playing ? 'Playing' : upNext ? `Starts ${upNext}` : undefined}
-        headline={playing ? formatElapsed(elapsed) : 'Off'}
+        state={playing ? 'playing' : state === 'attention' ? 'attention' : state === 'scheduled' ? 'soon' : 'off'}
+        label={playing ? (livePlanName ?? 'Playing') : undefined}
+        headline={headline}
         clock={playing}
-        line={playing ? 'You can lock the phone. The sound keeps going.' : BRAND_LINE}
+        line={line}
         topInset={insets.top}
         height={Math.max(180, blockHeight - insets.top)}
+        header={
+          place ? (
+            <Touchable
+              onPress={() => setPlacesOpen(true)}
+              accessibilityLabel={`${place.name}. ${BIRD_TARGET_LABELS[place.target]}, ${SPEAKER_LABEL[playsOn]}. Tap to switch place.`}
+              style={styles.placePress}
+            >
+              <View style={styles.placeRow}>
+                <View style={styles.placeText}>
+                  <Text
+                    style={[styles.placeName, { color: playing ? c.playOn : c.muted }]}
+                    numberOfLines={1}
+                  >
+                    {place.name}
+                  </Text>
+                  <Text
+                    style={[styles.placeMeta, { color: playing ? c.playOn : c.text }]}
+                    numberOfLines={1}
+                  >
+                    {BIRD_TARGET_LABELS[place.target]} · {SPEAKER_LABEL[playsOn]}
+                  </Text>
+                </View>
+                <ChevronDown size={18} color={playing ? c.playOn : c.muted} strokeWidth={2} />
+              </View>
+            </Touchable>
+          ) : null
+        }
       >
-        {playing ? (
-          <SpectrumBars
-            active
-            height={44}
-            color={c.playOn}
-            peakColor={c.energy}
-          />
-        ) : null}
+        {playing ? <SpectrumBars active height={44} color={c.playOn} peakColor={c.energy} /> : null}
       </StateBlock>
 
       <View style={styles.body}>
@@ -199,20 +322,32 @@ export default function HomeScreen() {
               onRetry={() => router.push('/paywall')}
             />
           </View>
+        ) : reported && state === 'off' ? (
+          <Text style={styles.reported}>{reported}</Text>
         ) : null}
 
         <View style={styles.list}>
-          <ListRow
-            icon={Music}
-            title={sound ? sound.name : 'No sound picked yet'}
-            meta={
-              sound
-                ? `${pitchLabel(sound)}. ${AUDIBLE_LABEL[audibleState(sound, playsOn)]}`
-                : undefined
-            }
-            onPress={() => router.navigate('/sounds')}
-            accessibilityLabel={`Sound, ${sound?.name ?? 'none picked yet'}. Tap to change.`}
-          />
+          {runsPlan && plan ? (
+            <ListRow
+              icon={ListMusic}
+              title={plan.name}
+              meta={describePlan(plan)}
+              onPress={() => setPlaysOpen(true)}
+              accessibilityLabel={`Protection plan, ${plan.name}. ${describePlan(plan)}. Tap to change what plays.`}
+            />
+          ) : (
+            <ListRow
+              icon={Music}
+              title={sound ? sound.name : 'No sound picked yet'}
+              meta={
+                sound
+                  ? `${pitchLabel(sound)}. ${AUDIBLE_LABEL[audibleState(sound, playsOn)]}`
+                  : undefined
+              }
+              onPress={() => (plan ? setPlaysOpen(true) : router.navigate('/sounds'))}
+              accessibilityLabel={`Sound, ${sound?.name ?? 'none picked yet'}. Tap to change.`}
+            />
+          )}
           <ListRow
             icon={Speaker}
             title={SPEAKER_LABEL[playsOn]}
@@ -238,20 +373,22 @@ export default function HomeScreen() {
           </Touchable>
         ) : null}
 
-        <View style={styles.howLong}>
-          <Text style={styles.fieldLabel}>How long</Text>
-          <View style={styles.chipRow}>
-            {HOW_LONG.map((d) => (
-              <Chip
-                key={String(d.value)}
-                label={d.label}
-                selected={duration === d.value}
-                locked={d.value === null && !ent.can('session.unlimited')}
-                onPress={() => pickHowLong(d.value)}
-              />
-            ))}
+        {runsPlan ? null : (
+          <View style={styles.howLong}>
+            <Text style={styles.fieldLabel}>How long</Text>
+            <View style={styles.chipRow}>
+              {HOW_LONG.map((d) => (
+                <Chip
+                  key={String(d.value)}
+                  label={d.label}
+                  selected={duration === d.value}
+                  locked={d.value === null && !ent.can('session.unlimited')}
+                  onPress={() => pickHowLong(d.value)}
+                />
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         <View style={styles.spacer} />
 
@@ -266,11 +403,58 @@ export default function HomeScreen() {
         />
       </View>
 
-      <Sheet
-        open={speakerOpen}
-        title="Where should it play?"
-        onClose={() => setSpeakerOpen(false)}
-      >
+      <Sheet open={placesOpen} title="Your places" onClose={() => setPlacesOpen(false)}>
+        <View style={styles.list}>
+          {places.map((p) => (
+            <PlaceRow
+              key={p.id}
+              place={p}
+              selected={p.id === activePlaceId}
+              onPress={() => {
+                setActivePlace(p.id);
+                setPlacesOpen(false);
+              }}
+            />
+          ))}
+          <ListRow
+            icon={Plus}
+            title="Add a place"
+            meta={canAddPlace() ? undefined : 'Pro keeps more than one'}
+            onPress={addPlace}
+          />
+        </View>
+      </Sheet>
+
+      <Sheet open={playsOpen} title="What should Start play?" onClose={() => setPlaysOpen(false)}>
+        <View style={styles.list}>
+          {plan ? (
+            <ListRow
+              icon={ListMusic}
+              title={plan.name}
+              meta={describePlan(plan)}
+              selected={runsPlan}
+              chevron={false}
+              onPress={() => {
+                usePlanAgain();
+                setPlaysOpen(false);
+              }}
+            />
+          ) : null}
+          <ListRow
+            icon={Music}
+            title={sound ? sound.name : 'Pick one sound'}
+            meta="One sound, this time only"
+            selected={!runsPlan}
+            chevron={false}
+            onPress={() => {
+              setPlaysOpen(false);
+              router.navigate('/sounds');
+            }}
+          />
+        </View>
+      </Sheet>
+
+      <Sheet open={speakerOpen} title="Where should it play?" onClose={() => setSpeakerOpen(false)}>
         <View style={styles.list}>
           {SPEAKERS.map((o) => (
             <ListRow
@@ -287,11 +471,49 @@ export default function HomeScreen() {
       </Sheet>
 
       <AdjustSheet open={adjustOpen} onClose={() => setAdjustOpen(false)} />
+
+      <ResultSheet
+        open={pending !== undefined && !playing}
+        sessionName={pending?.planName ?? pending?.profileName}
+        placeName={pending?.placeName}
+        onAnswer={answer}
+        onClose={() => pending && markAsked(pending.id)}
+      />
     </View>
   );
 }
 
 /* ------------------------------------------------------------------ */
+
+/** One place in the switcher: what it is for, and when it last ran. */
+function PlaceRow({
+  place,
+  selected,
+  onPress,
+}: {
+  place: HomePlace;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const last = useHistory((s) => s.entries.find((e) => e.placeId === place.id));
+
+  const when = last
+    ? `Last played ${new Date(last.startedAt).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+      })}`
+    : 'Nothing has played here yet';
+
+  return (
+    <ListRow
+      title={place.name}
+      meta={`${BIRD_TARGET_LABELS[place.target]}. ${when}`}
+      selected={selected}
+      chevron={false}
+      onPress={onPress}
+    />
+  );
+}
 
 /** Pitch and loudness. Kept behind one row so Home stays simple. */
 function AdjustSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -308,9 +530,7 @@ function AdjustSheet({ open, onClose }: { open: boolean; onClose: () => void }) 
   const isSweep = sound?.kind === 'sweep';
 
   const [hz, setHz] = useState(() => (sound ? peakFreqHz(sound) : 17000));
-  const [rate, setRate] = useState(() =>
-    isSweep ? (sound.params as SweepParams).rateHz : 0.5
-  );
+  const [rate, setRate] = useState(() => (isSweep ? (sound.params as SweepParams).rateHz : 0.5));
 
   useEffect(() => {
     if (!sound) return;
@@ -323,7 +543,7 @@ function AdjustSheet({ open, onClose }: { open: boolean; onClose: () => void }) 
       setHz(v);
       setParam('freqHz', v);
     },
-    [setParam]
+    [setParam],
   );
 
   const changeRate = useCallback(
@@ -331,7 +551,7 @@ function AdjustSheet({ open, onClose }: { open: boolean; onClose: () => void }) 
       setRate(v);
       setParam('rateHz', v);
     },
-    [setParam]
+    [setParam],
   );
 
   const shown = sound
@@ -396,6 +616,8 @@ const sheet = themed((c, t) => ({
     paddingBottom: space.md,
   },
   banner: { marginBottom: space.sm },
+  /** the one line the app says back about what somebody reported */
+  reported: { ...t.bodySmall, marginBottom: space.sm },
   list: { borderWidth: 1, borderColor: c.border },
   note: { minHeight: 40, justifyContent: 'center', marginTop: space.md },
   noteText: { ...t.bodySmall, color: c.link },
@@ -406,4 +628,10 @@ const sheet = themed((c, t) => ({
   spacer: { flex: 1, minHeight: 0 },
   sheetNote: { ...t.bodySmall },
   field: { gap: space.xs },
+
+  placePress: { minHeight: 0 },
+  placeRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: 40 },
+  placeText: { flex: 1, gap: 1 },
+  placeName: { ...t.overline },
+  placeMeta: { ...t.bodySmall },
 }));

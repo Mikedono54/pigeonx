@@ -4,12 +4,15 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { getEngine, type EngineState } from '../audio';
 import { limit } from '../core/entitlements';
 import { SPEAKER_LABEL, type AudioProfile, type OutputKind } from '../core/profiles';
+import { rotationOrder, slotMs } from '../core/protectionPlans';
 import { dismissRunningNotification, presentRunningNotification } from '../services/notifications';
 import { sessionRecorder } from '../services/sessionRecorder';
 import { persistStorage, STORAGE_KEYS } from './storage';
 import { useAccount } from './useAccount';
 import { useHistory, type SessionSource } from './useHistory';
+import { usePlacesHome } from './usePlacesHome';
 import { useProfiles } from './useProfiles';
+import { useProtectionPlans, type ProtectionPlan } from './useProtectionPlans';
 
 const KEEP_SCREEN_ON_TAG = 'pigeonx-play';
 
@@ -26,9 +29,24 @@ interface SessionState {
   zoneId: string | null;
   zoneName: string | null;
 
+  /**
+   * True once somebody picked one sound by hand.
+   *
+   * A place with a protection plan plays that plan. Picking a single sound on
+   * the Sounds screen says "not this time", and Home offers the plan back
+   * rather than quietly overruling either choice.
+   */
+  soundOverride: boolean;
+
   engineState: EngineState;
   error: string | null;
   startedAt: number | null;
+  /** the plan running this session, when a plan is running it */
+  planId: string | null;
+  planName: string | null;
+  /** the sounds of this session, in the order they will play */
+  rotation: string[];
+  rotationAt: number;
   /** set when a play stopped because the plan ran out of time */
   hitPlanCap: boolean;
   currentEntryId: string | null;
@@ -41,7 +59,16 @@ interface SessionState {
   setDuration: (d: DurationChoice) => void;
   setArea: (zoneId: string | null, zoneName?: string | null) => void;
   setParam: (key: string, value: number) => void;
-  start: (opts?: { profileId?: string; source?: SessionSource }) => Promise<void>;
+  /** Puts the place's plan back in charge of what plays. */
+  usePlanAgain: () => void;
+  /** The sound after this one in the rotation, by name. */
+  upNext: () => string | null;
+  start: (opts?: {
+    profileId?: string;
+    source?: SessionSource;
+    /** run this plan instead of one sound */
+    plan?: ProtectionPlan | null;
+  }) => Promise<void>;
   stop: () => Promise<void>;
   clearError: () => void;
   /** time limit in ms for this plan and choice. null means no limit. */
@@ -50,6 +77,30 @@ interface SessionState {
 }
 
 let detach: (() => void) | null = null;
+
+/**
+ * The two timers a rotation runs on, and the flag that keeps the engine's
+ * idle event from being read as the end of the session.
+ *
+ * They live outside the store because they belong to one run, not to state a
+ * screen renders. `clearRotation()` is safe to call at any point.
+ */
+let slotTimer: ReturnType<typeof setTimeout> | null = null;
+let sessionTimer: ReturnType<typeof setTimeout> | null = null;
+let swapping = false;
+
+function clearRotation(): void {
+  if (slotTimer) clearTimeout(slotTimer);
+  if (sessionTimer) clearTimeout(sessionTimer);
+  slotTimer = null;
+  sessionTimer = null;
+  swapping = false;
+}
+
+/** Test seam: what a rotation is waiting on right now. */
+export function __rotationPending(): boolean {
+  return slotTimer !== null || sessionTimer !== null;
+}
 
 export const useSession = create<SessionState>()(
   persist(
@@ -61,10 +112,15 @@ export const useSession = create<SessionState>()(
       deviceId: null,
       zoneId: null,
       zoneName: null,
+      soundOverride: false,
 
       engineState: 'idle',
       error: null,
       startedAt: null,
+      planId: null,
+      planName: null,
+      rotation: [],
+      rotationAt: 0,
       hitPlanCap: false,
       currentEntryId: null,
       notificationId: null,
@@ -77,7 +133,9 @@ export const useSession = create<SessionState>()(
             engineState: e.state,
             error: e.state === 'error' ? (e.error ?? "That didn't work. Try again.") : null,
           });
-          if (e.state === 'idle' && get().currentEntryId) {
+          // A rotation stops the engine on purpose between sounds. That idle is
+          // ours, not the end of the session.
+          if (e.state === 'idle' && get().currentEntryId && !swapping) {
             // the engine ended the run itself (duration cap or interruption)
             void finalise(set, get, e.autoStopped === true);
           }
@@ -93,8 +151,17 @@ export const useSession = create<SessionState>()(
       },
 
       setProfile: (id) => {
-        set({ profileId: id });
+        set({ profileId: id, soundOverride: true });
         useProfiles.getState().setLastUsed(id);
+      },
+
+      usePlanAgain: () => set({ soundOverride: false }),
+
+      upNext: () => {
+        const { rotation, rotationAt } = get();
+        if (rotation.length < 2) return null;
+        const next = rotation[(rotationAt + 1) % rotation.length];
+        return useProfiles.getState().byId(next)?.name ?? null;
       },
       setOutput: (output, deviceId) => set({ output, deviceId: deviceId ?? null }),
       setVolume: (v) => {
@@ -122,15 +189,33 @@ export const useSession = create<SessionState>()(
 
       start: async (opts) => {
         const engine = getEngine();
-        const profileId = opts?.profileId ?? get().profileId;
+        if (get().engineState === 'running') return;
+
+        // A plan turns one Start into a rotation. Everything below runs the
+        // same either way; the plan only decides what the list of sounds is
+        // and how long the whole thing lasts.
+        const plan = opts?.plan ?? null;
+        const order = plan
+          ? rotationOrder(plan.soundIds, plan.randomizeOrder).filter((id) =>
+              useProfiles.getState().byId(id),
+            )
+          : [];
+        const profileId = plan ? (order[0] ?? get().profileId) : (opts?.profileId ?? get().profileId);
         const profile = useProfiles.getState().byId(profileId);
         if (!profile) {
           set({ error: 'That sound is gone. Pick another one.' });
           return;
         }
-        if (get().engineState === 'running') return;
 
-        set({ error: null, hitPlanCap: false, profileId });
+        set({
+          error: null,
+          hitPlanCap: false,
+          profileId,
+          planId: plan?.id ?? null,
+          planName: plan?.name ?? null,
+          rotation: plan ? order : [],
+          rotationAt: 0,
+        });
         useProfiles.getState().setLastUsed(profileId);
 
         try {
@@ -139,22 +224,34 @@ export const useSession = create<SessionState>()(
           return; // the engine already surfaced the error through onStateChange
         }
 
+        const capMs = get().effectiveCapMs();
+        // A rotation is stopped by this store, not by the engine, because the
+        // engine only knows about the sound it is playing right now.
+        const sessionMs = plan
+          ? Math.min(capMs ?? Infinity, plan.sessionMinutes * 60_000)
+          : capMs;
+
         engine.setVolume(get().volume);
-        engine.setDurationLimitMs(get().effectiveCapMs());
+        engine.setDurationLimitMs(plan ? null : capMs);
         await engine.start(get().output);
 
         if (engine.getState() !== 'running') return;
 
+        const place = usePlacesHome.getState().active();
         const entry = await sessionRecorder.start({
           profile,
           output: get().output,
           source: opts?.source ?? 'manual',
           zoneId: get().zoneId,
           deviceId: get().deviceId,
+          placeId: place?.id ?? null,
+          placeName: place?.name ?? null,
+          planId: plan?.id ?? null,
+          planName: plan?.name ?? null,
         });
 
         const notificationId = await presentRunningNotification({
-          profileName: profile.name,
+          profileName: plan?.name ?? profile.name,
           outputLabel: SPEAKER_LABEL[get().output],
         });
 
@@ -169,9 +266,14 @@ export const useSession = create<SessionState>()(
           currentEntryId: entry.id,
           notificationId,
         });
+
+        if (plan && order.length > 0) {
+          armRotation(set, get, order.length, plan.sessionMinutes, sessionMs);
+        }
       },
 
       stop: async () => {
+        clearRotation();
         await getEngine().stop();
         await finalise(set, get, false);
       },
@@ -189,10 +291,69 @@ export const useSession = create<SessionState>()(
         deviceId: s.deviceId,
         zoneId: s.zoneId,
         zoneName: s.zoneName,
+        soundOverride: s.soundOverride,
       }),
     },
   ),
 );
+
+/**
+ * Sets the two clocks a rotation runs on: one for each sound's turn, and one
+ * for the whole session.
+ */
+function armRotation(
+  set: (patch: Partial<SessionState>) => void,
+  get: () => SessionState,
+  sounds: number,
+  sessionMinutes: number,
+  sessionMs: number | null,
+): void {
+  clearRotation();
+  const slot = slotMs(sessionMinutes, sounds);
+
+  if (sessionMs != null && Number.isFinite(sessionMs)) {
+    sessionTimer = setTimeout(() => {
+      sessionTimer = null;
+      void useSession.getState().stop();
+    }, sessionMs);
+  }
+
+  // One sound alone has nothing to change to. The session clock still runs.
+  if (sounds < 2) return;
+  slotTimer = setTimeout(function next() {
+    slotTimer = setTimeout(next, slot);
+    void advance(set, get);
+  }, slot);
+}
+
+/** Swaps to the next sound in the rotation without ending the session. */
+async function advance(
+  set: (patch: Partial<SessionState>) => void,
+  get: () => SessionState,
+): Promise<void> {
+  const { rotation, rotationAt, currentEntryId } = get();
+  if (!currentEntryId || rotation.length < 2) return;
+
+  const at = (rotationAt + 1) % rotation.length;
+  const profile = useProfiles.getState().byId(rotation[at]);
+  if (!profile) return;
+
+  const engine = getEngine();
+  swapping = true;
+  try {
+    await engine.stop();
+    await engine.load(profile);
+    engine.setVolume(get().volume);
+    engine.setDurationLimitMs(null);
+    await engine.start(get().output);
+    set({ rotationAt: at, profileId: profile.id });
+  } catch {
+    // The sound would not load or would not start. The engine has already
+    // said so, and the session ends the way any failed run ends.
+  } finally {
+    swapping = false;
+  }
+}
 
 async function finalise(
   set: (patch: Partial<SessionState>) => void,
@@ -200,11 +361,16 @@ async function finalise(
   hitCap: boolean,
 ): Promise<void> {
   const { currentEntryId, notificationId } = get();
+  clearRotation();
   set({
     startedAt: null,
     currentEntryId: null,
     notificationId: null,
     hitPlanCap: hitCap,
+    planId: null,
+    planName: null,
+    rotation: [],
+    rotationAt: 0,
   });
 
   if (currentEntryId) await sessionRecorder.end(currentEntryId);

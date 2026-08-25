@@ -15,6 +15,7 @@ export { Pigeon } from './Pigeon';
 export { Screen } from './Screen';
 export { SectionHeader } from './SectionHeader';
 export { Segmented } from './Segmented';
+export { ResultSheet, RESULT_QUESTION } from './ResultSheet';
 export { Sheet } from './Sheet';
 export { SignInSheet } from './SignInSheet';
 export { Slider } from './Slider';

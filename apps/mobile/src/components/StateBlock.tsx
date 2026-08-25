@@ -18,7 +18,7 @@ import Animated, {
 import { motion, space, themed, useTheme, useThemedStyles } from '../theme';
 import { Pigeon } from './Pigeon';
 
-export type BlockState = 'off' | 'playing' | 'soon';
+export type BlockState = 'off' | 'playing' | 'soon' | 'attention';
 
 export interface StateBlockProps {
   state: BlockState;
@@ -37,6 +37,13 @@ export interface StateBlockProps {
   topInset?: number;
   /** how tall the block stands. Home hands it a share of the screen. */
   height?: number;
+  /**
+   * The place switcher, sitting along the top of the block.
+   *
+   * Home puts it here rather than above the block, because which place you are
+   * looking after is part of the state and not a title over it.
+   */
+  header?: React.ReactNode;
 }
 
 /**
@@ -56,6 +63,7 @@ export function StateBlock({
   children,
   topInset = 0,
   height = 224,
+  header,
 }: StateBlockProps) {
   const styles = useThemedStyles(sheet);
   const { c } = useTheme();
@@ -132,6 +140,10 @@ export function StateBlock({
   const on = playing ? c.playOn : c.ink;
   const under = playing ? c.playOn : c.muted;
   const soon = state === 'soon';
+  // A speaker that is gone gets the same rule along the floor as a session
+  // coming up, painted in the warning colour. It is a fact to fix, not an
+  // alarm, so nothing else on the block changes.
+  const attention = state === 'attention';
 
   return (
     <Animated.View
@@ -143,12 +155,16 @@ export function StateBlock({
     >
       <Animated.View pointerEvents="none" style={[styles.pulse, pulse]} />
 
+      {header}
+
       {label ? (
         <View style={styles.head}>
           <Text style={[styles.label, { color: playing ? c.playOn : c.muted }]}>
             {label}
           </Text>
-          {soon ? <View style={styles.soon} /> : null}
+          {soon || attention ? (
+            <View style={[styles.soon, attention ? { backgroundColor: c.warning } : null]} />
+          ) : null}
         </View>
       ) : null}
 
@@ -169,7 +185,11 @@ export function StateBlock({
         </Text>
       ) : null}
 
-      {soon ? <View style={styles.soonRule} /> : null}
+      {soon || attention ? (
+        <View
+          style={[styles.soonRule, attention ? { backgroundColor: c.warning } : null]}
+        />
+      ) : null}
 
       <View style={styles.floor}>
         <Animated.View style={bird}>
