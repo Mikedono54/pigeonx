@@ -171,31 +171,49 @@ export type Database = {
       locations: {
         Row: {
           address: string | null;
+          area_size: string | null;
+          birds_active: string | null;
           business_hours: Json | null;
           created_at: string;
           id: string;
+          kind: Database['public']['Enums']['place_kind_t'] | null;
+          limit_audible: boolean;
           name: string;
           org_id: string;
+          people_nearby: boolean;
+          target: Database['public']['Enums']['bird_target_t'] | null;
           timezone: string;
           updated_at: string;
         };
         Insert: {
           address?: string | null;
+          area_size?: string | null;
+          birds_active?: string | null;
           business_hours?: Json | null;
           created_at?: string;
           id?: string;
+          kind?: Database['public']['Enums']['place_kind_t'] | null;
+          limit_audible?: boolean;
           name: string;
           org_id: string;
+          people_nearby?: boolean;
+          target?: Database['public']['Enums']['bird_target_t'] | null;
           timezone?: string;
           updated_at?: string;
         };
         Update: {
           address?: string | null;
+          area_size?: string | null;
+          birds_active?: string | null;
           business_hours?: Json | null;
           created_at?: string;
           id?: string;
+          kind?: Database['public']['Enums']['place_kind_t'] | null;
+          limit_audible?: boolean;
           name?: string;
           org_id?: string;
+          people_nearby?: boolean;
+          target?: Database['public']['Enums']['bird_target_t'] | null;
           timezone?: string;
           updated_at?: string;
         };
@@ -348,6 +366,97 @@ export type Database = {
         };
         Relationships: [];
       };
+      protection_plans: {
+        Row: {
+          created_at: string;
+          days: number[];
+          ends_on: string | null;
+          id: string;
+          interval_seconds: number;
+          name: string;
+          output: Database['public']['Enums']['output_kind_t'];
+          owner_org_id: string | null;
+          owner_user_id: string | null;
+          quiet_end: string | null;
+          quiet_start: string | null;
+          randomize_order: boolean;
+          session_minutes: number;
+          sound_ids: string[];
+          starts_on: string | null;
+          target: Database['public']['Enums']['bird_target_t'];
+          updated_at: string;
+          user_place_id: string | null;
+          volume: number;
+          zone_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          days?: number[];
+          ends_on?: string | null;
+          id?: string;
+          interval_seconds?: number;
+          name: string;
+          output?: Database['public']['Enums']['output_kind_t'];
+          owner_org_id?: string | null;
+          owner_user_id?: string | null;
+          quiet_end?: string | null;
+          quiet_start?: string | null;
+          randomize_order?: boolean;
+          session_minutes?: number;
+          sound_ids?: string[];
+          starts_on?: string | null;
+          target?: Database['public']['Enums']['bird_target_t'];
+          updated_at?: string;
+          user_place_id?: string | null;
+          volume?: number;
+          zone_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          days?: number[];
+          ends_on?: string | null;
+          id?: string;
+          interval_seconds?: number;
+          name?: string;
+          output?: Database['public']['Enums']['output_kind_t'];
+          owner_org_id?: string | null;
+          owner_user_id?: string | null;
+          quiet_end?: string | null;
+          quiet_start?: string | null;
+          randomize_order?: boolean;
+          session_minutes?: number;
+          sound_ids?: string[];
+          starts_on?: string | null;
+          target?: Database['public']['Enums']['bird_target_t'];
+          updated_at?: string;
+          user_place_id?: string | null;
+          volume?: number;
+          zone_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'protection_plans_owner_org_id_fkey';
+            columns: ['owner_org_id'];
+            isOneToOne: false;
+            referencedRelation: 'organizations';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'protection_plans_user_place_id_fkey';
+            columns: ['user_place_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_places';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'protection_plans_zone_id_fkey';
+            columns: ['zone_id'];
+            isOneToOne: false;
+            referencedRelation: 'zones';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       schedules: {
         Row: {
           created_at: string;
@@ -356,8 +465,13 @@ export type Database = {
           end_time: string;
           executor: Database['public']['Enums']['schedule_executor_t'];
           id: string;
+          offset_minutes: number;
+          plan_id: string | null;
           profile_id: string;
+          quiet_end: string | null;
+          quiet_start: string | null;
           start_time: string;
+          trigger: Database['public']['Enums']['schedule_trigger_t'];
           updated_at: string;
           zone_id: string;
         };
@@ -368,8 +482,13 @@ export type Database = {
           end_time: string;
           executor?: Database['public']['Enums']['schedule_executor_t'];
           id?: string;
+          offset_minutes?: number;
+          plan_id?: string | null;
           profile_id: string;
+          quiet_end?: string | null;
+          quiet_start?: string | null;
           start_time: string;
+          trigger?: Database['public']['Enums']['schedule_trigger_t'];
           updated_at?: string;
           zone_id: string;
         };
@@ -380,12 +499,24 @@ export type Database = {
           end_time?: string;
           executor?: Database['public']['Enums']['schedule_executor_t'];
           id?: string;
+          offset_minutes?: number;
+          plan_id?: string | null;
           profile_id?: string;
+          quiet_end?: string | null;
+          quiet_start?: string | null;
           start_time?: string;
+          trigger?: Database['public']['Enums']['schedule_trigger_t'];
           updated_at?: string;
           zone_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: 'schedules_plan_id_fkey';
+            columns: ['plan_id'];
+            isOneToOne: false;
+            referencedRelation: 'protection_plans';
+            referencedColumns: ['id'];
+          },
           {
             foreignKeyName: 'schedules_profile_id_fkey';
             columns: ['profile_id'];
@@ -410,11 +541,14 @@ export type Database = {
           id: string;
           output_kind: Database['public']['Enums']['output_kind_t'];
           peak_freq_hz: number | null;
+          plan_id: string | null;
           profile_id: string;
+          result: Database['public']['Enums']['session_result_t'] | null;
           source: Database['public']['Enums']['session_source_t'];
           started_at: string;
           updated_at: string;
           user_id: string;
+          user_place_id: string | null;
           zone_id: string | null;
         };
         Insert: {
@@ -424,11 +558,14 @@ export type Database = {
           id?: string;
           output_kind: Database['public']['Enums']['output_kind_t'];
           peak_freq_hz?: number | null;
+          plan_id?: string | null;
           profile_id: string;
+          result?: Database['public']['Enums']['session_result_t'] | null;
           source?: Database['public']['Enums']['session_source_t'];
           started_at?: string;
           updated_at?: string;
           user_id: string;
+          user_place_id?: string | null;
           zone_id?: string | null;
         };
         Update: {
@@ -438,11 +575,14 @@ export type Database = {
           id?: string;
           output_kind?: Database['public']['Enums']['output_kind_t'];
           peak_freq_hz?: number | null;
+          plan_id?: string | null;
           profile_id?: string;
+          result?: Database['public']['Enums']['session_result_t'] | null;
           source?: Database['public']['Enums']['session_source_t'];
           started_at?: string;
           updated_at?: string;
           user_id?: string;
+          user_place_id?: string | null;
           zone_id?: string | null;
         };
         Relationships: [
@@ -454,10 +594,24 @@ export type Database = {
             referencedColumns: ['id'];
           },
           {
+            foreignKeyName: 'sessions_plan_id_fkey';
+            columns: ['plan_id'];
+            isOneToOne: false;
+            referencedRelation: 'protection_plans';
+            referencedColumns: ['id'];
+          },
+          {
             foreignKeyName: 'sessions_profile_id_fkey';
             columns: ['profile_id'];
             isOneToOne: false;
             referencedRelation: 'audio_profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'sessions_user_place_id_fkey';
+            columns: ['user_place_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_places';
             referencedColumns: ['id'];
           },
           {
@@ -546,6 +700,48 @@ export type Database = {
         };
         Relationships: [];
       };
+      user_places: {
+        Row: {
+          area_size: string | null;
+          birds_active: string | null;
+          created_at: string;
+          id: string;
+          kind: Database['public']['Enums']['place_kind_t'] | null;
+          limit_audible: boolean;
+          name: string;
+          people_nearby: boolean;
+          target: Database['public']['Enums']['bird_target_t'] | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          area_size?: string | null;
+          birds_active?: string | null;
+          created_at?: string;
+          id?: string;
+          kind?: Database['public']['Enums']['place_kind_t'] | null;
+          limit_audible?: boolean;
+          name: string;
+          people_nearby?: boolean;
+          target?: Database['public']['Enums']['bird_target_t'] | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          area_size?: string | null;
+          birds_active?: string | null;
+          created_at?: string;
+          id?: string;
+          kind?: Database['public']['Enums']['place_kind_t'] | null;
+          limit_audible?: boolean;
+          name?: string;
+          people_nearby?: boolean;
+          target?: Database['public']['Enums']['bird_target_t'] | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       user_schedules: {
         Row: {
           created_at: string;
@@ -554,8 +750,13 @@ export type Database = {
           end_time: string;
           executor: Database['public']['Enums']['schedule_executor_t'];
           id: string;
+          offset_minutes: number;
+          plan_id: string | null;
           profile_id: string;
+          quiet_end: string | null;
+          quiet_start: string | null;
           start_time: string;
+          trigger: Database['public']['Enums']['schedule_trigger_t'];
           updated_at: string;
           user_id: string;
           zone_id: string | null;
@@ -567,8 +768,13 @@ export type Database = {
           end_time: string;
           executor?: Database['public']['Enums']['schedule_executor_t'];
           id?: string;
+          offset_minutes?: number;
+          plan_id?: string | null;
           profile_id: string;
+          quiet_end?: string | null;
+          quiet_start?: string | null;
           start_time: string;
+          trigger?: Database['public']['Enums']['schedule_trigger_t'];
           updated_at?: string;
           user_id: string;
           zone_id?: string | null;
@@ -580,13 +786,25 @@ export type Database = {
           end_time?: string;
           executor?: Database['public']['Enums']['schedule_executor_t'];
           id?: string;
+          offset_minutes?: number;
+          plan_id?: string | null;
           profile_id?: string;
+          quiet_end?: string | null;
+          quiet_start?: string | null;
           start_time?: string;
+          trigger?: Database['public']['Enums']['schedule_trigger_t'];
           updated_at?: string;
           user_id?: string;
           zone_id?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: 'user_schedules_plan_id_fkey';
+            columns: ['plan_id'];
+            isOneToOne: false;
+            referencedRelation: 'protection_plans';
+            referencedColumns: ['id'];
+          },
           {
             foreignKeyName: 'user_schedules_profile_id_fkey';
             columns: ['profile_id'];
@@ -669,11 +887,16 @@ export type Database = {
           minutes: number;
           output_kind: Database['public']['Enums']['output_kind_t'];
           peak_freq_hz: number;
+          place_name: string;
+          plan_id: string;
+          plan_name: string;
           profile_id: string;
           profile_name: string;
+          result: Database['public']['Enums']['session_result_t'];
           source: Database['public']['Enums']['session_source_t'];
           started_at: string;
           user_id: string;
+          user_place_id: string;
           zone_id: string;
           zone_name: string;
         }[];
@@ -720,10 +943,38 @@ export type Database = {
           role: Database['public']['Enums']['member_role_t'];
         }[];
       };
+      org_member_list: {
+        Args: { p_org_id: string };
+        Returns: {
+          display_name: string;
+          email: string;
+          joined_at: string;
+          role: Database['public']['Enums']['member_role_t'];
+          user_id: string;
+        }[];
+      };
+      place_feedback: {
+        Args: { p_user_place_id: string };
+        Returns: {
+          best_plan_name: string;
+          left_count: number;
+          not_yet_count: number;
+          sessions_total: number;
+          sessions_with_result: number;
+          some_left_count: number;
+        }[];
+      };
       profile_peak_freq_hz: { Args: { p_profile_id: string }; Returns: number };
       remove_member: {
         Args: { p_org_id: string; p_user_id: string };
         Returns: boolean;
+      };
+      report_session_result: {
+        Args: {
+          p_result: Database['public']['Enums']['session_result_t'];
+          p_session_id: string;
+        };
+        Returns: undefined;
       };
       role_rank: {
         Args: { r: Database['public']['Enums']['member_role_t'] };
@@ -733,8 +984,10 @@ export type Database = {
         Args: {
           p_device_id?: string;
           p_output?: Database['public']['Enums']['output_kind_t'];
+          p_plan_id?: string;
           p_profile_id: string;
           p_source?: Database['public']['Enums']['session_source_t'];
+          p_user_place_id?: string;
           p_zone_id: string;
         };
         Returns: string;
@@ -745,6 +998,17 @@ export type Database = {
           day: string;
           sessions: number;
           total_minutes: number;
+        }[];
+      };
+      zone_feedback: {
+        Args: { p_zone_id: string };
+        Returns: {
+          best_plan_name: string;
+          left_count: number;
+          not_yet_count: number;
+          sessions_total: number;
+          sessions_with_result: number;
+          some_left_count: number;
         }[];
       };
       zone_live_status: {
@@ -761,14 +1025,27 @@ export type Database = {
       zone_org: { Args: { zone: string }; Returns: string };
     };
     Enums: {
+      bird_target_t: 'pigeons' | 'gulls' | 'starlings' | 'corvids' | 'mixed_small' | 'unsure';
       device_kind_t: 'phone' | 'bt_speaker' | 'pigeonx_emitter' | 'simulated';
       device_status_t: 'online' | 'offline' | 'unknown';
       member_role_t: 'owner' | 'manager' | 'staff';
       org_plan_t: 'free' | 'business' | 'enterprise';
       output_kind_t: 'phone' | 'bt_speaker' | 'pigeonx_emitter' | 'simulated';
+      place_kind_t:
+        | 'balcony'
+        | 'roof'
+        | 'dock'
+        | 'storefront'
+        | 'warehouse'
+        | 'parking'
+        | 'garden'
+        | 'farm'
+        | 'custom';
       plan_t: 'free' | 'pro' | 'business' | 'enterprise';
       profile_kind_t: 'tone' | 'sweep' | 'pulse' | 'sample';
       schedule_executor_t: 'device' | 'reminder';
+      schedule_trigger_t: 'time' | 'sunrise' | 'sunset';
+      session_result_t: 'left' | 'some_left' | 'not_yet' | 'unknown';
       session_source_t: 'manual' | 'schedule' | 'remote';
       trigger_mode_t: 'manual' | 'schedule' | 'motion';
     };
@@ -895,14 +1172,28 @@ export const Constants = {
   },
   public: {
     Enums: {
+      bird_target_t: ['pigeons', 'gulls', 'starlings', 'corvids', 'mixed_small', 'unsure'],
       device_kind_t: ['phone', 'bt_speaker', 'pigeonx_emitter', 'simulated'],
       device_status_t: ['online', 'offline', 'unknown'],
       member_role_t: ['owner', 'manager', 'staff'],
       org_plan_t: ['free', 'business', 'enterprise'],
       output_kind_t: ['phone', 'bt_speaker', 'pigeonx_emitter', 'simulated'],
+      place_kind_t: [
+        'balcony',
+        'roof',
+        'dock',
+        'storefront',
+        'warehouse',
+        'parking',
+        'garden',
+        'farm',
+        'custom',
+      ],
       plan_t: ['free', 'pro', 'business', 'enterprise'],
       profile_kind_t: ['tone', 'sweep', 'pulse', 'sample'],
       schedule_executor_t: ['device', 'reminder'],
+      schedule_trigger_t: ['time', 'sunrise', 'sunset'],
+      session_result_t: ['left', 'some_left', 'not_yet', 'unknown'],
       session_source_t: ['manual', 'schedule', 'remote'],
       trigger_mode_t: ['manual', 'schedule', 'motion'],
     },
