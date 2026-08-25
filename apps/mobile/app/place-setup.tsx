@@ -108,7 +108,7 @@ export default function PlaceSetup() {
   const params = useLocalSearchParams<{ placeId?: string }>();
 
   const editing = usePlacesHome((s) => (params.placeId ? s.byId(params.placeId) : undefined));
-  const add = usePlacesHome((s) => s.add);
+  const describe = usePlacesHome((s) => s.describe);
   const update = usePlacesHome((s) => s.update);
   const setActivePlace = usePlacesHome((s) => s.setActive);
   const adopt = useProtectionPlans((s) => s.adoptRecommendation);
@@ -200,8 +200,8 @@ export default function PlaceSetup() {
       setActivePlace(editing.id);
       return { ...editing, ...draft, birdsActive: draft.birdsActive || null };
     }
-    return add(draft);
-  }, [add, draft, editing, setActivePlace, update]);
+    return describe(draft);
+  }, [describe, draft, editing, setActivePlace, update]);
 
   const finish = useCallback(
     (withPlan: boolean) => {

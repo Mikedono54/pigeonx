@@ -60,6 +60,24 @@ export function draftPlace(draft: PlaceDraft = {}): HomePlace {
   };
 }
 
+/**
+ * True while a place is still the one every phone starts with: made for
+ * somebody rather than by them, and never described.
+ *
+ * The questions fill this one in instead of adding a second place beside it,
+ * which is what a Free account has room for and what a person expects: they
+ * answered eight questions about the place they already had.
+ */
+export function isUndescribed(place: HomePlace): boolean {
+  return (
+    place.name === DEFAULT_PLACE_NAME &&
+    place.kind === 'custom' &&
+    place.target === 'unsure' &&
+    place.areaSize === null &&
+    place.birdsActive === null
+  );
+}
+
 interface PlacesHomeState {
   places: HomePlace[];
   activeId: string | null;
@@ -75,6 +93,11 @@ interface PlacesHomeState {
   /** false once the plan's cap is reached. Free keeps one place. */
   canAdd: () => boolean;
   add: (draft?: PlaceDraft) => HomePlace;
+  /**
+   * Writes the answers down: into the starting place if it is still untouched,
+   * as a new place otherwise.
+   */
+  describe: (draft: PlaceDraft) => HomePlace;
   update: (id: string, patch: PlaceDraft) => void;
   remove: (id: string) => void;
   setActive: (id: string) => void;
@@ -112,6 +135,16 @@ export const usePlacesHome = create<PlacesHomeState>()(
         set({ places: [...get().places, place], activeId: place.id });
         somethingChanged('place');
         return place;
+      },
+
+      describe: (draft) => {
+        const only = get().places.length === 1 ? get().places[0] : undefined;
+        if (only && isUndescribed(only)) {
+          get().update(only.id, draft);
+          set({ activeId: only.id });
+          return get().byId(only.id) ?? only;
+        }
+        return get().add(draft);
       },
 
       update: (id, patch) => {

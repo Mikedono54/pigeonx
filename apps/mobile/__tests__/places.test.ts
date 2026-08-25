@@ -20,7 +20,12 @@ import {
 } from '../src/core/protectionPlans';
 import { SYSTEM_PROFILE_UUIDS, findSystemProfile } from '../src/core/profiles';
 import { useAccount } from '../src/state/useAccount';
-import { DEFAULT_PLACE_NAME, draftPlace, usePlacesHome } from '../src/state/usePlacesHome';
+import {
+  DEFAULT_PLACE_NAME,
+  draftPlace,
+  isUndescribed,
+  usePlacesHome,
+} from '../src/state/usePlacesHome';
 import { useProtectionPlans } from '../src/state/useProtectionPlans';
 
 function reset(): void {
@@ -62,6 +67,46 @@ describe('the place every phone starts with', () => {
   it('points at the one place it made', () => {
     const place = usePlacesHome.getState().ensureDefault();
     expect(usePlacesHome.getState().active()?.id).toBe(place.id);
+  });
+});
+
+describe('answering the questions for the first time', () => {
+  it('fills in the place that was already there, rather than crowding it', () => {
+    const start = usePlacesHome.getState().ensureDefault();
+
+    const described = usePlacesHome
+      .getState()
+      .describe({ name: 'Front balcony', kind: 'balcony', target: 'gulls' });
+
+    expect(usePlacesHome.getState().places).toHaveLength(1);
+    expect(described.id).toBe(start.id);
+    expect(described.name).toBe('Front balcony');
+    expect(usePlacesHome.getState().active()?.id).toBe(start.id);
+  });
+
+  it('leaves a Free account inside its one place after setup', () => {
+    usePlacesHome.getState().ensureDefault();
+    usePlacesHome.getState().describe({ name: 'Roof', kind: 'roof' });
+
+    expect(usePlacesHome.getState().canAdd()).toBe(false);
+    expect(usePlacesHome.getState().places).toHaveLength(1);
+  });
+
+  it('adds a second place once the first one is somebody real', () => {
+    useAccount.setState({ plan: 'pro' });
+    usePlacesHome.getState().ensureDefault();
+    usePlacesHome.getState().describe({ name: 'Roof', kind: 'roof' });
+    usePlacesHome.getState().describe({ name: 'Dock', kind: 'dock' });
+
+    expect(usePlacesHome.getState().places.map((p) => p.name)).toEqual(['Roof', 'Dock']);
+  });
+
+  it('knows a starting place from one somebody described', () => {
+    const start = usePlacesHome.getState().ensureDefault();
+    expect(isUndescribed(start)).toBe(true);
+
+    usePlacesHome.getState().update(start.id, { target: 'pigeons' });
+    expect(isUndescribed(usePlacesHome.getState().byId(start.id)!)).toBe(false);
   });
 });
 
