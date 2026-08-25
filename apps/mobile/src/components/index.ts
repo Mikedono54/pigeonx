@@ -22,6 +22,7 @@ export { SpeakerReach } from './SpeakerReach';
 export { SpectrumBars } from './SpectrumBars';
 export { StateBlock } from './StateBlock';
 export { StatusPill } from './StatusPill';
+export { TargetGlyph } from './TargetGlyph';
 export { TextField } from './TextField';
 export { ToastProvider, useToast } from './Toast';
 export { Touchable } from './Touchable';

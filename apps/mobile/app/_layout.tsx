@@ -128,6 +128,7 @@ function Painted() {
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
         />
         <Stack.Screen name="history" />
+        <Stack.Screen name="place-setup" options={{ gestureEnabled: false }} />
         <Stack.Screen name="for-businesses" />
         <Stack.Screen name="team" />
         <Stack.Screen name="speaker" options={{ animation: 'fade', gestureEnabled: false }} />
@@ -234,18 +235,34 @@ function inviteToken(url: string | null | undefined): string | null {
   }
 }
 
-/** Sends new people to the welcome screens, once. */
+/**
+ * Sends new people to the welcome screens, then to the questions about their
+ * place. Both happen once.
+ *
+ * Somebody who was already using PigeonX before the questions existed is not
+ * walked through them: the migration in `useAccount` counts them as asked.
+ */
 function useOnboardingGate(ready: boolean) {
   const onboarded = useAccount((s) => s.onboarded);
+  const placeAsked = useAccount((s) => s.placeAsked);
   const segments = useSegments();
   const navState = useRootNavigationState();
 
   useEffect(() => {
     if (!ready || !navState?.key) return;
     const inOnboarding = segments[0] === 'onboarding';
-    if (!onboarded && !inOnboarding) router.replace('/onboarding');
-    if (onboarded && inOnboarding) router.replace('/');
-  }, [navState?.key, onboarded, ready, segments]);
+    const inPlaceSetup = segments[0] === 'place-setup';
+
+    if (!onboarded) {
+      if (!inOnboarding) router.replace('/onboarding');
+      return;
+    }
+    if (inOnboarding) {
+      router.replace('/');
+      return;
+    }
+    if (!placeAsked && !inPlaceSetup) router.replace('/place-setup');
+  }, [navState?.key, onboarded, placeAsked, ready, segments]);
 }
 
 /** Wires the reminder Stop and Play now buttons to the sound. */
