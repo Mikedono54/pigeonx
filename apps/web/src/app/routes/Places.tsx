@@ -11,12 +11,23 @@ import {
   deletePlace,
   listAreasForPlaces,
   listPlaces,
+  listPlans,
+  listSpeakers,
   liveStatus,
   updatePlace,
 } from '../lib/db';
-import { DEMO_AREAS, DEMO_PLACES, demoLive, demoWriteBlocked, isDemo } from '../lib/demo';
-import { placeStatus } from '../lib/derive';
-import type { LiveArea, Place } from '../lib/types';
+import {
+  DEMO_AREAS,
+  DEMO_PLACES,
+  DEMO_PLANS,
+  DEMO_SPEAKERS,
+  demoLive,
+  demoWriteBlocked,
+  isDemo,
+} from '../lib/demo';
+import { attentionCountFor, attentionList, placeStatus } from '../lib/derive';
+import { BIRD_TARGET_LABELS, PLACE_KIND_LABELS } from '../lib/labels';
+import type { Area, LiveArea, Place, ProtectionPlan, Speaker } from '../lib/types';
 import {
   Empty,
   ErrorNote,
@@ -34,6 +45,9 @@ import { Dialog } from '../components/Dialog';
 
 type PlacesData = {
   places: Place[];
+  areas: Area[];
+  speakers: Speaker[];
+  plans: ProtectionPlan[];
   areaCount: Record<string, number>;
   live: Record<string, LiveArea[]>;
 };
@@ -60,21 +74,32 @@ export default function Places() {
         live[p.id] = demoLive(p.id);
         areaCount[p.id] = DEMO_AREAS.filter((a) => a.location_id === p.id).length;
       }
-      return { places: DEMO_PLACES, areaCount, live };
+      return {
+        places: DEMO_PLACES,
+        areas: DEMO_AREAS,
+        speakers: DEMO_SPEAKERS,
+        plans: DEMO_PLANS,
+        areaCount,
+        live,
+      };
     }
-    if (!orgId) return { places: [], areaCount: {}, live: {} };
+    if (!orgId) {
+      return { places: [], areas: [], speakers: [], plans: [], areaCount: {}, live: {} };
+    }
     const places = await listPlaces(orgId);
     const areas = await listAreasForPlaces(places.map((p) => p.id));
     const areaCount: Record<string, number> = {};
     for (const a of areas) areaCount[a.location_id] = (areaCount[a.location_id] ?? 0) + 1;
-    const lists = await Promise.all(
-      places.map((p) => liveStatus(p.id).catch(() => [] as LiveArea[])),
-    );
+    const [speakers, plans, lists] = await Promise.all([
+      listSpeakers(areas.map((a) => a.id)),
+      listPlans(orgId).catch(() => [] as ProtectionPlan[]),
+      Promise.all(places.map((p) => liveStatus(p.id).catch(() => [] as LiveArea[]))),
+    ]);
     const live: Record<string, LiveArea[]> = {};
     places.forEach((p, i) => {
       live[p.id] = lists[i];
     });
-    return { places, areaCount, live };
+    return { places, areas, speakers, plans, areaCount, live };
   }, [orgId, demo]);
 
   useRealtime(state.reload);
@@ -109,16 +134,19 @@ export default function Places() {
   }
 
   const places = state.data?.places ?? [];
+  const attention = state.data
+    ? attentionList(state.data.places, state.data.areas, state.data.speakers, state.data.plans)
+    : [];
 
   return (
     <>
       <PageHead
-        title="Places"
-        intro="Every property you run. Open one to set up its areas and speakers."
+        title="Locations"
+        intro="Every property you run. Open one to set up its areas, plans and speakers."
         action={
           <Button onClick={openAdd}>
             <Plus size={16} strokeWidth={2} aria-hidden />
-            Add a place
+            Add a location
           </Button>
         }
       />
@@ -134,14 +162,15 @@ export default function Places() {
           <SkeletonRows rows={3} />
         ) : places.length === 0 ? (
           <Empty
-            title="No places yet. Add the first property you want covered."
-            action={<Button onClick={openAdd}>Add a place</Button>}
+            title="No locations yet. Add the first property you want covered."
+            action={<Button onClick={openAdd}>Add a location</Button>}
           />
         ) : (
           <TableWrap>
             <thead>
               <tr>
-                <Th>Place</Th>
+                <Th>Location</Th>
+                <Th>What you are protecting</Th>
                 <Th>Areas</Th>
                 <Th>Right now</Th>
                 <Th className="text-right">{''}</Th>
@@ -151,6 +180,7 @@ export default function Places() {
               {places.map((place) => {
                 const areas = state.data?.live[place.id] ?? [];
                 const playing = areas.some((a) => a.running);
+                const needs = attentionCountFor(attention, place.id);
                 return (
                   <tr key={place.id}>
                     <Td>
@@ -164,9 +194,22 @@ export default function Places() {
                         {place.address ?? 'No address yet'}
                       </span>
                     </Td>
+                    <Td>
+                      {place.target ? BIRD_TARGET_LABELS[place.target] : 'No target bird yet'}
+                      <span className="block text-[14px] text-muted">
+                        {place.kind ? PLACE_KIND_LABELS[place.kind] : 'No kind set'}
+                      </span>
+                    </Td>
                     <Td className="px-num">{state.data?.areaCount[place.id] ?? areas.length}</Td>
                     <Td>
-                      <Pill tone={playing ? 'live' : 'quiet'}>{placeStatus(areas)}</Pill>
+                      <div className="flex flex-wrap gap-2">
+                        <Pill tone={playing ? 'live' : 'quiet'}>{placeStatus(areas)}</Pill>
+                        {needs > 0 ? (
+                          <Pill tone="warn">
+                            {needs === 1 ? '1 area needs attention' : `${needs} need attention`}
+                          </Pill>
+                        ) : null}
+                      </div>
                     </Td>
                     <Td className="text-right whitespace-nowrap">
                       <GhostButton onClick={() => openEdit(place)}>Rename</GhostButton>{' '}
@@ -184,7 +227,7 @@ export default function Places() {
 
       <Dialog
         open={adding}
-        title="Add a place"
+        title="Add a location"
         onClose={() => setAdding(false)}
         onSubmit={() =>
           void run(
@@ -194,11 +237,11 @@ export default function Places() {
             () => setAdding(false),
           )
         }
-        submitLabel="Add the place"
+        submitLabel="Add the location"
         busy={busy}
         error={error}
       >
-        <Field label="Place name" htmlFor="new-place-name">
+        <Field label="Location name" htmlFor="new-place-name">
           <Input
             id="new-place-name"
             value={name}
@@ -219,7 +262,7 @@ export default function Places() {
 
       <Dialog
         open={editing !== null}
-        title="Rename this place"
+        title="Rename this location"
         onClose={() => setEditing(null)}
         onSubmit={() =>
           void run(
@@ -236,7 +279,7 @@ export default function Places() {
         busy={busy}
         error={error}
       >
-        <Field label="Place name" htmlFor="edit-place-name">
+        <Field label="Location name" htmlFor="edit-place-name">
           <Input
             id="edit-place-name"
             value={name}
@@ -255,7 +298,7 @@ export default function Places() {
 
       <Dialog
         open={removing !== null}
-        title="Delete this place"
+        title="Delete this location"
         onClose={() => setRemoving(null)}
         onSubmit={() =>
           void run(
