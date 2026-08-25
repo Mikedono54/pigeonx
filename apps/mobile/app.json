@@ -22,7 +22,8 @@
         "NSBluetoothAlwaysUsageDescription": "PigeonX uses Bluetooth to find and set up PigeonX emitters near you.",
         "NSBluetoothPeripheralUsageDescription": "PigeonX uses Bluetooth to find and set up PigeonX emitters near you.",
         "ITSAppUsesNonExemptEncryption": false,
-        "NSMicrophoneUsageDescription": "PigeonX does not record audio. The audio engine links microphone APIs, and Apple requires this notice."
+        "NSMicrophoneUsageDescription": "PigeonX does not record audio. The audio engine links microphone APIs, and Apple requires this notice.",
+        "NSLocationWhenInUseUsageDescription": "PigeonX uses a rough location to work out when the sun rises and sets at your place, so a schedule can start at sunrise. The calculation runs on this phone."
       },
       "usesAppleSignIn": true
     },
@@ -41,7 +42,8 @@
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
         "android.permission.POST_NOTIFICATIONS",
-        "android.permission.WAKE_LOCK"
+        "android.permission.WAKE_LOCK",
+        "android.permission.ACCESS_COARSE_LOCATION"
       ]
     },
     "web": {
@@ -82,6 +84,13 @@
         {
           "color": "#2B5CFF",
           "defaultChannel": "pigeonx-runs"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "PigeonX uses a rough location to work out when the sun rises and sets at your place, so a schedule can start at sunrise. The calculation runs on this phone.",
+          "isAndroidBackgroundLocationEnabled": false
         }
       ]
     ],

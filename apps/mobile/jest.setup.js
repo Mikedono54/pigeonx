@@ -49,6 +49,18 @@ jest.mock('expo-secure-store', () => {
   };
 });
 
+/**
+ * Location exists for one thing: working out when the sun comes up where the
+ * place is. Under Jest nobody grants it, so every test runs on the plain
+ * fallback times, which is what a person who says no gets too.
+ */
+jest.mock('expo-location', () => ({
+  requestForegroundPermissionsAsync: jest.fn(async () => ({ status: 'denied' })),
+  getLastKnownPositionAsync: jest.fn(async () => null),
+  getCurrentPositionAsync: jest.fn(async () => null),
+  Accuracy: { Lowest: 1, Low: 2, Balanced: 3, High: 4 },
+}));
+
 jest.mock('expo-linking', () => ({
   getInitialURL: jest.fn(async () => null),
   addEventListener: jest.fn(() => ({ remove: jest.fn() })),

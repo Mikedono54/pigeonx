@@ -226,6 +226,15 @@ export function scheduleFromRow(
 ): Schedule {
   const sound = nameFor(row.profile_id ?? null);
   return {
+    // The trigger, the place and the plan live on this phone until the
+    // schedules table carries them, so a row from the account keeps whatever
+    // the phone already knew rather than blanking it.
+    trigger: match?.trigger ?? 'time',
+    offsetMinutes: match?.offsetMinutes ?? 0,
+    placeId: match?.placeId ?? null,
+    placeName: match?.placeName ?? null,
+    planId: match?.planId ?? null,
+    planName: match?.planName ?? null,
     id: match?.id ?? `sch_${row.id}`,
     name: match?.name ?? sound.name,
     profileId: sound.id,

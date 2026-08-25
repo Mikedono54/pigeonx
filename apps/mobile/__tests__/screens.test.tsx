@@ -36,6 +36,7 @@ jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
 }));
 
 import Home from '../app/(tabs)/index';
+import ScheduleScreen from '../app/(tabs)/schedule';
 import Settings from '../app/(tabs)/settings';
 import Sounds from '../app/(tabs)/sounds';
 import HistoryScreen from '../app/history';
@@ -46,6 +47,7 @@ import { useAccount } from '../src/state/useAccount';
 import { useHistory } from '../src/state/useHistory';
 import { usePlacesHome } from '../src/state/usePlacesHome';
 import { useProtectionPlans } from '../src/state/useProtectionPlans';
+import { useSchedules, type Schedule } from '../src/state/useSchedules';
 import { useSession } from '../src/state/useSession';
 
 interface Node {
@@ -76,6 +78,7 @@ beforeEach(() => {
   usePlacesHome.setState({ places: [], activeId: null });
   useProtectionPlans.setState({ plans: [], activeByPlace: {} });
   useHistory.setState({ entries: [], queue: [] });
+  useSchedules.setState({ schedules: [] });
   useSession.setState({
     profileId: 'sys_pigeon_18k',
     output: 'phone',
@@ -289,6 +292,90 @@ describe('Home, with a speaker that is gone', () => {
 
     expect(said).toContain('Connected');
     expect(said).not.toContain('Check speaker');
+  });
+});
+
+const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
+
+/** A run that covers the whole of every day, so "now" is always inside it. */
+function aRun(over: Partial<Schedule> = {}): Schedule {
+  return {
+    id: 'sch_1',
+    name: 'Every day, Pigeon Rotation',
+    profileId: 'sys_pigeon_18k',
+    profileName: 'High-frequency deterrent',
+    days: EVERY_DAY,
+    startMinutes: 0,
+    endMinutes: 23 * 60 + 59,
+    enabled: true,
+    executor: 'reminder',
+    trigger: 'time',
+    offsetMinutes: 0,
+    placeId: 'plh_1',
+    placeName: 'Back balcony',
+    planId: null,
+    planName: 'Pigeon Rotation',
+    zoneId: null,
+    deviceId: null,
+    notificationIds: [],
+    updatedAt: 0,
+    remoteId: null,
+    ...over,
+  };
+}
+
+describe('the Schedule, as a timeline', () => {
+  it('offers to protect the place by name, in the words that place was described in', async () => {
+    useAccount.setState({ plan: 'pro' });
+    usePlacesHome.getState().add({
+      name: 'Back balcony',
+      kind: 'balcony',
+      target: 'pigeons',
+      birdsActive: 'early morning',
+    });
+
+    const said = words(await paint(<ScheduleScreen />));
+
+    expect(said).toContain('Protect Back balcony automatically');
+    expect(said).toContain('Create a schedule for the times birds usually appear.');
+    expect(said).toContain('You said birds show up early morning.');
+  });
+
+  it('opens on today, and says what the run is and where', async () => {
+    aPlace('Back balcony');
+    useSchedules.setState({ schedules: [aRun()] });
+
+    const said = words(await paint(<ScheduleScreen />));
+
+    expect(said).toContain('Today');
+    expect(said).toContain('Back balcony');
+    expect(said.join('')).toContain('Pigeon Rotation');
+    expect(said.some((w) => w.startsWith('Next:'))).toBe(true);
+  });
+
+  it('says which run is happening right now', async () => {
+    aPlace('Back balcony');
+    useSchedules.setState({ schedules: [aRun()] });
+
+    const said = words(await paint(<ScheduleScreen />));
+    expect(said).toContain('Running now');
+  });
+
+  it('calls a run somebody switched off paused, and never running', async () => {
+    aPlace('Back balcony');
+    useSchedules.setState({ schedules: [aRun({ enabled: false })] });
+
+    const said = words(await paint(<ScheduleScreen />));
+    expect(said).toContain('Paused');
+    expect(said).not.toContain('Running now');
+  });
+
+  it('admits the sunrise it is using is an estimate when nobody said where the place is', async () => {
+    aPlace('Back balcony');
+    useSchedules.setState({ schedules: [aRun({ trigger: 'sunrise', endMinutes: 8 * 60 })] });
+
+    const said = words(await paint(<ScheduleScreen />));
+    expect(said.some((w) => w.includes('Estimated times'))).toBe(true);
   });
 });
 

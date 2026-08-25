@@ -8,8 +8,11 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { Mascot } from '../src/components';
 import { msUntilEnd, nextRun, playingAt, type TimeWindow } from '../src/core/scheduler';
 import { SPEAKER_LABEL } from '../src/core/profiles';
+import { runLength, startOn } from '../src/core/scheduleTimeline';
 import { SPEAKER_STATUS_LABEL, speakerStatus } from '../src/core/speakerStatus';
 import { useAccount } from '../src/state/useAccount';
+import { useLocation } from '../src/state/useLocation';
+import { useProtectionPlans } from '../src/state/useProtectionPlans';
 import { formatMinutes, useSchedules } from '../src/state/useSchedules';
 import { useSession } from '../src/state/useSession';
 import {
@@ -28,6 +31,8 @@ const HOLD_TO_LEAVE_MS = 2000;
 interface Window extends TimeWindow {
   profileId: string;
   profileName: string;
+  /** the protection plan this run plays, when it plays one */
+  planId: string | null;
 }
 
 /**
@@ -56,19 +61,27 @@ export default function SpeakerMode() {
   const runningFor = useRef<string | null>(null);
   const endTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const windows = useMemo<Window[]>(
-    () =>
-      schedules.map((s) => ({
+  const coords = useLocation((s) => s.coords);
+  // A run anchored to the sun starts at a different minute every day, so the
+  // windows are worked out again once a day rather than once a second.
+  const today = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+  const windows = useMemo<Window[]>(() => {
+    const day = new Date();
+    return schedules.map((s) => {
+      const start = startOn(s, day, coords).minutes;
+      return {
         id: s.id,
         days: s.days,
-        startMinutes: s.startMinutes,
-        endMinutes: s.endMinutes,
+        startMinutes: start,
+        endMinutes: (start + runLength(s)) % 1440,
         enabled: s.enabled,
         profileId: s.profileId,
-        profileName: s.profileName,
-      })),
-    [schedules]
-  );
+        profileName: s.planName ?? s.profileName,
+        planId: s.planId,
+      };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coords, schedules, today]);
 
   const playing = useMemo(() => playingAt(windows, now), [now, windows]);
   const upNext = useMemo(() => nextRun(windows, now), [now, windows]);
@@ -105,6 +118,16 @@ export default function SpeakerMode() {
 
     if (running) await session.stop();
     runningFor.current = should.id;
+
+    // A run with a plan behind it plays the whole rotation, the same way
+    // Start on Home does. One with a sound behind it plays that sound.
+    const plan = should.planId
+      ? useProtectionPlans.getState().byId(should.planId)
+      : undefined;
+    if (plan) {
+      await session.start({ source: 'schedule', plan });
+      return;
+    }
     session.setProfile(should.profileId);
     await session.start({ profileId: should.profileId, source: 'schedule' });
   }, [windows]);

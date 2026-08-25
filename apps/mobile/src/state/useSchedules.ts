@@ -1,10 +1,16 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
+  nextOccurrence,
+  scheduleTimeline,
+  type ScheduleTrigger,
+} from '../core/scheduleTimeline';
+import {
   cancelReminders,
   configureNotifications,
   scheduleReminders,
 } from '../services/notifications';
+import { useLocation } from './useLocation';
 import { somethingChanged } from '../services/syncSignal';
 import { persistStorage, STORAGE_KEYS, uid } from './storage';
 
@@ -18,11 +24,21 @@ export interface Schedule {
   profileName: string;
   /** 0 is Sunday, 6 is Saturday */
   days: number[];
-  /** minutes past midnight */
+  /** minutes past midnight. The anchor a run set to a time starts at. */
   startMinutes: number;
   endMinutes: number;
   enabled: boolean;
   executor: Executor;
+  /** what starts it: a time on the clock, or the sun */
+  trigger: ScheduleTrigger;
+  /** minutes before or after sunrise or sunset */
+  offsetMinutes: number;
+  /** the place this run looks after */
+  placeId: string | null;
+  placeName: string | null;
+  /** the protection plan it runs, when it runs one rather than one sound */
+  planId: string | null;
+  planName: string | null;
   zoneId: string | null;
   deviceId: string | null;
   notificationIds: string[];
@@ -82,8 +98,38 @@ export const EXECUTOR_LABEL: Record<Executor, string> = {
 
 export type ScheduleInput = Omit<
   Schedule,
-  'id' | 'notificationIds' | 'enabled' | 'updatedAt' | 'remoteId'
-> & { id?: string; enabled?: boolean; remoteId?: string | null };
+  | 'id'
+  | 'notificationIds'
+  | 'enabled'
+  | 'updatedAt'
+  | 'remoteId'
+  | 'trigger'
+  | 'offsetMinutes'
+  | 'placeId'
+  | 'placeName'
+  | 'planId'
+  | 'planName'
+> & {
+  id?: string;
+  enabled?: boolean;
+  remoteId?: string | null;
+  trigger?: ScheduleTrigger;
+  offsetMinutes?: number;
+  placeId?: string | null;
+  placeName?: string | null;
+  planId?: string | null;
+  planName?: string | null;
+};
+
+/** What a schedule nobody has described yet looks like. */
+export const SCHEDULE_DEFAULTS = {
+  trigger: 'time' as ScheduleTrigger,
+  offsetMinutes: 0,
+  placeId: null,
+  placeName: null,
+  planId: null,
+  planName: null,
+};
 
 interface SchedulesState {
   schedules: Schedule[];
@@ -121,6 +167,8 @@ export const useSchedules = create<SchedulesState>()(
       upsert: async (input) => {
         const existing = input.id ? get().schedules.find((s) => s.id === input.id) : undefined;
         const draft: Schedule = {
+          ...SCHEDULE_DEFAULTS,
+          ...existing,
           ...input,
           id: existing?.id ?? uid('sch'),
           enabled: input.enabled ?? existing?.enabled ?? true,
@@ -159,20 +207,14 @@ export const useSchedules = create<SchedulesState>()(
 
       nextUp: () => {
         const now = new Date();
-        let best: { schedule: Schedule; at: Date } | null = null;
-        for (const s of get().schedules) {
-          if (!s.enabled || s.days.length === 0) continue;
-          for (let offset = 0; offset < 8; offset++) {
-            const d = new Date(now);
-            d.setDate(now.getDate() + offset);
-            if (!s.days.includes(d.getDay())) continue;
-            d.setHours(Math.floor(s.startMinutes / 60), s.startMinutes % 60, 0, 0);
-            if (d.getTime() <= now.getTime()) continue;
-            if (!best || d < best.at) best = { schedule: s, at: d };
-            break;
-          }
-        }
-        return best;
+        // A run anchored to the sun moves from one day to the next, so the
+        // answer comes off the same timeline the Schedule screen draws.
+        const timeline = scheduleTimeline(get().schedules, now, {
+          days: 8,
+          coords: useLocation.getState().coords,
+        });
+        const next = nextOccurrence(timeline, now);
+        return next ? { schedule: next.schedule, at: next.start } : null;
       },
 
       setAll: (schedules) => set({ schedules }),
@@ -185,13 +227,14 @@ export const useSchedules = create<SchedulesState>()(
       name: STORAGE_KEYS.schedules,
       storage: persistStorage,
       partialize: (s) => ({ schedules: s.schedules }),
-      version: 2,
+      version: 3,
       migrate: (state) => {
         const s = state as { schedules?: Schedule[] } | undefined;
         if (!s?.schedules) return state as never;
         return {
           ...s,
           schedules: s.schedules.map((x) => ({
+            ...SCHEDULE_DEFAULTS,
             ...x,
             updatedAt: x.updatedAt ?? Date.now(),
             remoteId: x.remoteId ?? null,
