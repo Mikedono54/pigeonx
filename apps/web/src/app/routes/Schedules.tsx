@@ -135,9 +135,9 @@ function TimelineRow({
 
   return (
     <li className="border-b border-line last:border-b-0">
-      <div className="flex flex-wrap items-start justify-between gap-4 p-4">
-        <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-4 gap-y-1">
-          <p className="px-num w-full shrink-0 text-[15px] text-ink sm:w-[16rem]">
+      <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-4">
+          <p className="px-num shrink-0 text-[15px] whitespace-nowrap text-ink sm:w-[15rem]">
             {scheduleWindow(row)}
           </p>
           <div className="min-w-0 flex-1">

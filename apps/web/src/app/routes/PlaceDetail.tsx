@@ -587,7 +587,7 @@ export default function PlaceDetail() {
           ) : shownPlays.length === 0 ? (
             <Empty title="No runs match that result. Pick another one." />
           ) : (
-            <TableWrap>
+            <TableWrap min="48rem">
               <thead>
                 <tr>
                   <Th>When</Th>

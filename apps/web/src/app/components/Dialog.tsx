@@ -87,8 +87,9 @@ export function Dialog({
             </p>
           ) : null}
           <div className="flex flex-wrap justify-end gap-3 border-t border-line px-5 py-4">
+            {/* A sheet with nothing to save is read, not cancelled. */}
             <Button type="button" variant="secondary" onClick={onClose}>
-              Cancel
+              {onSubmit ? 'Cancel' : 'Close'}
             </Button>
             {onSubmit ? (
               <Button

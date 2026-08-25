@@ -82,6 +82,8 @@ export default function History() {
 
   const shown = useMemo(() => filterPlays(plays, filters), [plays, filters]);
   const narrowed = JSON.stringify(filters) !== JSON.stringify(NO_FILTERS);
+  /** No answer yet is not the same as no sessions. Say nothing until it lands. */
+  const counted = state.data !== null;
 
   const set = (patch: Partial<HistoryFilters>) => setFilters({ ...filters, ...patch });
 
@@ -167,8 +169,10 @@ export default function History() {
         </Field>
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[15px] text-muted">{playCountLine(shown.length, plays.length)}</p>
+      <div className="mt-5 flex min-h-6 flex-wrap items-center justify-between gap-3">
+        <p className="text-[15px] text-muted">
+          {counted ? playCountLine(shown.length, plays.length) : ''}
+        </p>
         {narrowed ? (
           <GhostButton onClick={() => setFilters(NO_FILTERS)}>Clear the filters</GhostButton>
         ) : null}
@@ -185,7 +189,7 @@ export default function History() {
             action={<GhostButton onClick={() => setFilters(NO_FILTERS)}>Clear them</GhostButton>}
           />
         ) : (
-          <TableWrap>
+          <TableWrap min="58rem">
             <thead>
               <tr>
                 <Th>When</Th>

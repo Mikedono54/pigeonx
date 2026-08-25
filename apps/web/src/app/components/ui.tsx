@@ -193,10 +193,17 @@ export function Select({
 
 /* ── tables ────────────────────────────────────────────────────────────── */
 
-export function TableWrap({ children }: { children: ReactNode }) {
+/**
+ * A table that keeps its columns readable and scrolls sideways rather than
+ * squeezing. `min` is the width below which the columns stop making sense, so
+ * a table with more columns asks for more room.
+ */
+export function TableWrap({ children, min = '42rem' }: { children: ReactNode; min?: string }) {
   return (
     <div className="overflow-x-auto border border-line">
-      <table className="w-full min-w-[42rem] border-collapse text-left">{children}</table>
+      <table className="w-full border-collapse text-left" style={{ minWidth: min }}>
+        {children}
+      </table>
     </div>
   );
 }
