@@ -87,6 +87,11 @@ beforeEach(() => {
     rotation: [],
     rotationAt: 0,
     deviceId: null,
+    deviceName: null,
+    paused: false,
+    pausedAt: null,
+    gapUntil: null,
+    blocked: null,
   });
 });
 
@@ -166,6 +171,124 @@ describe('Home, opened on a place', () => {
 
     const said = words(await paint(<Home />));
     expect(said).toContain('You reported improvement after 2 of 3 sessions.');
+  });
+});
+
+describe('Home, while a sound is playing', () => {
+  function playing(over: Record<string, unknown> = {}) {
+    useSession.setState({
+      profileId: 'sys_distress_pigeon',
+      engineState: 'running',
+      startedAt: Date.now() - 65_000,
+      paused: false,
+      pausedAt: null,
+      gapUntil: null,
+      ...over,
+    });
+  }
+
+  it('turns the screen under the block into the session itself', async () => {
+    aPlace();
+    playing();
+    const said = words(await paint(<Home />));
+
+    expect(said).toContain('Pigeon distress call');
+    expect(said).toContain('Natural recording');
+    expect(said).toContain('Plays on');
+    expect(said).toContain('This phone');
+    expect(said).toContain('Loudness');
+    expect(said).toContain('Pause');
+    expect(said).toContain('Stop');
+  });
+
+  it('offers no pitch over a recording, because a recording has none', async () => {
+    aPlace();
+    playing();
+    const said = words(await paint(<Home />));
+    expect(said).not.toContain('Pitch');
+  });
+
+  it('offers the pitch of a sound the phone is generating', async () => {
+    aPlace();
+    playing({ profileId: 'sys_pigeon_18k' });
+    const said = words(await paint(<Home />));
+    expect(said).toContain('Pitch');
+  });
+
+  it('names what is coming after this one, and the order of the rest', async () => {
+    aPlace();
+    playing({
+      profileId: 'sys_pigeon_18k',
+      planName: 'Pigeon Rotation',
+      rotation: ['sys_pigeon_18k', 'sys_pulse_16k', 'sys_sweep_15_19k'],
+      rotationAt: 0,
+    });
+    const said = words(await paint(<Home />));
+
+    expect(said).toContain('Up next');
+    expect(said).toContain('Unpredictable beeps');
+    expect(said.join('')).toContain('Variable pitch sweep');
+  });
+
+  it('counts down the silence between two sounds', async () => {
+    aPlace();
+    playing({
+      planName: 'Pigeon Rotation',
+      rotation: ['sys_distress_pigeon', 'sys_predator_hawk'],
+      rotationAt: 0,
+      gapUntil: Date.now() + 20_000,
+    });
+    const said = words(await paint(<Home />));
+
+    expect(said.join('')).toContain('Next sound in');
+  });
+
+  it('says it is held, and offers to let it out again', async () => {
+    aPlace();
+    const at = Date.now();
+    playing({ startedAt: at - 65_000, paused: true, pausedAt: at });
+    const said = words(await paint(<Home />));
+
+    expect(said).toContain('Paused');
+    expect(said).toContain('Play');
+    expect(said).toContain('Held. Nothing is coming out.');
+  });
+});
+
+describe('Home, with a speaker that is gone', () => {
+  it('says what to do about it, and names the speaker', async () => {
+    aPlace();
+    useSession.setState({
+      output: 'simulated',
+      deviceId: 'dev_gone',
+      deviceName: 'Living Room Speaker',
+    });
+    const said = words(await paint(<Home />));
+
+    expect(said).toContain('Check speaker');
+    expect(said.join('')).toContain('Reconnect Living Room Speaker in your phone settings.');
+  });
+
+  it('says a speaker it still has is connected', async () => {
+    aPlace();
+    useAccount.setState({
+      plan: 'pro',
+      devices: [
+        {
+          id: 'dev_1',
+          name: 'Roof speaker',
+          kind: 'simulated',
+          pairedAt: 0,
+          updatedAt: 0,
+          remoteId: null,
+        },
+      ],
+    });
+    useSession.setState({ output: 'simulated', deviceId: 'dev_1', deviceName: 'Roof speaker' });
+    const said = words(await paint(<Home />));
+
+    expect(said).toContain('Connected');
+    expect(said).not.toContain('Check speaker');
   });
 });
 

@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Linking, Text, useWindowDimensions, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Linking, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as Haptics from 'expo-haptics';
 import {
   ChevronDown,
   ListMusic,
   Music,
+  Pause,
   Play,
   Plus,
   SlidersHorizontal,
@@ -15,8 +17,10 @@ import {
 } from 'lucide-react-native';
 
 import {
+  ActiveSession,
   Banner,
   BlockButton,
+  Button,
   Chip,
   ListRow,
   ResultSheet,
@@ -31,11 +35,17 @@ import {
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { useElapsed } from '../../src/hooks/useElapsed';
 import {
-  HOME_ATTENTION_LINE,
   HOME_OFF_LINE,
   homeState,
   nextSessionLine,
 } from '../../src/core/homeState';
+import { MASCOT_WALK_MS, mascotPose } from '../../src/core/mascot';
+import { PLAN_BLOCK_TITLE, planBlock } from '../../src/core/planWindow';
+import {
+  SPEAKER_STATUS_LABEL,
+  reconnectLine,
+  speakerStatus,
+} from '../../src/core/speakerStatus';
 import {
   BIRD_TARGET_LABELS,
   summaryLine,
@@ -116,18 +126,24 @@ export default function HomeScreen() {
   const hitPlanCap = useSession((s) => s.hitPlanCap);
   const soundOverride = useSession((s) => s.soundOverride);
   const livePlanName = useSession((s) => s.planName);
-  const rotationAt = useSession((s) => s.rotationAt);
+  const paused = useSession((s) => s.paused);
+  const pausedAt = useSession((s) => s.pausedAt);
+  const blocked = useSession((s) => s.blocked);
   const setPlaysOn = useSession((s) => s.setOutput);
   const setDuration = useSession((s) => s.setDuration);
   const usePlanAgain = useSession((s) => s.usePlanAgain);
   const start = useSession((s) => s.start);
+  const pause = useSession((s) => s.pause);
+  const resume = useSession((s) => s.resume);
   const stop = useSession((s) => s.stop);
+  const clearBlocked = useSession((s) => s.clearBlocked);
 
   const byId = useProfiles((s) => s.byId);
   const sound = byId(profileId);
 
   const speakers = useAccount((s) => s.devices);
   const deviceId = useSession((s) => s.deviceId);
+  const deviceName = useSession((s) => s.deviceName);
   const addTestSpeaker = useAccount((s) => s.addSimulatedDevice);
   const schedules = useSchedules((s) => s.schedules);
   const nextUp = useSchedules((s) => s.nextUp);
@@ -176,13 +192,38 @@ export default function HomeScreen() {
    * say honestly: you picked a speaker of your own, and the phone no longer
    * has it. A place playing out of the phone is never in this state.
    */
-  const speakerMissing = useMemo(() => {
-    if (playsOn === 'phone' || playsOn === 'bt_speaker') return false;
-    if (deviceId) return !speakers.some((d) => d.id === deviceId);
-    return speakers.length === 0;
-  }, [deviceId, playsOn, speakers]);
+  const status = useMemo(
+    () => speakerStatus({ output: playsOn, deviceId, knownIds: speakers.map((d) => d.id) }),
+    [deviceId, playsOn, speakers],
+  );
+  const speakerMissing = status === 'offline';
 
   const state = homeState({ playing, speakerMissing, nextAt });
+
+  /**
+   * A session that has just ended.
+   *
+   * One flash of the playing colour, one success tap, and the bird walking
+   * off the block. It lasts as long as the walk and then Home settles into
+   * whatever it is now.
+   */
+  const wasPlaying = useRef(false);
+  const [finishing, setFinishing] = useState(false);
+  const [flashKey, setFlashKey] = useState(0);
+
+  useEffect(() => {
+    if (playing) {
+      wasPlaying.current = true;
+      return;
+    }
+    if (!wasPlaying.current) return;
+    wasPlaying.current = false;
+    setFlashKey((n) => n + 1);
+    setFinishing(true);
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const settle = setTimeout(() => setFinishing(false), MASCOT_WALK_MS + 200);
+    return () => clearTimeout(settle);
+  }, [playing]);
 
   /** One line of counting, from what this person told us about this place. */
   const reported = useMemo(() => {
@@ -192,21 +233,35 @@ export default function HomeScreen() {
     );
   }, [entries, place]);
 
-  const upNextName = useMemo(() => {
-    void rotationAt;
-    return useSession.getState().upNext();
-  }, [rotationAt]);
+  /**
+   * Why this Start would refuse.
+   *
+   * Quiet hours are a thing a person can still press through and be told
+   * about, because they may well have forgotten setting them. A day the plan
+   * does not run and a date it does not cover are facts about right now, so
+   * the button says so and stays down.
+   */
+  const why = useMemo(() => {
+    void minute;
+    return runsPlan && plan ? planBlock(plan, new Date()) : null;
+  }, [minute, plan, runsPlan]);
+  const outOfRange = why?.reason === 'days' || why?.reason === 'dates';
 
   const pickSpeaker = useCallback(
     (o: OutputKind) => {
       if (o === 'pigeonx_emitter' && speakers.length === 0) {
         const d = addTestSpeaker();
-        setPlaysOn('simulated', d.id);
+        setPlaysOn('simulated', d.id, d.name);
         toast.show('PigeonX speakers are not out yet. Added a test speaker.');
         setSpeakerOpen(false);
         return;
       }
-      setPlaysOn(o, o === 'simulated' ? (speakers[0]?.id ?? null) : null);
+      const first = speakers[0];
+      setPlaysOn(
+        o,
+        o === 'simulated' ? (first?.id ?? null) : null,
+        o === 'simulated' ? (first?.name ?? null) : null,
+      );
       setSpeakerOpen(false);
     },
     [addTestSpeaker, setPlaysOn, speakers, toast],
@@ -248,8 +303,13 @@ export default function HomeScreen() {
     Math.min(Math.round(room * STATE_BLOCK_SHARE), room - CONTROLS_MIN),
   );
 
+  // A held session shows the time it was held at, not a clock that keeps
+  // running behind a gate that is shut.
+  const shownElapsed =
+    paused && pausedAt !== null && startedAt !== null ? pausedAt - startedAt : elapsed;
+
   const headline = playing
-    ? formatElapsed(elapsed)
+    ? formatElapsed(shownElapsed)
     : state === 'attention'
       ? 'Check speaker'
       : state === 'scheduled'
@@ -257,12 +317,20 @@ export default function HomeScreen() {
         : 'Off';
 
   const line = playing
-    ? (upNextName ? `Up next: ${upNextName}` : 'You can lock the phone. The sound keeps going.')
+    ? paused
+      ? 'Held. Nothing is coming out.'
+      : 'You can lock the phone. The sound keeps going.'
     : state === 'attention'
-      ? HOME_ATTENTION_LINE
+      ? reconnectLine(deviceName)
       : state === 'scheduled' && nextAt
         ? nextSessionLine(nextAt, new Date(minute))
         : HOME_OFF_LINE;
+
+  const pose = mascotPose({
+    state: playing && !paused ? 'active' : playing ? 'off' : state,
+    ready: paused || sound !== undefined || plan !== undefined,
+    finishing,
+  });
 
   return (
     <View style={styles.root} onLayout={(e) => setFrame(e.nativeEvent.layout.height)}>
@@ -270,10 +338,12 @@ export default function HomeScreen() {
 
       <StateBlock
         state={playing ? 'playing' : state === 'attention' ? 'attention' : state === 'scheduled' ? 'soon' : 'off'}
-        label={playing ? (livePlanName ?? 'Playing') : undefined}
+        label={playing ? (paused ? 'Paused' : (livePlanName ?? 'Playing')) : undefined}
         headline={headline}
         clock={playing}
         line={line}
+        pose={pose}
+        flashKey={flashKey}
         topInset={insets.top}
         height={Math.max(180, blockHeight - insets.top)}
         header={
@@ -304,104 +374,158 @@ export default function HomeScreen() {
           ) : null
         }
       >
-        {playing ? <SpectrumBars active height={44} color={c.playOn} peakColor={c.energy} /> : null}
+        {playing ? (
+          <SpectrumBars active={!paused} height={44} color={c.playOn} peakColor={c.energy} />
+        ) : null}
       </StateBlock>
 
-      <View style={styles.body}>
-        {error ? (
-          <View style={styles.banner}>
-            <Banner title="That didn't work" body={error} onRetry={() => void start()} />
-          </View>
-        ) : hitPlanCap && !playing ? (
-          <View style={styles.banner}>
-            <Banner
-              tone="info"
-              title="Stopped after 15 minutes"
-              body="Pro plays as long as you like."
-              retryLabel="See Pro"
-              onRetry={() => router.push('/paywall')}
-            />
-          </View>
-        ) : reported && state === 'off' ? (
-          <Text style={styles.reported}>{reported}</Text>
-        ) : null}
+      {playing ? (
+        <View style={styles.body}>
+          {/* the surface is taller than a short phone, so it carries its own
+              scroll and the two buttons stay pinned under it */}
+          <ScrollView
+            style={styles.liveScroll}
+            contentContainerStyle={styles.liveContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <ActiveSession />
+          </ScrollView>
 
-        <View style={styles.list}>
-          {runsPlan && plan ? (
-            <ListRow
-              icon={ListMusic}
-              title={plan.name}
-              meta={describePlan(plan)}
-              onPress={() => setPlaysOpen(true)}
-              accessibilityLabel={`Protection plan, ${plan.name}. ${describePlan(plan)}. Tap to change what plays.`}
-            />
-          ) : (
-            <ListRow
-              icon={Music}
-              title={sound ? sound.name : 'No sound picked yet'}
-              meta={
-                sound
-                  ? `${pitchLabel(sound)}. ${AUDIBLE_LABEL[audibleState(sound, playsOn)]}`
-                  : undefined
+          <View style={styles.stopRow}>
+            <Button
+              label={paused ? 'Play' : 'Pause'}
+              variant="secondary"
+              size="lg"
+              full={false}
+              icon={paused ? Play : Pause}
+              onPress={() => (paused ? resume() : pause())}
+              accessibilityHint={
+                paused ? 'Lets the sound out again' : 'Holds the session where it is'
               }
-              onPress={() => (plan ? setPlaysOpen(true) : router.navigate('/sounds'))}
-              accessibilityLabel={`Sound, ${sound?.name ?? 'none picked yet'}. Tap to change.`}
+              style={styles.pause}
             />
+            <BlockButton
+              label="Stop"
+              tone="danger"
+              tall
+              onPress={() => void stop()}
+              icon={Square}
+              accessibilityHint="Ends this session"
+              style={styles.stop}
+            />
+          </View>
+        </View>
+      ) : (
+        <View style={styles.body}>
+          {error ? (
+            <View style={styles.banner}>
+              <Banner title="That didn't work" body={error} onRetry={() => void start()} />
+            </View>
+          ) : hitPlanCap ? (
+            <View style={styles.banner}>
+              <Banner
+                tone="info"
+                title="Stopped after 15 minutes"
+                body="Pro plays as long as you like."
+                retryLabel="See Pro"
+                onRetry={() => router.push('/paywall')}
+              />
+            </View>
+          ) : reported && state === 'off' ? (
+            <Text style={styles.reported}>{reported}</Text>
+          ) : null}
+
+          <View style={styles.list}>
+            {runsPlan && plan ? (
+              <ListRow
+                icon={ListMusic}
+                title={plan.name}
+                meta={describePlan(plan)}
+                onPress={() => setPlaysOpen(true)}
+                accessibilityLabel={`Protection plan, ${plan.name}. ${describePlan(plan)}. Tap to change what plays.`}
+              />
+            ) : (
+              <ListRow
+                icon={Music}
+                title={sound ? sound.name : 'No sound picked yet'}
+                meta={
+                  sound
+                    ? `${pitchLabel(sound)}. ${AUDIBLE_LABEL[audibleState(sound, playsOn)]}`
+                    : undefined
+                }
+                onPress={() => (plan ? setPlaysOpen(true) : router.navigate('/sounds'))}
+                accessibilityLabel={`Sound, ${sound?.name ?? 'none picked yet'}. Tap to change.`}
+              />
+            )}
+            <ListRow
+              icon={Speaker}
+              title={SPEAKER_LABEL[playsOn]}
+              meta={
+                status && status !== 'this_phone'
+                  ? SPEAKER_STATUS_LABEL[status]
+                  : SPEAKER_HINT[playsOn] || undefined
+              }
+              iconColor={speakerMissing ? c.warning : undefined}
+              onPress={() => setSpeakerOpen(true)}
+              accessibilityLabel={`Plays on ${SPEAKER_LABEL[playsOn]}${
+                status ? `, ${SPEAKER_STATUS_LABEL[status]}` : ''
+              }. Tap to change.`}
+            />
+            <ListRow
+              icon={SlidersHorizontal}
+              title="Pitch and loudness"
+              onPress={() => setAdjustOpen(true)}
+              accessibilityLabel="Pitch and loudness. Tap to change."
+            />
+          </View>
+
+          {speakerMissing || playsOn === 'bt_speaker' ? (
+            <Touchable
+              onPress={() => void Linking.openSettings()}
+              accessibilityLabel="Open your phone settings to connect a speaker"
+              style={styles.note}
+            >
+              <Text style={styles.noteText}>
+                {speakerMissing ? reconnectLine(deviceName) : BLUETOOTH_NOTE}
+              </Text>
+            </Touchable>
+          ) : null}
+
+          {runsPlan ? null : (
+            <View style={styles.howLong}>
+              <Text style={styles.fieldLabel}>How long</Text>
+              <View style={styles.chipRow}>
+                {HOW_LONG.map((d) => (
+                  <Chip
+                    key={String(d.value)}
+                    label={d.label}
+                    selected={duration === d.value}
+                    locked={d.value === null && !ent.can('session.unlimited')}
+                    onPress={() => pickHowLong(d.value)}
+                  />
+                ))}
+              </View>
+            </View>
           )}
-          <ListRow
-            icon={Speaker}
-            title={SPEAKER_LABEL[playsOn]}
-            meta={SPEAKER_HINT[playsOn]}
-            onPress={() => setSpeakerOpen(true)}
-            accessibilityLabel={`Plays on ${SPEAKER_LABEL[playsOn]}. Tap to change.`}
-          />
-          <ListRow
-            icon={SlidersHorizontal}
-            title="Pitch and loudness"
-            onPress={() => setAdjustOpen(true)}
-            accessibilityLabel="Pitch and loudness. Tap to change."
+
+          <View style={styles.spacer} />
+
+          {outOfRange && why ? <Text style={styles.reason}>{why.line}</Text> : null}
+
+          <BlockButton
+            label="Start"
+            tone="accent"
+            tall
+            loading={busy}
+            disabled={outOfRange}
+            onPress={onBigButton}
+            icon={Play}
+            accessibilityHint={
+              outOfRange && why ? why.line : 'Plays the sound shown above'
+            }
           />
         </View>
-
-        {playsOn === 'bt_speaker' ? (
-          <Touchable
-            onPress={() => void Linking.openSettings()}
-            accessibilityLabel="Open your phone settings to connect a speaker"
-            style={styles.note}
-          >
-            <Text style={styles.noteText}>{BLUETOOTH_NOTE}</Text>
-          </Touchable>
-        ) : null}
-
-        {runsPlan ? null : (
-          <View style={styles.howLong}>
-            <Text style={styles.fieldLabel}>How long</Text>
-            <View style={styles.chipRow}>
-              {HOW_LONG.map((d) => (
-                <Chip
-                  key={String(d.value)}
-                  label={d.label}
-                  selected={duration === d.value}
-                  locked={d.value === null && !ent.can('session.unlimited')}
-                  onPress={() => pickHowLong(d.value)}
-                />
-              ))}
-            </View>
-          </View>
-        )}
-
-        <View style={styles.spacer} />
-
-        <BlockButton
-          label={playing ? 'Stop' : 'Start'}
-          tone={playing ? 'danger' : 'accent'}
-          tall
-          loading={busy}
-          onPress={onBigButton}
-          icon={playing ? Square : Play}
-          accessibilityHint={playing ? 'Stops the sound' : 'Plays the sound shown above'}
-        />
-      </View>
+      )}
 
       <Sheet open={placesOpen} title="Your places" onClose={() => setPlacesOpen(false)}>
         <View style={styles.list}>
@@ -468,6 +592,17 @@ export default function HomeScreen() {
           ))}
         </View>
         <Text style={styles.sheetNote}>{BLUETOOTH_NOTE}</Text>
+      </Sheet>
+
+      <Sheet
+        open={blocked !== null}
+        title={blocked ? PLAN_BLOCK_TITLE[blocked.reason] : 'Not right now'}
+        onClose={clearBlocked}
+      >
+        <Text style={styles.blockedLine}>{blocked?.line}</Text>
+        <Text style={styles.sheetNote}>
+          Change it in the protection plan for this place, or start one sound by hand.
+        </Text>
       </Sheet>
 
       <AdjustSheet open={adjustOpen} onClose={() => setAdjustOpen(false)} />
@@ -626,8 +761,18 @@ const sheet = themed((c, t) => ({
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   /** the only slack on the screen, and it sits above the one big button */
   spacer: { flex: 1, minHeight: 0 },
+  /** why the button under it will not move */
+  reason: { ...t.bodySmall, marginBottom: space.sm },
   sheetNote: { ...t.bodySmall },
+  blockedLine: { ...t.body, color: c.text, marginBottom: space.sm },
   field: { gap: space.xs },
+
+  liveScroll: { flex: 1 },
+  liveContent: { paddingBottom: space.md },
+  /** hold on the left, end it on the right. Only one of them is raised. */
+  stopRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space.sm },
+  pause: { minWidth: 132 },
+  stop: { flex: 1 },
 
   placePress: { minHeight: 0 },
   placeRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: 40 },
