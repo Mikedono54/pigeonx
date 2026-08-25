@@ -1,22 +1,46 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 
-import { Card, EmptyState, Screen, SectionHeader, Touchable } from '../src/components';
-import { SPEAKER_LABEL } from '../src/core/profiles';
+import { Chip, EmptyState, Screen, SectionHeader, Touchable } from '../src/components';
+import { SESSION_RESULTS, SESSION_RESULT_LINE, NO_RESULT_LINE } from '../src/core/personalization';
+import { SPEAKER_LABEL, type OutputKind } from '../src/core/profiles';
+import {
+  durationLabel,
+  filterTimeline,
+  groupTimeline,
+  itemName,
+  itemTime,
+  resultLabel,
+  type ResultFilter,
+} from '../src/core/timeline';
 import { useEntitlement } from '../src/hooks/useEntitlement';
 import { fetchRemoteHistory, mergeHistory } from '../src/services/sync';
-import { groupByDay, useHistory, type SessionEntry } from '../src/state/useHistory';
+import { useHistory, type SessionEntry } from '../src/state/useHistory';
+import { usePlacesHome } from '../src/state/usePlacesHome';
 import { font, icon, space, themed, useTheme, useThemedStyles } from '../src/theme';
 
+/**
+ * What played, when, where, and what happened after.
+ *
+ * A timeline rather than a tally: one line a session, in the order they
+ * happened, so a person can see their own week. The result on the right is the
+ * only thing on this screen the app did not observe itself, and it says so by
+ * being the thing that reads "No result reported" when nobody answered.
+ */
 export default function HistoryScreen() {
   const styles = useThemedStyles(sheet);
   const { c } = useTheme();
+  const insets = useSafeAreaInsets();
   const ent = useEntitlement();
   const entries = useHistory((s) => s.entries);
+  const places = usePlacesHome((s) => s.places);
   const historyDays = ent.limit('historyDays');
   const [elsewhere, setElsewhere] = useState<SessionEntry[]>([]);
+  const [placeFilter, setPlaceFilter] = useState<string | null>(null);
+  const [resultFilter, setResultFilter] = useState<ResultFilter | null>(null);
 
   // What played on other phones and in your places, if you are signed in.
   useEffect(() => {
@@ -38,10 +62,22 @@ export default function HistoryScreen() {
     return all.filter((e) => e.startedAt >= cutoff);
   }, [elsewhere, entries, historyDays]);
 
-  const days = useMemo(() => groupByDay(visible), [visible]);
+  const shown = useMemo(
+    () => filterTimeline(visible, { placeId: placeFilter, result: resultFilter }),
+    [placeFilter, resultFilter, visible],
+  );
+
+  const days = useMemo(() => groupTimeline(shown), [shown]);
+
+  // A filter row nobody can use is noise. Places show up once there is more
+  // than one, results once anybody has answered the question.
+  const showPlaces = places.length > 1;
+  const showResults = visible.some((e) => e.result !== null);
+  const filtered = placeFilter !== null || resultFilter !== null;
 
   return (
     <Screen
+      scroll={false}
       header={
         <View style={styles.headRow}>
           <Touchable onPress={() => router.back()} accessibilityLabel="Go back" style={styles.back}>
@@ -51,57 +87,133 @@ export default function HistoryScreen() {
         </View>
       }
     >
-      <SectionHeader
-       
-        title={
-          historyDays == null
-            ? `${visible.length} time${visible.length === 1 ? '' : 's'} so far`
-            : `Free keeps the last ${historyDays} days`
-        }
-      />
-
-      {days.length === 0 ? (
-        <EmptyState
-          title="Nothing has played yet"
-          body="Every play shows up here."
-          actionLabel="Go play one"
-          onAction={() => router.navigate('/')}
-        />
-      ) : (
-        <View style={styles.list}>
-          {days.map((d) => (
-            <Card key={d.day}>
-              <View style={styles.dayHead}>
-                <Text style={styles.dayLabel}>{d.label}</Text>
-                <Text style={styles.dayTotal}>
-                  {d.count} time{d.count === 1 ? '' : 's'}, {Math.round(d.totalMs / 60000)} min
-                </Text>
-              </View>
-              {d.entries.map((e) => (
-                <View key={e.id} style={styles.entryRow}>
-                  <View style={styles.entryText}>
-                    <Text style={styles.entryName} numberOfLines={1}>
-                      {e.profileName}
-                    </Text>
-                    <Text style={styles.entryMeta} numberOfLines={1}>
-                      {SPEAKER_LABEL[e.outputKind]} at{' '}
-                      {new Date(e.startedAt).toLocaleTimeString(undefined, {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                      })}
-                    </Text>
-                  </View>
-                  <Text style={styles.entryDur}>
-                    {e.endedAt
-                      ? `${Math.max(1, Math.round((e.endedAt - e.startedAt) / 60000))} min`
-                      : 'Still going'}
-                  </Text>
-                </View>
+      <ScrollView
+        style={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + space.xl }}
+      >
+        {showPlaces ? (
+          <View style={styles.filters}>
+            <Text style={styles.filterLabel}>Place</Text>
+            <View style={styles.chipRow}>
+              <Chip
+                label="Everywhere"
+                compact
+                selected={placeFilter === null}
+                onPress={() => setPlaceFilter(null)}
+              />
+              {places.map((p) => (
+                <Chip
+                  key={p.id}
+                  label={p.name}
+                  compact
+                  selected={placeFilter === p.id}
+                  onPress={() => setPlaceFilter(placeFilter === p.id ? null : p.id)}
+                />
               ))}
-            </Card>
-          ))}
-        </View>
-      )}
+            </View>
+          </View>
+        ) : null}
+
+        {showResults ? (
+          <View style={styles.filters}>
+            <Text style={styles.filterLabel}>What happened</Text>
+            <View style={styles.chipRow}>
+              <Chip
+                label="Everything"
+                compact
+                selected={resultFilter === null}
+                onPress={() => setResultFilter(null)}
+              />
+              {SESSION_RESULTS.map((r) => (
+                <Chip
+                  key={r}
+                  label={SESSION_RESULT_LINE[r]}
+                  compact
+                  selected={resultFilter === r}
+                  onPress={() => setResultFilter(resultFilter === r ? null : r)}
+                />
+              ))}
+              <Chip
+                label={NO_RESULT_LINE}
+                compact
+                selected={resultFilter === 'none'}
+                onPress={() => setResultFilter(resultFilter === 'none' ? null : 'none')}
+              />
+            </View>
+          </View>
+        ) : null}
+
+        <SectionHeader
+          title={
+            historyDays == null
+              ? `${shown.length} session${shown.length === 1 ? '' : 's'}`
+              : `Free keeps the last ${historyDays} days`
+          }
+        />
+
+        {days.length === 0 ? (
+          <EmptyState
+            title={filtered ? 'Nothing matches' : 'Nothing has played yet'}
+            body={
+              filtered
+                ? 'Try a wider filter.'
+                : 'Every session shows up here the moment it ends.'
+            }
+            actionLabel={filtered ? 'Show everything' : 'Go play one'}
+            onAction={() => {
+              if (!filtered) {
+                router.navigate('/');
+                return;
+              }
+              setPlaceFilter(null);
+              setResultFilter(null);
+            }}
+          />
+        ) : (
+          <View style={styles.days}>
+            {days.map((day) => (
+              <View key={day.key}>
+                <View style={styles.dayHead}>
+                  <View style={styles.dayMark} />
+                  <Text style={styles.dayLabel}>{day.heading}</Text>
+                </View>
+
+                <View style={styles.list}>
+                  {day.items.map((item) => (
+                    <View key={item.id} style={styles.entry}>
+                      <Text style={styles.time}>{itemTime(item)}</Text>
+                      <View style={styles.entryText}>
+                        <Text style={styles.name} numberOfLines={1}>
+                          {itemName(item)}
+                        </Text>
+                        <Text style={styles.where} numberOfLines={1}>
+                          {[
+                            item.placeName,
+                            SPEAKER_LABEL[item.outputKind as OutputKind] ?? item.outputKind,
+                            durationLabel(item),
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.result,
+                            item.result === null ? styles.resultQuiet : null,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {resultLabel(item)}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </ScrollView>
     </Screen>
   );
 }
@@ -115,31 +227,44 @@ const sheet = themed((c, t) => ({
     justifyContent: 'center',
   },
   headTitle: { ...t.title, flex: 1 },
-  list: { gap: space.sm },
+  scroll: { flex: 1 },
+
+  filters: { marginBottom: space.md, gap: space.sm },
+  filterLabel: { ...t.overline },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+
+  days: { gap: space.lg },
   dayHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: space.sm,
     marginBottom: space.sm,
-    gap: space.sm,
   },
-  dayLabel: { ...t.subheading },
-  dayTotal: { ...t.caption },
-  entryRow: {
+  dayMark: { width: 10, height: 3, backgroundColor: c.accent },
+  dayLabel: { ...t.overline, color: c.text },
+
+  list: { borderWidth: 1, borderColor: c.border },
+  entry: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    paddingVertical: 10,
+    gap: space.sm + 4,
+    paddingHorizontal: space.sm + 4,
+    paddingVertical: space.sm + 4,
     borderTopWidth: 1,
     borderTopColor: c.border,
+    backgroundColor: c.card,
+    marginTop: -1,
   },
-  entryText: { flex: 1, gap: 2 },
-  entryName: { ...t.label, fontSize: 15, color: c.ink },
-  entryMeta: { ...t.caption },
-  entryDur: {
+  time: {
+    width: 68,
     fontFamily: font.mono.bold,
     fontSize: 13,
     letterSpacing: -0.3,
     color: c.ink,
+    paddingTop: 2,
   },
+  entryText: { flex: 1, gap: 3 },
+  name: { ...t.subheading },
+  where: { ...t.caption },
+  result: { ...t.label, fontSize: 14, color: c.text },
+  resultQuiet: { color: c.muted },
 }));
