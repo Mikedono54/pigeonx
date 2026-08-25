@@ -5,6 +5,10 @@
  * ships, this file becomes a re-export. Keep the shape identical.
  *
  * Source of truth: docs/superpowers/specs/2026-08-21-pigeonx-platform-design.md §4.2
+ *
+ * `places.multiple` and the `places` cap are ahead of core: the personalized
+ * place model shipped on the phone first. They have to land in
+ * `packages/core/src/entitlements.ts` before the web dashboard can gate on them.
  */
 
 export type Plan = 'free' | 'pro' | 'business' | 'enterprise';
@@ -21,6 +25,7 @@ export type Feature =
   | 'schedules.device'
   | 'bluetooth.remember'
   | 'history.unlimited'
+  | 'places.multiple'
   | 'zones'
   | 'team'
   | 'dashboard'
@@ -37,6 +42,7 @@ export const FEATURE_MIN_PLAN: Record<Feature, Plan> = {
   'schedules.device': 'business',
   'bluetooth.remember': 'pro',
   'history.unlimited': 'pro',
+  'places.multiple': 'pro',
   zones: 'business',
   team: 'business',
   dashboard: 'business',
@@ -45,6 +51,7 @@ export const FEATURE_MIN_PLAN: Record<Feature, Plan> = {
 };
 
 export type LimitKey =
+  | 'places'
   | 'savedProfiles'
   | 'sessionMinutes'
   | 'historyDays'
@@ -52,6 +59,7 @@ export type LimitKey =
 
 /** `null` means unlimited. */
 export const LIMITS: Record<LimitKey, Record<Plan, number | null>> = {
+  places: { free: 1, pro: null, business: null, enterprise: null },
   savedProfiles: { free: 1, pro: null, business: null, enterprise: null },
   sessionMinutes: { free: 15, pro: null, business: null, enterprise: null },
   historyDays: { free: 7, pro: null, business: null, enterprise: null },
@@ -111,6 +119,7 @@ export const FEATURE_LABEL: Record<Feature, string> = {
   'schedules.device': 'A speaker that runs the schedule by itself',
   'bluetooth.remember': 'Remembering your Bluetooth speaker',
   'history.unlimited': 'The full list of what played',
+  'places.multiple': 'Multiple places',
   zones: 'Places, areas and speakers',
   team: 'Your team',
   dashboard: 'The web dashboard',

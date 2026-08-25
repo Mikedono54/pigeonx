@@ -6,7 +6,16 @@
  */
 
 export type ChangeReason =
-  'sound' | 'schedule' | 'speaker' | 'play' | 'place' | 'sign-in' | 'foreground' | 'manual';
+  | 'sound'
+  | 'schedule'
+  | 'speaker'
+  | 'play'
+  | 'place'
+  | 'plan'
+  | 'result'
+  | 'sign-in'
+  | 'foreground'
+  | 'manual';
 
 type Handler = (reason: ChangeReason) => void;
 

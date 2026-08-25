@@ -40,6 +40,8 @@ export const STORAGE_KEYS = {
   history: 'pigeonx.history',
   session: 'pigeonx.session',
   places: 'pigeonx.places',
+  placesHome: 'pigeonx.placesHome',
+  protectionPlans: 'pigeonx.protectionPlans',
 } as const;
 
 export function uid(prefix: string): string {

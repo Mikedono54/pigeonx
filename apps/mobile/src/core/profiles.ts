@@ -146,6 +146,33 @@ export function findSystemProfile(id: string): AudioProfile | undefined {
   return SYSTEM_PROFILES.find((p) => p.id === id);
 }
 
+/**
+ * The ids the account gives the nine built-in sounds.
+ *
+ * NOTE: mirror of `SYSTEM_PROFILE_UUIDS` in `packages/core/src/profiles.ts`,
+ * which is what the seed rows are written with. `remoteSoundId()` prefers what
+ * the account actually reports; this map is the fallback for a phone that has
+ * never reached the account, so a plan made offline still points at the right
+ * sounds once it goes up.
+ */
+export const SYSTEM_PROFILE_UUIDS: Record<string, string> = {
+  sys_pigeon_18k: '00000000-0000-0000-0000-000000000001',
+  sys_pulse_16k: '00000000-0000-0000-0000-000000000002',
+  sys_sweep_15_19k: '00000000-0000-0000-0000-000000000003',
+  sys_gull_17k: '00000000-0000-0000-0000-000000000004',
+  sys_random_pulse: '00000000-0000-0000-0000-000000000005',
+  sys_distress_pigeon: '00000000-0000-0000-0000-000000000006',
+  sys_predator_hawk: '00000000-0000-0000-0000-000000000007',
+  sys_predator_falcon: '00000000-0000-0000-0000-000000000008',
+  sys_max_22k: '00000000-0000-0000-0000-000000000009',
+};
+
+/** The built-in sound one of those ids belongs to. */
+export function systemProfileByUuid(uuid: string): AudioProfile | undefined {
+  const id = Object.keys(SYSTEM_PROFILE_UUIDS).find((k) => SYSTEM_PROFILE_UUIDS[k] === uuid);
+  return id ? findSystemProfile(id) : undefined;
+}
+
 /** Nominal top pitch of a bird call. Calls are ordinary audible audio. */
 export const SAMPLE_PEAK_HZ = 8000;
 /** Nominal lowest pitch of a bird call. */
