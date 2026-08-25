@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { getEngine, type EngineState } from '../audio';
 import { limit } from '../core/entitlements';
+import { planBlock, type PlanBlock } from '../core/planWindow';
 import { SPEAKER_LABEL, type AudioProfile, type OutputKind } from '../core/profiles';
 import { rotationOrder, slotMs } from '../core/protectionPlans';
 import { dismissRunningNotification, presentRunningNotification } from '../services/notifications';
@@ -25,6 +26,8 @@ interface SessionState {
   volume: number;
   duration: DurationChoice;
   deviceId: string | null;
+  /** what that speaker is called, so a warning can name it */
+  deviceName: string | null;
   /** the area this phone plays into, when the business has areas */
   zoneId: string | null;
   zoneName: string | null;
@@ -47,6 +50,18 @@ interface SessionState {
   /** the sounds of this session, in the order they will play */
   rotation: string[];
   rotationAt: number;
+  /**
+   * The gate is closed and the clock is held.
+   *
+   * The engine keeps everything it built to make the sound, so letting go
+   * starts again in one step instead of loading the whole thing twice.
+   */
+  paused: boolean;
+  pausedAt: number | null;
+  /** when the silence between two sounds of a rotation runs out */
+  gapUntil: number | null;
+  /** why the last Start refused, when it did */
+  blocked: PlanBlock | null;
   /** set when a play stopped because the plan ran out of time */
   hitPlanCap: boolean;
   currentEntryId: string | null;
@@ -54,7 +69,7 @@ interface SessionState {
 
   attach: () => () => void;
   setProfile: (id: string) => void;
-  setOutput: (output: OutputKind, deviceId?: string | null) => void;
+  setOutput: (output: OutputKind, deviceId?: string | null, deviceName?: string | null) => void;
   setVolume: (v: number) => void;
   setDuration: (d: DurationChoice) => void;
   setArea: (zoneId: string | null, zoneName?: string | null) => void;
@@ -63,14 +78,19 @@ interface SessionState {
   usePlanAgain: () => void;
   /** The sound after this one in the rotation, by name. */
   upNext: () => string | null;
+  /** The sounds still to come this time round, in order, by name. */
+  comingUp: () => string[];
   start: (opts?: {
     profileId?: string;
     source?: SessionSource;
     /** run this plan instead of one sound */
     plan?: ProtectionPlan | null;
   }) => Promise<void>;
+  pause: () => void;
+  resume: () => void;
   stop: () => Promise<void>;
   clearError: () => void;
+  clearBlocked: () => void;
   /** time limit in ms for this plan and choice. null means no limit. */
   effectiveCapMs: () => number | null;
   isRunning: () => boolean;
@@ -79,27 +99,47 @@ interface SessionState {
 let detach: (() => void) | null = null;
 
 /**
- * The two timers a rotation runs on, and the flag that keeps the engine's
- * idle event from being read as the end of the session.
+ * What one rotation is doing, and when it changes next.
  *
- * They live outside the store because they belong to one run, not to state a
- * screen renders. `clearRotation()` is safe to call at any point.
+ * It lives outside the store because it belongs to one run rather than to
+ * state a screen renders, and because pausing has to move its deadlines
+ * without a re-render for every one of them. `clearRotation()` is safe to
+ * call at any point.
  */
-let slotTimer: ReturnType<typeof setTimeout> | null = null;
+interface RotationCtx {
+  order: string[];
+  /** how long each sound gets, in milliseconds */
+  slot: number;
+  /** the silence between two sounds, in milliseconds */
+  gap: number;
+  /** when the whole session ends. null means it runs until somebody stops it. */
+  sessionEndsAt: number | null;
+  /** when the phase we are in now runs out */
+  phaseEndsAt: number;
+  phase: 'sound' | 'gap';
+}
+
+let ctx: RotationCtx | null = null;
+let phaseTimer: ReturnType<typeof setTimeout> | null = null;
 let sessionTimer: ReturnType<typeof setTimeout> | null = null;
 let swapping = false;
 
-function clearRotation(): void {
-  if (slotTimer) clearTimeout(slotTimer);
+function clearTimers(): void {
+  if (phaseTimer) clearTimeout(phaseTimer);
   if (sessionTimer) clearTimeout(sessionTimer);
-  slotTimer = null;
+  phaseTimer = null;
   sessionTimer = null;
+}
+
+function clearRotation(): void {
+  clearTimers();
+  ctx = null;
   swapping = false;
 }
 
 /** Test seam: what a rotation is waiting on right now. */
 export function __rotationPending(): boolean {
-  return slotTimer !== null || sessionTimer !== null;
+  return phaseTimer !== null || sessionTimer !== null;
 }
 
 export const useSession = create<SessionState>()(
@@ -110,6 +150,7 @@ export const useSession = create<SessionState>()(
       volume: 0.85,
       duration: 15,
       deviceId: null,
+      deviceName: null,
       zoneId: null,
       zoneName: null,
       soundOverride: false,
@@ -121,6 +162,10 @@ export const useSession = create<SessionState>()(
       planName: null,
       rotation: [],
       rotationAt: 0,
+      paused: false,
+      pausedAt: null,
+      gapUntil: null,
+      blocked: null,
       hitPlanCap: false,
       currentEntryId: null,
       notificationId: null,
@@ -163,9 +208,28 @@ export const useSession = create<SessionState>()(
         const next = rotation[(rotationAt + 1) % rotation.length];
         return useProfiles.getState().byId(next)?.name ?? null;
       },
-      setOutput: (output, deviceId) => set({ output, deviceId: deviceId ?? null }),
+
+      comingUp: () => {
+        const { rotation, rotationAt } = get();
+        if (rotation.length < 2) return [];
+        const byId = useProfiles.getState().byId;
+        return rotation
+          .slice(rotationAt + 1)
+          .map((id) => byId(id)?.name)
+          .filter((name): name is string => !!name);
+      },
+
+      setOutput: (output, deviceId, deviceName) =>
+        set({
+          output,
+          deviceId: deviceId ?? null,
+          deviceName: deviceId ? (deviceName ?? get().deviceName) : null,
+        }),
+
       setVolume: (v) => {
         set({ volume: v });
+        // While the gate is closed the engine holds the number and plays none
+        // of it, so a slider moved during a pause is still silent.
         getEngine().setVolume(v);
       },
       setDuration: (d) => set({ duration: d }),
@@ -195,6 +259,18 @@ export const useSession = create<SessionState>()(
         // same either way; the plan only decides what the list of sounds is
         // and how long the whole thing lasts.
         const plan = opts?.plan ?? null;
+
+        // Quiet hours, the days it runs and the dates it covers are all things
+        // a person set on purpose. A Start inside any of them refuses and says
+        // which one, rather than playing over the top of the instruction.
+        if (plan) {
+          const why = planBlock(plan, new Date());
+          if (why) {
+            set({ blocked: why });
+            return;
+          }
+        }
+
         const order = plan
           ? rotationOrder(plan.soundIds, plan.randomizeOrder).filter((id) =>
               useProfiles.getState().byId(id),
@@ -209,7 +285,11 @@ export const useSession = create<SessionState>()(
 
         set({
           error: null,
+          blocked: null,
           hitPlanCap: false,
+          paused: false,
+          pausedAt: null,
+          gapUntil: null,
           profileId,
           planId: plan?.id ?? null,
           planName: plan?.name ?? null,
@@ -231,6 +311,7 @@ export const useSession = create<SessionState>()(
           ? Math.min(capMs ?? Infinity, plan.sessionMinutes * 60_000)
           : capMs;
 
+        engine.setGateClosed(false);
         engine.setVolume(get().volume);
         engine.setDurationLimitMs(plan ? null : capMs);
         await engine.start(get().output);
@@ -268,8 +349,40 @@ export const useSession = create<SessionState>()(
         });
 
         if (plan && order.length > 0) {
-          armRotation(set, get, order.length, plan.sessionMinutes, sessionMs);
+          armRotation(order, plan, sessionMs);
         }
+      },
+
+      pause: () => {
+        const s = get();
+        if (s.engineState !== 'running' || s.paused) return;
+        const engine = getEngine();
+        engine.setGateClosed(true);
+        engine.holdAutoStop();
+        clearTimers();
+        set({ paused: true, pausedAt: Date.now() });
+      },
+
+      resume: () => {
+        const s = get();
+        if (!s.paused || s.pausedAt === null) return;
+        const held = Date.now() - s.pausedAt;
+        const engine = getEngine();
+        engine.setGateClosed(false);
+        engine.releaseAutoStop();
+
+        if (ctx) {
+          ctx.phaseEndsAt += held;
+          if (ctx.sessionEndsAt !== null) ctx.sessionEndsAt += held;
+        }
+
+        set({
+          paused: false,
+          pausedAt: null,
+          startedAt: s.startedAt === null ? null : s.startedAt + held,
+          gapUntil: s.gapUntil === null ? null : s.gapUntil + held,
+        });
+        armTimers();
       },
 
       stop: async () => {
@@ -279,6 +392,7 @@ export const useSession = create<SessionState>()(
       },
 
       clearError: () => set({ error: null }),
+      clearBlocked: () => set({ blocked: null }),
     }),
     {
       name: STORAGE_KEYS.session,
@@ -289,6 +403,7 @@ export const useSession = create<SessionState>()(
         volume: s.volume,
         duration: s.duration,
         deviceId: s.deviceId,
+        deviceName: s.deviceName,
         zoneId: s.zoneId,
         zoneName: s.zoneName,
         soundOverride: s.soundOverride,
@@ -298,40 +413,92 @@ export const useSession = create<SessionState>()(
 );
 
 /**
- * Sets the two clocks a rotation runs on: one for each sound's turn, and one
+ * Sets the clocks a rotation runs on: one for the phase it is in now, and one
  * for the whole session.
  */
-function armRotation(
-  set: (patch: Partial<SessionState>) => void,
-  get: () => SessionState,
-  sounds: number,
-  sessionMinutes: number,
-  sessionMs: number | null,
-): void {
+function armRotation(order: string[], plan: ProtectionPlan, sessionMs: number | null): void {
   clearRotation();
-  const slot = slotMs(sessionMinutes, sounds);
+  const slot = slotMs(plan.sessionMinutes, order.length);
+  const gap = Math.max(0, plan.intervalSeconds) * 1000;
 
-  if (sessionMs != null && Number.isFinite(sessionMs)) {
-    sessionTimer = setTimeout(() => {
-      sessionTimer = null;
-      void useSession.getState().stop();
-    }, sessionMs);
+  ctx = {
+    order,
+    slot,
+    gap,
+    sessionEndsAt:
+      sessionMs !== null && Number.isFinite(sessionMs) ? Date.now() + sessionMs : null,
+    phaseEndsAt: Date.now() + slot,
+    phase: 'sound',
+  };
+  armTimers();
+}
+
+/** Hangs both timers off the deadlines already in the context. */
+function armTimers(): void {
+  clearTimers();
+  if (!ctx) return;
+  const now = Date.now();
+
+  if (ctx.sessionEndsAt !== null) {
+    sessionTimer = setTimeout(
+      () => {
+        sessionTimer = null;
+        void useSession.getState().stop();
+      },
+      Math.max(0, ctx.sessionEndsAt - now),
+    );
   }
 
   // One sound alone has nothing to change to. The session clock still runs.
-  if (sounds < 2) return;
-  slotTimer = setTimeout(function next() {
-    slotTimer = setTimeout(next, slot);
-    void advance(set, get);
-  }, slot);
+  if (ctx.order.length < 2) return;
+  phaseTimer = setTimeout(
+    () => {
+      phaseTimer = null;
+      void nextPhase();
+    },
+    Math.max(0, ctx.phaseEndsAt - now),
+  );
+}
+
+/**
+ * Moves the rotation on: into the silence between two sounds, or into the
+ * next sound itself.
+ *
+ * A plan with no interval has no silence, and goes straight from one sound to
+ * the next. `swapping` stays true for the whole of a gap, so the engine going
+ * idle in the middle of one is never read as the session ending.
+ */
+async function nextPhase(): Promise<void> {
+  if (!ctx) return;
+
+  if (ctx.phase === 'sound' && ctx.gap > 0) {
+    swapping = true;
+    await getEngine().stop();
+    if (!ctx) return;
+    ctx.phase = 'gap';
+    ctx.phaseEndsAt = Date.now() + ctx.gap;
+    useSession.setState({ gapUntil: ctx.phaseEndsAt });
+    armTimers();
+    return;
+  }
+
+  swapping = true;
+  try {
+    await advance();
+  } finally {
+    swapping = false;
+  }
+  if (!ctx) return;
+  ctx.phase = 'sound';
+  ctx.phaseEndsAt = Date.now() + ctx.slot;
+  useSession.setState({ gapUntil: null });
+  armTimers();
 }
 
 /** Swaps to the next sound in the rotation without ending the session. */
-async function advance(
-  set: (patch: Partial<SessionState>) => void,
-  get: () => SessionState,
-): Promise<void> {
-  const { rotation, rotationAt, currentEntryId } = get();
+async function advance(): Promise<void> {
+  const store = useSession.getState();
+  const { rotation, rotationAt, currentEntryId } = store;
   if (!currentEntryId || rotation.length < 2) return;
 
   const at = (rotationAt + 1) % rotation.length;
@@ -339,19 +506,16 @@ async function advance(
   if (!profile) return;
 
   const engine = getEngine();
-  swapping = true;
   try {
     await engine.stop();
     await engine.load(profile);
-    engine.setVolume(get().volume);
+    engine.setVolume(store.volume);
     engine.setDurationLimitMs(null);
-    await engine.start(get().output);
-    set({ rotationAt: at, profileId: profile.id });
+    await engine.start(store.output);
+    useSession.setState({ rotationAt: at, profileId: profile.id });
   } catch {
     // The sound would not load or would not start. The engine has already
     // said so, and the session ends the way any failed run ends.
-  } finally {
-    swapping = false;
   }
 }
 
@@ -362,6 +526,7 @@ async function finalise(
 ): Promise<void> {
   const { currentEntryId, notificationId } = get();
   clearRotation();
+  getEngine().setGateClosed(false);
   set({
     startedAt: null,
     currentEntryId: null,
@@ -371,6 +536,9 @@ async function finalise(
     planName: null,
     rotation: [],
     rotationAt: 0,
+    paused: false,
+    pausedAt: null,
+    gapUntil: null,
   });
 
   if (currentEntryId) await sessionRecorder.end(currentEntryId);
@@ -388,6 +556,14 @@ export function formatElapsed(ms: number): string {
   const m = Math.floor(total / 60);
   const s = total % 60;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+/** "0:20", the way the line about the next sound counts down. */
+export function formatCountdown(ms: number): string {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
 }
 
 export function currentProfile(): AudioProfile | undefined {

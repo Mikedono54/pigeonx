@@ -45,6 +45,17 @@ export abstract class BaseAudioEngine implements AudioEngine {
   private stateListeners = new Set<(e: EngineStateEvent) => void>();
   private spectrumListeners = new Set<(bins: Spectrum) => void>();
   private autoStopTimer: ReturnType<typeof setTimeout> | null = null;
+  /** when the duration cap will fire, so a hold can work out what is left */
+  private autoStopAt: number | null = null;
+  private autoStopLeftMs: number | null = null;
+  /**
+   * The gate.
+   *
+   * Pause closes it: the sound stops coming out and everything the engine
+   * built to make it stays where it is, so letting go opens again in one
+   * step instead of loading the whole sound a second time.
+   */
+  private gateClosed = false;
   private spectrumTimer: ReturnType<typeof setInterval> | null = null;
   private startedAt: number | null = null;
   private durationLimitMs: number | null = null;
@@ -110,7 +121,7 @@ export abstract class BaseAudioEngine implements AudioEngine {
     this.setState('loading');
     try {
       await this.backendStart(output);
-      this.backendSetVolume(this.volume);
+      this.backendSetVolume(this.gateClosed ? 0 : this.volume);
       this.startedAt = Date.now();
       this.lastError = null;
       this.setState('running');
@@ -127,11 +138,40 @@ export abstract class BaseAudioEngine implements AudioEngine {
 
   setVolume(volume: number): void {
     this.volume = Math.max(0, Math.min(1, volume));
-    if (this.state === 'running') this.backendSetVolume(this.volume);
+    if (this.state === 'running') this.backendSetVolume(this.gateClosed ? 0 : this.volume);
   }
 
   getVolume(): number {
     return this.volume;
+  }
+
+  /** Closes or opens the gate without losing the volume a person set. */
+  setGateClosed(closed: boolean): void {
+    this.gateClosed = closed;
+    if (this.state === 'running') this.backendSetVolume(closed ? 0 : this.volume);
+  }
+
+  isGateClosed(): boolean {
+    return this.gateClosed;
+  }
+
+  /** Holds the duration cap where it is. Nothing else about the run changes. */
+  holdAutoStop(): void {
+    if (!this.autoStopTimer || this.autoStopAt == null) return;
+    clearTimeout(this.autoStopTimer);
+    this.autoStopTimer = null;
+    this.autoStopLeftMs = Math.max(0, this.autoStopAt - Date.now());
+  }
+
+  /** Starts the cap again with the time that was left on it. */
+  releaseAutoStop(): void {
+    if (this.autoStopLeftMs == null) return;
+    const left = this.autoStopLeftMs;
+    this.autoStopLeftMs = null;
+    this.autoStopAt = Date.now() + left;
+    this.autoStopTimer = setTimeout(() => {
+      void this.finish(true);
+    }, left);
   }
 
   setParam(key: string, value: number): void {
@@ -178,11 +218,14 @@ export abstract class BaseAudioEngine implements AudioEngine {
       // stopping must never throw at the caller. It is over either way.
     }
     this.startedAt = null;
+    // A gate left closed would make the next session silent.
+    this.gateClosed = false;
     this.setState('idle', undefined, autoStopped);
   }
 
   private armAutoStop(): void {
     if (this.durationLimitMs == null) return;
+    this.autoStopAt = Date.now() + this.durationLimitMs;
     this.autoStopTimer = setTimeout(() => {
       void this.finish(true);
     }, this.durationLimitMs);
@@ -200,6 +243,8 @@ export abstract class BaseAudioEngine implements AudioEngine {
     if (this.autoStopTimer) clearTimeout(this.autoStopTimer);
     if (this.spectrumTimer) clearInterval(this.spectrumTimer);
     this.autoStopTimer = null;
+    this.autoStopAt = null;
+    this.autoStopLeftMs = null;
     this.spectrumTimer = null;
   }
 
@@ -221,7 +266,8 @@ export abstract class BaseAudioEngine implements AudioEngine {
 
     let centre = 0;
     let width = 2;
-    let level = this.volume;
+    // A closed gate is silence, and silence has no bars.
+    let level = this.gateClosed ? 0 : this.volume;
 
     switch (p.kind) {
       case 'tone':
