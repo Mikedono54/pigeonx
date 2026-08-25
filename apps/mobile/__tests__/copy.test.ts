@@ -36,6 +36,16 @@ import {
 } from '../src/core/personalization';
 import { HOME_ATTENTION_LINE, HOME_OFF_LINE, nextSessionLine } from '../src/core/homeState';
 import { recommendPlan } from '../src/core/protectionPlans';
+import { MASCOT_LABEL } from '../src/core/mascot';
+import { SPEAKER_STATUS_LABEL, reconnectLine } from '../src/core/speakerStatus';
+import { TRIGGER_LABEL } from '../src/core/scheduleTimeline';
+import { ESTIMATED_NOTE } from '../src/core/sun';
+import {
+  PLAN_BLOCK_TITLE,
+  describePlanDays,
+  planBlock,
+  quietHoursLine,
+} from '../src/core/planWindow';
 
 /**
  * Code words a person should never have to read. See docs/mobile-glossary.md.
@@ -408,6 +418,35 @@ describe('nothing the app says is a promise we cannot keep', () => {
   });
 });
 
+
+describe('the words the app says about itself while it works', () => {
+  it('keeps every one of them clean', () => {
+    const quiet = { quietStart: '22:00', quietEnd: '07:00', days: [1], startsOn: null, endsOn: null };
+    for (const s of [
+      ...Object.values(MASCOT_LABEL),
+      ...Object.values(SPEAKER_STATUS_LABEL),
+      ...Object.values(TRIGGER_LABEL),
+      ...Object.values(PLAN_BLOCK_TITLE),
+      ESTIMATED_NOTE,
+      reconnectLine('Living Room Speaker'),
+      reconnectLine(null),
+      quietHoursLine(quiet)!,
+      describePlanDays([1, 2, 3, 4, 5]),
+      planBlock(quiet, new Date(2026, 7, 25, 23, 30))!.line,
+    ]) {
+      checkString(s);
+    }
+  });
+
+  it('never promises a schedule it cannot keep when it is estimating the sun', () => {
+    expect(ESTIMATED_NOTE).toMatch(/estimated/i);
+    expect(ESTIMATED_NOTE).not.toMatch(/exact|precise/i);
+  });
+
+  it('says only what it knows about a speaker', () => {
+    expect(Object.values(SPEAKER_STATUS_LABEL)).toEqual(['This phone', 'Connected', 'Offline']);
+  });
+});
 
 describe('the words a place is described in', () => {
   it('keeps every one of them clean', () => {

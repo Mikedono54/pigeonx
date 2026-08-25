@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Check, ChevronLeft, Trash2 } from 'lucide-react-native';
 
 import {
@@ -25,8 +26,15 @@ import {
   findSystemProfile,
   pitchLabel,
 } from '../src/core/profiles';
+import {
+  PLAN_DAY_NAMES,
+  dayInWords,
+  describePlanDays,
+  parseDay,
+} from '../src/core/planWindow';
 import { usePlacesHome } from '../src/state/usePlacesHome';
 import {
+  EVERY_DAY,
   describePlan,
   useProtectionPlans,
   type ProtectionPlan,
@@ -37,12 +45,26 @@ import { icon, space, themed, useTheme, useThemedStyles } from '../src/theme';
 /** The session lengths a plan can hold, in minutes. */
 const LENGTHS = [5, 15, 30, 60];
 
+/** The silences a plan can leave between two sounds, in seconds. */
+const GAPS = [0, 10, 20, 30, 60];
+
+/** Monday first, the way `protection_plans.days` counts. */
+const PLAN_DAYS = [1, 2, 3, 4, 5, 6, 7];
+
+/** "2026-09-01" out of a date somebody picked. */
+function toDayString(at: Date): string {
+  return `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, '0')}-${String(
+    at.getDate(),
+  ).padStart(2, '0')}`;
+}
+
 /**
  * Every protection plan, under the place it looks after.
  *
- * A plan is four decisions: what it is called, which sounds it rotates, whether
- * it shuffles them, and how long a session runs. Editing it never changes what
- * a plan claims to do, because a plan does not claim anything.
+ * A plan is what it is called, which sounds it rotates, whether it shuffles
+ * them, how long a session runs, how long it goes quiet between sounds, which
+ * days it runs and between which dates. Editing it never changes what a plan
+ * claims to do, because a plan does not claim anything.
  */
 export default function Plans() {
   const styles = useThemedStyles(sheet);
@@ -177,6 +199,19 @@ function PlanEditor({
   const [soundIds, setSoundIds] = useState(plan.soundIds);
   const [randomize, setRandomize] = useState(plan.randomizeOrder);
   const [minutes, setMinutes] = useState(plan.sessionMinutes);
+  const [gap, setGap] = useState(plan.intervalSeconds);
+  const [days, setDays] = useState<number[]>(
+    plan.days.length > 0 ? plan.days : EVERY_DAY,
+  );
+  const [startsOn, setStartsOn] = useState<string | null>(plan.startsOn);
+  const [endsOn, setEndsOn] = useState<string | null>(plan.endsOn);
+  const [pickingDate, setPickingDate] = useState<'from' | 'until' | null>(null);
+
+  const toggleDay = useCallback((d: number) => {
+    setDays((prev) =>
+      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort((a, b) => a - b),
+    );
+  }, []);
 
   const toggle = useCallback((id: string) => {
     setSoundIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
@@ -190,9 +225,13 @@ function PlanEditor({
       soundIds,
       randomizeOrder: randomize,
       sessionMinutes: minutes,
+      intervalSeconds: gap,
+      days,
+      startsOn,
+      endsOn,
     });
     onClose();
-  }, [minutes, name, onClose, plan, randomize, soundIds, upsert]);
+  }, [days, endsOn, gap, minutes, name, onClose, plan, randomize, soundIds, startsOn, upsert]);
 
   return (
     <Sheet
@@ -247,6 +286,93 @@ function PlanEditor({
             />
           ))}
         </View>
+      </View>
+
+      <View style={styles.field}>
+        <Text style={styles.fieldLabel}>Gap between sounds</Text>
+        <View style={styles.chipRow}>
+          {GAPS.map((g) => (
+            <Chip
+              key={g}
+              label={g === 0 ? 'No gap' : `${g} seconds`}
+              selected={gap === g}
+              onPress={() => setGap(g)}
+            />
+          ))}
+        </View>
+        <Text style={styles.hint}>
+          The rotation goes quiet for this long before the next sound starts.
+        </Text>
+      </View>
+
+      <View style={styles.field}>
+        <Text style={styles.fieldLabel}>Days this plan runs</Text>
+        <View style={styles.chipRow}>
+          {PLAN_DAYS.map((d) => (
+            <Chip
+              key={d}
+              compact
+              label={PLAN_DAY_NAMES[d].slice(0, 3)}
+              selected={days.includes(d)}
+              onPress={() => toggleDay(d)}
+            />
+          ))}
+        </View>
+        <Text style={styles.hint}>
+          Start refuses on a day this plan does not run, and says so. It runs{' '}
+          {describePlanDays(days)}.
+        </Text>
+      </View>
+
+      <View style={styles.field}>
+        <Text style={styles.fieldLabel}>Dates</Text>
+        <View style={styles.chipRow}>
+          <Chip
+            label={startsOn ? `From ${dayInWords(parseDay(startsOn)!)}` : 'Starts today'}
+            selected={startsOn !== null}
+            onPress={() => setPickingDate(pickingDate === 'from' ? null : 'from')}
+          />
+          <Chip
+            label={endsOn ? `Until ${dayInWords(parseDay(endsOn)!)}` : 'No end date'}
+            selected={endsOn !== null}
+            onPress={() => setPickingDate(pickingDate === 'until' ? null : 'until')}
+          />
+          {startsOn || endsOn ? (
+            <Chip
+              label="Clear dates"
+              onPress={() => {
+                setStartsOn(null);
+                setEndsOn(null);
+                setPickingDate(null);
+              }}
+            />
+          ) : null}
+        </View>
+        {pickingDate ? (
+          <View style={styles.field}>
+            <DateTimePicker
+              value={
+                parseDay(pickingDate === 'from' ? startsOn : endsOn) ?? new Date()
+              }
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={(_, date) => {
+                if (Platform.OS !== 'ios') setPickingDate(null);
+                if (!date) return;
+                if (pickingDate === 'from') setStartsOn(toDayString(date));
+                else setEndsOn(toDayString(date));
+              }}
+            />
+            {Platform.OS === 'ios' ? (
+              <Button
+                label="Done"
+                variant="secondary"
+                size="sm"
+                onPress={() => setPickingDate(null)}
+              />
+            ) : null}
+          </View>
+        ) : null}
       </View>
 
       {soundIds.length > 0 ? (
