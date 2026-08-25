@@ -40,13 +40,19 @@ export function homeState({ playing, speakerMissing, nextAt }: HomeInputs): Home
 export const HOME_OFF_LINE = 'Ready when birds appear.';
 export const HOME_ATTENTION_LINE = 'The speaker for this place is not connected.';
 
-/** "7:00 AM", the way every time in the app reads. */
-export function clockTime(at: Date): string {
-  const h24 = at.getHours();
-  const m = at.getMinutes();
+/** "7:00 AM", from minutes past midnight. One clock face for the whole app. */
+export function clockMinutes(minutes: number): string {
+  const total = ((Math.round(minutes) % 1440) + 1440) % 1440;
+  const h24 = Math.floor(total / 60);
+  const m = total % 60;
   const ampm = h24 >= 12 ? 'PM' : 'AM';
   const h = h24 % 12 === 0 ? 12 : h24 % 12;
   return `${h}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+/** "7:00 AM", the way every time in the app reads. */
+export function clockTime(at: Date): string {
+  return clockMinutes(at.getHours() * 60 + at.getMinutes());
 }
 
 /** How many midnights sit between two moments. */
