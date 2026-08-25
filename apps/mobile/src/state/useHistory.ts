@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { SessionResult } from '../core/personalization';
 import type { OutputKind } from '../core/profiles';
+import { somethingChanged } from '../services/syncSignal';
 import { persistStorage, STORAGE_KEYS, uid } from './storage';
 
 export type SessionSource = 'manual' | 'schedule' | 'remote';
@@ -16,6 +18,19 @@ export interface SessionEntry {
   source: SessionSource;
   zoneId: string | null;
   deviceId: string | null;
+  /** the place on this phone this run looked after */
+  placeId: string | null;
+  placeName: string | null;
+  /** the protection plan that ran it, when a plan did */
+  planId: string | null;
+  planName: string | null;
+  /** what the person said happened. null until they say. */
+  result: SessionResult | null;
+  /**
+   * True once the question has been put, however it was answered, including
+   * not at all. The app asks once per session and never again.
+   */
+  resultAsked: boolean;
   /** the id the server gives back once the row is written */
   remoteId: string | null;
   /** false while the row still has to reach the server */
@@ -24,7 +39,7 @@ export interface SessionEntry {
 
 export interface QueuedOp {
   id: string;
-  kind: 'start' | 'end';
+  kind: 'start' | 'end' | 'result';
   sessionId: string;
   attempts: number;
   queuedAt: number;
@@ -35,14 +50,38 @@ interface HistoryState {
   queue: QueuedOp[];
 
   addEntry: (
-    e: Omit<SessionEntry, 'id' | 'endedAt' | 'remoteId' | 'synced'>
+    e: Omit<
+      SessionEntry,
+      | 'id'
+      | 'endedAt'
+      | 'remoteId'
+      | 'synced'
+      | 'result'
+      | 'resultAsked'
+      | 'placeId'
+      | 'placeName'
+      | 'planId'
+      | 'planName'
+    > &
+      Partial<Pick<SessionEntry, 'placeId' | 'placeName' | 'planId' | 'planName'>>
   ) => SessionEntry;
   closeEntry: (id: string, endedAt: number) => SessionEntry | undefined;
+  /** Records what a person said happened, once. */
+  setResult: (id: string, result: SessionResult) => SessionEntry | undefined;
+  /** Marks the question as put, so it is never put again. */
+  markAsked: (id: string) => void;
   markSynced: (id: string, remoteId: string | null) => void;
   enqueue: (kind: QueuedOp['kind'], sessionId: string) => void;
   dequeue: (opId: string) => void;
   bumpAttempts: (opId: string) => void;
   clear: () => void;
+  /**
+   * The last finished run nobody has been asked about yet.
+   *
+   * One sheet, one session. A run that was already asked about, or that is
+   * still going, is never offered again however many times a screen looks.
+   */
+  pendingResult: () => SessionEntry | undefined;
   todayCount: () => number;
   withinDays: (days: number | null) => SessionEntry[];
 }
@@ -58,10 +97,16 @@ export const useHistory = create<HistoryState>()(
       addEntry: (e) => {
         const entry: SessionEntry = {
           ...e,
+          placeId: e.placeId ?? null,
+          placeName: e.placeName ?? null,
+          planId: e.planId ?? null,
+          planName: e.planName ?? null,
           id: uid('ses'),
           endedAt: null,
           remoteId: null,
           synced: false,
+          result: null,
+          resultAsked: false,
         };
         set({ entries: [entry, ...get().entries].slice(0, MAX_ENTRIES) });
         return entry;
@@ -78,6 +123,26 @@ export const useHistory = create<HistoryState>()(
         });
         return updated;
       },
+
+      setResult: (id, result) => {
+        let updated: SessionEntry | undefined;
+        set({
+          entries: get().entries.map((s) => {
+            if (s.id !== id) return s;
+            updated = { ...s, result, resultAsked: true };
+            return updated;
+          }),
+        });
+        if (updated) somethingChanged('result');
+        return updated;
+      },
+
+      markAsked: (id) =>
+        set({
+          entries: get().entries.map((s) =>
+            s.id === id ? { ...s, resultAsked: true } : s
+          ),
+        }),
 
       markSynced: (id, remoteId) =>
         set({
@@ -114,6 +179,10 @@ export const useHistory = create<HistoryState>()(
 
       clear: () => set({ entries: [], queue: [] }),
 
+      // Entries are kept newest first, so the first match is the run that just
+      // finished.
+      pendingResult: () => get().entries.find((s) => s.endedAt !== null && !s.resultAsked),
+
       todayCount: () => {
         const start = new Date();
         start.setHours(0, 0, 0, 0);
@@ -131,6 +200,26 @@ export const useHistory = create<HistoryState>()(
       name: STORAGE_KEYS.history,
       storage: persistStorage,
       partialize: (s) => ({ entries: s.entries, queue: s.queue }),
+      version: 2,
+      // Every run somebody already has on their phone predates places, plans
+      // and the question. It keeps its place in the timeline and reads as a
+      // session nobody was asked about, which is exactly what it is.
+      migrate: (state) => {
+        const s = state as { entries?: SessionEntry[]; queue?: QueuedOp[] } | undefined;
+        if (!s?.entries) return state as never;
+        return {
+          ...s,
+          entries: s.entries.map((e) => ({
+            ...e,
+            placeId: e.placeId ?? null,
+            placeName: e.placeName ?? null,
+            planId: e.planId ?? null,
+            planName: e.planName ?? null,
+            result: e.result ?? null,
+            resultAsked: e.resultAsked ?? true,
+          })),
+        } as never;
+      },
     }
   )
 );

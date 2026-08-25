@@ -1,8 +1,9 @@
+import type { SessionResult } from '../core/personalization';
 import type { AudioProfile, OutputKind } from '../core/profiles';
 import { peakFreqHz } from '../core/profiles';
 import { useHistory, type SessionEntry, type SessionSource } from '../state/useHistory';
 import { useAccount } from '../state/useAccount';
-import { remoteSoundId } from './soundIds';
+import { remotePlaceId, remotePlanId, remoteSoundId } from './soundIds';
 import { callFunction, getSupabase } from './supabase';
 import { somethingChanged } from './syncSignal';
 
@@ -14,6 +15,8 @@ export interface RemoteSink {
   /** returns the remote session id, or throws */
   startSession(entry: SessionEntry): Promise<string | null>;
   endSession(entry: SessionEntry): Promise<void>;
+  /** Carries up what a person said happened. */
+  reportResult(entry: SessionEntry): Promise<void>;
   /** false when there is no configured/authenticated backend to talk to */
   isAvailable(): boolean;
 }
@@ -30,15 +33,21 @@ export const supabaseSink: RemoteSink = {
     const profileId = remoteSoundId(entry.profileId);
     if (!profileId) throw new Error('That sound has not reached the account.');
 
-    // A play in an area goes through the server so the rest of the team sees
-    // it. A play that belongs to one person is written straight down.
-    if (entry.zoneId) {
+    const userPlaceId = remotePlaceId(entry.placeId);
+    const planId = remotePlanId(entry.planId);
+
+    // A play in an area, in a place, or run by a plan goes through the server,
+    // so the row carries what it belonged to. A bare play by one person with
+    // nothing attached is written straight down.
+    if (entry.zoneId || userPlaceId || planId) {
       const { data, error } = await callFunction(sb, 'start_session', {
         zone_id: entry.zoneId,
         profile_id: profileId,
         device_id: entry.deviceId,
         output: entry.outputKind,
         source: entry.source,
+        plan_id: planId,
+        user_place_id: userPlaceId,
       });
       if (error) throw new Error(error.message ?? 'That did not reach the account.');
       return typeof data === 'string' ? data : null;
@@ -83,6 +92,21 @@ export const supabaseSink: RemoteSink = {
       .eq('id', entry.remoteId);
     if (error) throw new Error(error.message);
   },
+
+  async reportResult(entry) {
+    const sb = getSupabase();
+    if (!sb) throw new Error('No account yet.');
+    if (!entry.result) return;
+    // A run that never reached the account has nothing to attach an answer to.
+    // The queue holds it until `startSession` gets an id back.
+    if (!entry.remoteId) throw new Error('That run has not reached the account.');
+
+    const { error } = await callFunction(sb, 'report_session_result', {
+      session_id: entry.remoteId,
+      result: entry.result,
+    });
+    if (error) throw new Error(error.message ?? 'That did not reach the account.');
+  },
 };
 
 export const MAX_ATTEMPTS = 8;
@@ -105,6 +129,10 @@ export class SessionRecorder {
     source?: SessionSource;
     zoneId?: string | null;
     deviceId?: string | null;
+    placeId?: string | null;
+    placeName?: string | null;
+    planId?: string | null;
+    planName?: string | null;
   }): Promise<SessionEntry> {
     const h = useHistory.getState();
     const entry = h.addEntry({
@@ -116,6 +144,10 @@ export class SessionRecorder {
       source: args.source ?? 'manual',
       zoneId: args.zoneId ?? null,
       deviceId: args.deviceId ?? null,
+      placeId: args.placeId ?? null,
+      placeName: args.placeName ?? null,
+      planId: args.planId ?? null,
+      planName: args.planName ?? null,
     });
 
     if (!this.sink.isAvailable()) {
@@ -153,6 +185,29 @@ export class SessionRecorder {
     return entry;
   }
 
+  /**
+   * What a person said happened, written down once.
+   *
+   * The answer lands on this phone whatever the network is doing. Carrying it
+   * up is a separate matter, and a failure only means the queue tries again.
+   */
+  async report(sessionId: string, result: SessionResult): Promise<SessionEntry | undefined> {
+    const entry = useHistory.getState().setResult(sessionId, result);
+    if (!entry) return undefined;
+
+    if (!this.sink.isAvailable() || !entry.remoteId) {
+      useHistory.getState().enqueue('result', entry.id);
+      return entry;
+    }
+
+    try {
+      await this.sink.reportResult(entry);
+    } catch {
+      useHistory.getState().enqueue('result', entry.id);
+    }
+    return entry;
+  }
+
   /** Retries every queued op. Safe to call often; stops at MAX_ATTEMPTS. */
   async flush(): Promise<{ sent: number; remaining: number }> {
     if (!this.sink.isAvailable()) {
@@ -172,8 +227,10 @@ export class SessionRecorder {
         if (op.kind === 'start') {
           const remoteId = await this.sink.startSession(entry);
           useHistory.getState().markSynced(entry.id, remoteId);
-        } else {
+        } else if (op.kind === 'end') {
           await this.sink.endSession(entry);
+        } else {
+          await this.sink.reportResult(entry);
         }
         useHistory.getState().dequeue(op.id);
         sent += 1;

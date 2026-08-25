@@ -1,6 +1,13 @@
 import { AppState } from 'react-native';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  SESSION_RESULTS,
+  type AreaSize,
+  type BirdTarget,
+  type PlaceKind,
+  type SessionResult,
+} from '../core/personalization';
+import {
   SYSTEM_PROFILES,
   type AudioProfile,
   type ProfileKind,
@@ -9,11 +16,19 @@ import {
 import type { OutputKind } from '../core/profiles';
 import { useAccount, type SimulatedDevice, type SpeakerKind } from '../state/useAccount';
 import { useHistory, type SessionEntry, type SessionSource } from '../state/useHistory';
+import { usePlacesHome, type HomePlace } from '../state/usePlacesHome';
 import { useProfiles } from '../state/useProfiles';
+import { useProtectionPlans, type ProtectionPlan } from '../state/useProtectionPlans';
 import { useSchedules, type Executor, type Schedule } from '../state/useSchedules';
 import { askForMoveUp, markMoveUpDone, moveUpDone, moveUpPending } from './guestMigration';
 import { sessionRecorder } from './sessionRecorder';
-import { loadBuiltInSoundIds, localSoundId, remoteSoundId } from './soundIds';
+import {
+  loadBuiltInSoundIds,
+  localPlaceId,
+  localSoundId,
+  remotePlaceId,
+  remoteSoundId,
+} from './soundIds';
 import { callFunction, getSupabase, isMissingOnServer } from './supabase';
 import { setChangeHandler, somethingChanged, type ChangeReason } from './syncSignal';
 
@@ -120,6 +135,12 @@ export interface HistoryRow extends RemoteRow {
   peak_freq_hz?: number | null;
   source?: string | null;
   zone_id?: string | null;
+  /** what the person said happened, once `history()` started returning it */
+  result?: string | null;
+  plan_name?: string | null;
+  place_name?: string | null;
+  user_place_id?: string | null;
+  plan_id?: string | null;
 }
 
 const OUTPUT_KINDS: OutputKind[] = ['phone', 'bt_speaker', 'pigeonx_emitter', 'simulated'];
@@ -135,6 +156,11 @@ export function historyRowToEntry(
     : 'phone';
   const source: SessionSource =
     row.source === 'schedule' || row.source === 'remote' ? row.source : 'manual';
+  // An older server says nothing about a result, and an unreported run says
+  // `unknown` for a different reason. Only the four words we know count.
+  const result = SESSION_RESULTS.includes(row.result as SessionResult)
+    ? (row.result as SessionResult)
+    : null;
 
   return {
     id: `remote_${row.id}`,
@@ -147,6 +173,13 @@ export function historyRowToEntry(
     source,
     zoneId: row.zone_id ?? null,
     deviceId: null,
+    placeId: null,
+    placeName: row.place_name ?? null,
+    planId: null,
+    planName: row.plan_name ?? null,
+    result,
+    // Nothing on this phone asked about a run that happened somewhere else.
+    resultAsked: true,
     remoteId: row.id,
     synced: true,
   };
@@ -257,6 +290,132 @@ export function soundFromRow(row: SoundRow, match: AudioProfile | undefined): Au
   };
 }
 
+/* ── the place a person is looking after ──────────────────────────────────── */
+
+export interface UserPlaceRow extends RemoteRow {
+  name?: string | null;
+  kind?: string | null;
+  target?: string | null;
+  area_size?: string | null;
+  people_nearby?: boolean | null;
+  limit_audible?: boolean | null;
+  birds_active?: string | null;
+}
+
+const PLACE_KINDS: PlaceKind[] = [
+  'balcony',
+  'roof',
+  'dock',
+  'storefront',
+  'warehouse',
+  'parking',
+  'garden',
+  'farm',
+  'custom',
+];
+const BIRD_TARGETS: BirdTarget[] = [
+  'pigeons',
+  'gulls',
+  'starlings',
+  'corvids',
+  'mixed_small',
+  'unsure',
+];
+const AREA_SIZES: AreaSize[] = ['small', 'medium', 'large'];
+
+/**
+ * An answer the account gives back that this phone does not have a word for is
+ * not shown as itself. A place with an unknown kind is a custom place, and a
+ * place with an unknown bird is one nobody has answered for yet.
+ */
+export function placeFromRow(row: UserPlaceRow, match: HomePlace | undefined): HomePlace {
+  const kind = PLACE_KINDS.includes(row.kind as PlaceKind) ? (row.kind as PlaceKind) : 'custom';
+  const target = BIRD_TARGETS.includes(row.target as BirdTarget)
+    ? (row.target as BirdTarget)
+    : 'unsure';
+  const areaSize = AREA_SIZES.includes(row.area_size as AreaSize)
+    ? (row.area_size as AreaSize)
+    : null;
+  const peopleNearby = row.people_nearby ?? true;
+
+  return {
+    id: match?.id ?? `plh_${row.id}`,
+    name: row.name ?? match?.name ?? 'My space',
+    kind,
+    target,
+    areaSize,
+    peopleNearby,
+    limitAudible: peopleNearby ? (row.limit_audible ?? false) : false,
+    birdsActive: row.birds_active ?? null,
+    updatedAt: remoteTime(row),
+    remoteId: row.id,
+  };
+}
+
+/* ── the plan a place runs ────────────────────────────────────────────────── */
+
+export interface ProtectionPlanRow extends RemoteRow {
+  user_place_id?: string | null;
+  name?: string | null;
+  target?: string | null;
+  sound_ids?: string[] | null;
+  randomize_order?: boolean | null;
+  interval_seconds?: number | null;
+  session_minutes?: number | null;
+  output?: string | null;
+  volume?: number | null;
+  quiet_start?: string | null;
+  quiet_end?: string | null;
+  days?: number[] | null;
+  starts_on?: string | null;
+  ends_on?: string | null;
+}
+
+/** "22:00:00" from the server reads as "22:00" on a card. */
+export function trimSeconds(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const [h, m] = value.split(':');
+  if (h === undefined || m === undefined) return null;
+  return `${h}:${m}`;
+}
+
+export function planFromRow(
+  row: ProtectionPlanRow,
+  match: ProtectionPlan | undefined,
+): ProtectionPlan {
+  const output = OUTPUT_KINDS.includes(row.output as OutputKind)
+    ? (row.output as OutputKind)
+    : 'phone';
+  const target = BIRD_TARGETS.includes(row.target as BirdTarget)
+    ? (row.target as BirdTarget)
+    : 'unsure';
+  // A sound this phone has never heard of is dropped rather than shown as an
+  // id. The plan keeps playing whatever is left of it.
+  const soundIds = (row.sound_ids ?? [])
+    .map((id) => localSoundId(id))
+    .filter((id): id is string => id !== null);
+
+  return {
+    id: match?.id ?? `pln_${row.id}`,
+    placeId: match?.placeId ?? localPlaceId(row.user_place_id) ?? '',
+    name: row.name ?? match?.name ?? 'Protection plan',
+    target,
+    soundIds: soundIds.length > 0 ? soundIds : (match?.soundIds ?? []),
+    randomizeOrder: row.randomize_order ?? true,
+    intervalSeconds: row.interval_seconds ?? 0,
+    sessionMinutes: row.session_minutes ?? 15,
+    output,
+    volume: row.volume ?? 0.85,
+    quietStart: trimSeconds(row.quiet_start),
+    quietEnd: trimSeconds(row.quiet_end),
+    days: row.days ?? [1, 2, 3, 4, 5, 6, 7],
+    startsOn: row.starts_on ?? null,
+    endsOn: row.ends_on ?? null,
+    updatedAt: remoteTime(row),
+    remoteId: row.id,
+  };
+}
+
 /* ── the part that talks to the account ───────────────────────────────────── */
 
 export interface SyncReport {
@@ -331,9 +490,13 @@ async function runOnce(): Promise<SyncReport> {
 
   const report: SyncReport = { ran: true, pushed: 0, pulled: 0, skipped: [] };
 
-  // Sounds go first: a schedule and a play both point at one.
+  // Order matters. Sounds go first, because a schedule and a play both point
+  // at one. Places go before plans, because a plan belongs to a place. Plays
+  // go last, because a play can point at all three.
   await refreshSoundIds(sb);
   await syncSounds(sb, userId, report);
+  await syncPlaces(sb, userId, report);
+  await syncPlans(sb, userId, report);
   await syncSchedules(sb, userId, report);
   await syncSpeakers(sb, userId, report);
   await pushPlays(sb, userId, report);
@@ -399,6 +562,129 @@ async function syncSounds(sb: SupabaseClient, userId: string, report: SyncReport
         .single();
       if (!e && created) {
         useProfiles.getState().markSaved(sound.id, (created as { id: string }).id);
+        report.pushed += 1;
+      }
+    }
+  }
+}
+
+/* ── places ───────────────────────────────────────────────────────────────── */
+
+async function syncPlaces(sb: SupabaseClient, userId: string, report: SyncReport): Promise<void> {
+  const local = usePlacesHome.getState().places;
+
+  const { data, error } = await sb
+    .from('user_places')
+    .select(
+      'id, name, kind, target, area_size, people_nearby, limit_audible, birds_active, updated_at, created_at',
+    )
+    .eq('user_id', userId);
+
+  if (error) {
+    if (isMissingOnServer(error)) report.skipped.push('places');
+    return;
+  }
+
+  const merged = mergeCollections(local, (data ?? []) as UserPlaceRow[], (row, match) =>
+    placeFromRow(row, match),
+  );
+
+  usePlacesHome.getState().setAll(merged.keep);
+  report.pulled += Math.max(0, merged.keep.length - local.length);
+
+  for (const place of merged.push) {
+    const payload = {
+      user_id: userId,
+      name: place.name,
+      kind: place.kind,
+      target: place.target,
+      area_size: place.areaSize,
+      people_nearby: place.peopleNearby,
+      limit_audible: place.limitAudible,
+      birds_active: place.birdsActive,
+    };
+    if (place.remoteId) {
+      const { error: e } = await sb.from('user_places').update(payload).eq('id', place.remoteId);
+      if (!e) report.pushed += 1;
+    } else {
+      const { data: created, error: e } = await sb
+        .from('user_places')
+        .insert(payload)
+        .select('id')
+        .single();
+      if (!e && created) {
+        usePlacesHome.getState().markSynced(place.id, (created as { id: string }).id);
+        report.pushed += 1;
+      }
+    }
+  }
+}
+
+/* ── protection plans ─────────────────────────────────────────────────────── */
+
+async function syncPlans(sb: SupabaseClient, userId: string, report: SyncReport): Promise<void> {
+  const local = useProtectionPlans.getState().plans;
+
+  const { data, error } = await sb
+    .from('protection_plans')
+    .select(
+      'id, user_place_id, name, target, sound_ids, randomize_order, interval_seconds, session_minutes, output, volume, quiet_start, quiet_end, days, starts_on, ends_on, updated_at, created_at',
+    )
+    .eq('owner_user_id', userId);
+
+  if (error) {
+    if (isMissingOnServer(error)) report.skipped.push('plans');
+    return;
+  }
+
+  const merged = mergeCollections(local, (data ?? []) as ProtectionPlanRow[], (row, match) =>
+    planFromRow(row, match),
+  );
+
+  useProtectionPlans.getState().setAll(merged.keep);
+  report.pulled += Math.max(0, merged.keep.length - local.length);
+
+  for (const plan of merged.push) {
+    const userPlaceId = remotePlaceId(plan.placeId);
+    // The place it belongs to has not gone up yet. It goes on the next pass.
+    if (!userPlaceId) continue;
+
+    const soundIds = plan.soundIds
+      .map((id) => remoteSoundId(id))
+      .filter((id): id is string => id !== null);
+
+    const payload = {
+      owner_user_id: userId,
+      user_place_id: userPlaceId,
+      name: plan.name,
+      target: plan.target,
+      sound_ids: soundIds,
+      randomize_order: plan.randomizeOrder,
+      interval_seconds: plan.intervalSeconds,
+      session_minutes: plan.sessionMinutes,
+      output: plan.output,
+      volume: plan.volume,
+      quiet_start: plan.quietStart,
+      quiet_end: plan.quietEnd,
+      days: plan.days,
+      starts_on: plan.startsOn,
+      ends_on: plan.endsOn,
+    };
+
+    if (plan.remoteId) {
+      const { error: e } = await sb
+        .from('protection_plans')
+        .update(payload)
+        .eq('id', plan.remoteId);
+      if (!e) report.pushed += 1;
+    } else {
+      const { data: created, error: e } = await sb
+        .from('protection_plans')
+        .insert(payload)
+        .select('id')
+        .single();
+      if (!e && created) {
+        useProtectionPlans.getState().markSaved(plan.id, (created as { id: string }).id);
         report.pushed += 1;
       }
     }
@@ -531,6 +817,7 @@ async function pushPlays(sb: SupabaseClient, userId: string, report: SyncReport)
         user_id: userId,
         zone_id: null,
         profile_id: profileId,
+        user_place_id: remotePlaceId(entry.placeId),
         started_at: new Date(entry.startedAt).toISOString(),
         ended_at: entry.endedAt ? new Date(entry.endedAt).toISOString() : null,
         output_kind: entry.outputKind,

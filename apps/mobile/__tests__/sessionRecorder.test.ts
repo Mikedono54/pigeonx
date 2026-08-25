@@ -13,6 +13,7 @@ function makeSink(overrides: Partial<RemoteSink> = {}): RemoteSink {
     isAvailable: () => true,
     startSession: jest.fn(async () => 'remote-1'),
     endSession: jest.fn(async () => {}),
+    reportResult: jest.fn(async () => {}),
     ...overrides,
   };
 }
