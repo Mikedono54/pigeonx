@@ -5,8 +5,10 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 
-import { Pigeon } from '../src/components';
+import { Mascot } from '../src/components';
 import { msUntilEnd, nextRun, playingAt, type TimeWindow } from '../src/core/scheduler';
+import { SPEAKER_LABEL } from '../src/core/profiles';
+import { SPEAKER_STATUS_LABEL, speakerStatus } from '../src/core/speakerStatus';
 import { useAccount } from '../src/state/useAccount';
 import { formatMinutes, useSchedules } from '../src/state/useSchedules';
 import { useSession } from '../src/state/useSession';
@@ -41,7 +43,13 @@ export default function SpeakerMode() {
   const insets = useSafeAreaInsets();
   const schedules = useSchedules((s) => s.schedules);
   const areaName = useSession((s) => s.zoneName);
+  const output = useSession((s) => s.output);
+  const deviceId = useSession((s) => s.deviceId);
+  const speakers = useAccount((s) => s.devices);
   const businessName = useAccount((s) => s.activeOrgName);
+
+  // The same three answers Home gives, on the screen that is doing the work.
+  const status = speakerStatus({ output, deviceId, knownIds: speakers.map((d) => d.id) });
 
   const [now, setNow] = useState(() => new Date());
   const [held, setHeld] = useState(0);
@@ -192,6 +200,10 @@ export default function SpeakerMode() {
         <Text style={styles.where} numberOfLines={1}>
           {where}
         </Text>
+        <Text style={styles.output} numberOfLines={1}>
+          {SPEAKER_LABEL[output]}
+          {status ? ` · ${SPEAKER_STATUS_LABEL[status]}` : ''}
+        </Text>
         <Text style={styles.line} numberOfLines={2}>
           {playing
             ? `Playing ${playing.profileName} until ${formatMinutes(playing.endMinutes)}`
@@ -203,12 +215,14 @@ export default function SpeakerMode() {
 
       <View style={styles.foot}>
         <View style={styles.hintRow}>
-          <Pigeon
+          <Mascot
             size={34}
-            pose={playing ? 'fly' : 'sit'}
+            pose={playing ? 'calling' : status === 'offline' ? 'offline' : 'waiting'}
             color={darkPalette.ink}
             holeColor={night.bg}
             beakColor={c.energy}
+            markColor={darkPalette.muted}
+            warningColor={darkPalette.warning}
           />
           <Text style={styles.hint}>
             Leave this screen open. The phone plays your times on its own.
@@ -281,6 +295,12 @@ const sheet = themed((c) => ({
     fontSize: 24,
     letterSpacing: -0.9,
     color: darkPalette.playOn,
+  },
+  output: {
+    fontFamily: font.mono.medium,
+    fontSize: 13,
+    letterSpacing: 0.4,
+    color: night.dim,
   },
   line: {
     fontFamily: font.body.medium,

@@ -26,6 +26,7 @@ import {
   useToast,
 } from '../../src/components';
 import { liveLabel, liveTone, type Place } from '../../src/core/places';
+import { SPEAKER_STATUS_LABEL } from '../../src/core/speakerStatus';
 import { watchLive } from '../../src/services/live';
 import { useAccount } from '../../src/state/useAccount';
 import { usePlaces } from '../../src/state/usePlaces';
@@ -271,12 +272,25 @@ export default function PlacesScreen() {
                       </View>
                     ))}
 
-                    {area.speakerIds.map((id) => (
+                    {area.speakerIds.map((id) => {
+                      // The phone either still has a record of this speaker or
+                      // it does not. That is the whole of what we know, so it
+                      // is the whole of what the row says.
+                      const here = speakers.some((d) => d.id === id);
+                      return (
                       <View key={id} style={styles.speakerRow}>
-                        <Speaker size={icon.sm} color={c.ink} strokeWidth={icon.stroke} />
+                        <Speaker
+                          size={icon.sm}
+                          color={here ? c.ink : c.warning}
+                          strokeWidth={icon.stroke}
+                        />
                         <Text style={styles.speakerName} numberOfLines={1}>
                           {speakerName(id)}
                         </Text>
+                        <StatusPill
+                          label={SPEAKER_STATUS_LABEL[here ? 'connected' : 'offline']}
+                          tone={here ? 'running' : 'warning'}
+                        />
                         <Touchable
                           onPress={() =>
                             void usePlaces.getState().removeSpeaker(place.id, area.id, id)
@@ -287,7 +301,8 @@ export default function PlacesScreen() {
                           <Trash2 size={icon.sm} color={c.danger} strokeWidth={icon.stroke} />
                         </Touchable>
                       </View>
-                    ))}
+                      );
+                    })}
 
                     <View style={styles.areaActions}>
                       <Button
