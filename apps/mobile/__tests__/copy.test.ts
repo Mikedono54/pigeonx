@@ -23,6 +23,19 @@ import { plainMessage } from '../src/services/supabase';
 import { describeLinkProblem } from '../src/services/auth';
 import { describeDays, describeSchedule } from '../src/state/useSchedules';
 import { SAMPLE_LABEL, SAMPLE_SHORT, SOUND_CREDITS } from '../src/audio/samples';
+import {
+  AREA_SIZE_HINT,
+  AREA_SIZE_LABELS,
+  BIRD_TARGET_LABELS,
+  NO_RESULT_LINE,
+  PLACE_KIND_DEFAULT_NAME,
+  PLACE_KIND_LABELS,
+  SESSION_RESULT_LABELS,
+  SESSION_RESULT_LINE,
+  summaryLine,
+} from '../src/core/personalization';
+import { HOME_ATTENTION_LINE, HOME_OFF_LINE, nextSessionLine } from '../src/core/homeState';
+import { recommendPlan } from '../src/core/protectionPlans';
 
 /**
  * Code words a person should never have to read. See docs/mobile-glossary.md.
@@ -392,5 +405,53 @@ describe('nothing the app says is a promise we cannot keep', () => {
   it('says randomised timing makes a pattern harder to predict, and no more', () => {
     const said = Object.fromEntries(SYSTEM_PROFILES.map((p) => [p.id, p.description]));
     expect(said.sys_pulse_16k).toBe('Harder for birds to predict');
+  });
+});
+
+
+describe('the words a place is described in', () => {
+  it('keeps every one of them clean', () => {
+    for (const s of [
+      ...Object.values(BIRD_TARGET_LABELS),
+      ...Object.values(PLACE_KIND_LABELS),
+      ...Object.values(PLACE_KIND_DEFAULT_NAME),
+      ...Object.values(AREA_SIZE_LABELS),
+      ...Object.values(AREA_SIZE_HINT),
+      ...Object.values(SESSION_RESULT_LABELS),
+      ...Object.values(SESSION_RESULT_LINE),
+      NO_RESULT_LINE,
+      HOME_OFF_LINE,
+      HOME_ATTENTION_LINE,
+      nextSessionLine(new Date('2026-08-26T07:00:00'), new Date('2026-08-25T18:00:00')),
+    ]) {
+      checkString(s);
+    }
+  });
+
+  it('never says corvid to a person, however the row is stored', () => {
+    for (const target of ['pigeons', 'gulls', 'starlings', 'corvids', 'mixed_small', 'unsure'] as const) {
+      for (const quiet of [true, false]) {
+        expect(recommendPlan(target, quiet, 'phone').name).not.toMatch(/corvid/i);
+      }
+    }
+    for (const label of Object.values(BIRD_TARGET_LABELS)) {
+      expect(label).not.toMatch(/corvid/i);
+    }
+    expect(BIRD_TARGET_LABELS.corvids).toBe('Crows or jays');
+  });
+
+  it('names every recommended plan in plain words', () => {
+    for (const target of ['pigeons', 'gulls', 'starlings', 'corvids', 'mixed_small', 'unsure'] as const) {
+      for (const quiet of [true, false]) {
+        checkString(recommendPlan(target, quiet, 'phone').name);
+      }
+    }
+  });
+
+  it('says only what a person told it, and never a rate or a trend', () => {
+    const line = summaryLine({ withResult: 7, left: 3, someLeft: 2, notYet: 1, unknown: 1 });
+    expect(line).toBe('You reported improvement after 5 of 7 sessions.');
+    expect(line).not.toMatch(/%|percent|success|effective/i);
+    checkString(line!);
   });
 });

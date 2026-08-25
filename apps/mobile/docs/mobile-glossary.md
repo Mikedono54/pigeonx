@@ -38,6 +38,9 @@ app, not because it is long.
 | PigeonX emitter, hardware | PigeonX speaker |
 | simulated device | test speaker |
 | zone | area |
+| corvid | crows or jays |
+| plan (the sounds) | protection plan |
+| result, outcome, effectiveness | what you reported |
 | location (one building) | place |
 | location (a business with many) | locations, as in "multiple locations" |
 | sample, recording | bird call, or the recording |
@@ -80,12 +83,16 @@ app, not because it is long.
 | Typically inaudible | 22 kHz, out of a PigeonX speaker. Most people hear nothing. |
 | Natural recording | A real bird, recorded by somebody we credit. |
 | Generated tone | Made by the app, not recorded. |
-| Place | A building. |
-| Area | One part of a building, like a roof or a patio. |
+| Place | The one spot a person is looking after: a balcony, a roof, a dock. A business calls a building a place too, and it holds areas. |
+| Area | One part of a building, like a roof or a patio. Business only. |
+| Target | Which birds a place has. Six answers, and Not sure is one of them. |
+| Protection plan | The sounds a place plays, in what order, and for how long. Never just "plan" on a screen, because Plan means Free, Pro or Business. |
+| Rotation | The sounds of a protection plan, one after another, for one session. |
+| Result | What a person said happened after a session. Only ever what they said. |
 | Schedule | Days and times you want the sound to play. |
 | Who runs it | This phone reminds me, or Speaker mode runs it on its own. |
-| Plan | Free, Pro or Business. |
-| History | What played and when. |
+| Plan | Free, Pro or Business. Nothing else. |
+| History | What played and when, as a timeline of sessions. |
 | Business | The company a team works for. It owns the places. |
 | Teammate | One person on your team. |
 | Invite | The link you send someone so they join your team. |
@@ -113,6 +120,74 @@ a sound someone already picked has to keep loading.
 All four bird calls are real recordings. Nothing in the app is a stand-in any
 more, and no screen says one is. Where each recording came from lives in
 `assets/audio/SOURCES.md`, and Settings shows those credits under About.
+
+## A place, and the eight questions
+
+A place is only ever the answers to eight questions, so the same flow makes
+one, adds one and edits one. Every question can be skipped, and every skip
+lands on an answer the app can work with.
+
+| Question | Answers |
+| --- | --- |
+| Which birds are causing the problem? | Pigeons, Gulls, Starlings, Crows or jays, Small mixed birds, Not sure |
+| What are you protecting? | Balcony, Roof, Dock or marina, Storefront, Warehouse, Parking structure, Garden, Farm or field, Custom |
+| How big is it? | Small (a balcony), Medium (a patio), Large (a roof or yard) |
+| Are people usually nearby? | Yes, No |
+| Should the sounds stay quiet for people? | Yes, No. Only asked when people are nearby. |
+| Where will it play? | This phone, Bluetooth speaker, PigeonX speaker |
+| When do the birds show up? | Free text, and it can be left blank |
+| What should we call it? | A name, filled in from what the place is |
+
+Skipping all eight leaves a place called My space, targeting Not sure, with a
+starter rotation. Somebody who was already using PigeonX before the questions
+existed is never walked through them.
+
+The database stores `corvids`. No screen ever says it. Two protection plans are
+named after that group and both of them say crow.
+
+## The four states on Home
+
+The header is the place: its name in small caps, and under it the birds and the
+speaker. One of four states sits under that, and every one of them comes from
+something real.
+
+| State | Says |
+| --- | --- |
+| Off | Ready when birds appear. |
+| Playing | The clock, the plan name, and what is up next in the rotation. |
+| A session is coming | Next session tomorrow at 7:00 AM. |
+| Needs attention | The speaker for this place is not connected. |
+
+Playing wins over everything, because a person can hear it. A speaker that is
+gone wins over a schedule, because a schedule that cannot run is a lie. There
+is no live speaker health, and the app never invents any: the only version of
+"offline" it will say is that you picked a speaker and this phone no longer
+has it.
+
+## What a person reported
+
+The app asks one question, once, when a session ends: **Did the birds leave?**
+
+| Answer | Reads back in History as |
+| --- | --- |
+| Yes | Most birds left |
+| Some left | Some birds left |
+| Not yet | Birds stayed |
+| I could not tell | Could not tell |
+| (closed the panel) | No result reported |
+
+Closing the panel counts as having been asked. Nothing re-asks, ever. "I could
+not tell" is a real answer and counts toward nothing, which is different from
+saying nothing at all.
+
+Under three answers the app says nothing about them. At three or more, Home
+carries one line and only one:
+
+> You reported improvement after 5 of 7 sessions.
+
+That line counts the Yes and Some left answers out of the answers given. It is
+not a rate, not a trend and not a finding. Nothing in the app counts a session
+nobody answered, and nothing counts anything the app itself decided.
 
 ## Numbers
 
@@ -217,6 +292,8 @@ The screens are clean. Some code identifiers still use the old words so the
 data people already have on their phones keeps loading:
 
 - `AudioProfile`, `SYSTEM_PROFILES`, `useProfiles`, `profileId`
+- `usePlacesHome` for the solo place, `usePlaces` for the business one
+- `useProtectionPlans`, `ProtectionPlan`, `recommendPlan`, `rotationOrder`
 - `OutputKind`, `effectiveForOutput`, `OUTPUT_CEILING_HZ`
 - `SessionEntry`, `useSession`, `sessionRecorder`
 - `Executor`, `zoneId`, `deviceId`
