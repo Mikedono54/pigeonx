@@ -11,6 +11,8 @@ import {
   configureNotifications,
   scheduleReminders,
 } from '../services/notifications';
+import { can } from '../core/team';
+import { useAccount } from './useAccount';
 import { useLocation } from './useLocation';
 import { somethingChanged } from '../services/syncSignal';
 import { persistStorage, STORAGE_KEYS, uid } from './storage';
@@ -155,6 +157,22 @@ export const SCHEDULE_DEFAULTS = {
   scope: 'user' as ScheduleScope,
 };
 
+/**
+ * Whether this phone may change this run.
+ *
+ * One a person set for themselves is theirs. One a business keeps for an area
+ * belongs to the team, and the account only lets a manager change it, so a
+ * teammate's phone must not either: a switch that flips and then quietly comes
+ * back on the next look is worse than a switch that says who to ask.
+ */
+export function mayChange(schedule: Pick<Schedule, 'scope'>): boolean {
+  if (schedule.scope !== 'org') return true;
+  return can(useAccount.getState().activeOrgRole, 'schedules');
+}
+
+/** The one line under a run somebody is not allowed to change. */
+export const SCHEDULE_LOCKED_LINE = 'Managers can change this one.';
+
 interface SchedulesState {
   schedules: Schedule[];
   upsert: (input: ScheduleInput) => Promise<Schedule>;
@@ -197,6 +215,7 @@ export const useSchedules = create<SchedulesState>()(
 
       upsert: async (input) => {
         const existing = input.id ? get().schedules.find((s) => s.id === input.id) : undefined;
+        if (existing && !mayChange(existing)) return existing;
         const draft: Schedule = {
           ...SCHEDULE_DEFAULTS,
           ...existing,
@@ -220,7 +239,7 @@ export const useSchedules = create<SchedulesState>()(
 
       toggle: async (id) => {
         const s = get().schedules.find((x) => x.id === id);
-        if (!s) return;
+        if (!s || !mayChange(s)) return;
         const next = { ...s, enabled: !s.enabled, updatedAt: Date.now() };
         const notificationIds = await refreshReminders(next);
         set({
@@ -231,6 +250,7 @@ export const useSchedules = create<SchedulesState>()(
 
       remove: async (id) => {
         const s = get().schedules.find((x) => x.id === id);
+        if (s && !mayChange(s)) return;
         if (s) await cancelReminders(s.notificationIds);
         set({ schedules: get().schedules.filter((x) => x.id !== id) });
         somethingChanged('schedule');

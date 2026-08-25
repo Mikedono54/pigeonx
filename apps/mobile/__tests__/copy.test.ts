@@ -21,7 +21,11 @@ import { ROLE_HINT, ROLE_LABEL, ROLE_POWERS, WHO_CAN_DO_WHAT } from '../src/core
 import { liveLabel } from '../src/core/places';
 import { plainMessage } from '../src/services/supabase';
 import { describeLinkProblem } from '../src/services/auth';
-import { describeDays, describeSchedule } from '../src/state/useSchedules';
+import {
+  describeDays,
+  describeSchedule,
+  SCHEDULE_LOCKED_LINE,
+} from '../src/state/useSchedules';
 import { SAMPLE_LABEL, SAMPLE_SHORT, SOUND_CREDITS } from '../src/audio/samples';
 import {
   AREA_SIZE_HINT,
@@ -37,7 +41,17 @@ import {
 import { HOME_ATTENTION_LINE, HOME_OFF_LINE, nextSessionLine } from '../src/core/homeState';
 import { recommendPlan } from '../src/core/protectionPlans';
 import { MASCOT_LABEL } from '../src/core/mascot';
-import { SPEAKER_STATUS_LABEL, reconnectLine } from '../src/core/speakerStatus';
+import {
+  FLEET_STATUS_LABEL,
+  SPEAKER_STATUS_LABEL,
+  reconnectLine,
+} from '../src/core/speakerStatus';
+import {
+  attentionLine,
+  lastSessionLine,
+  PROTECTION_MODE_LINE,
+  speakerLine,
+} from '../src/core/businessPlaces';
 import { TRIGGER_LABEL } from '../src/core/scheduleTimeline';
 import { ESTIMATED_NOTE } from '../src/core/sun';
 import {
@@ -435,6 +449,12 @@ describe('the words the app says about itself while it works', () => {
     for (const s of [
       ...Object.values(MASCOT_LABEL),
       ...Object.values(SPEAKER_STATUS_LABEL),
+      ...Object.values(FLEET_STATUS_LABEL),
+      ...Object.values(PROTECTION_MODE_LINE),
+      SCHEDULE_LOCKED_LINE,
+      attentionLine({ speakersOffline: 1, areasWithoutPlan: 2 })!,
+      lastSessionLine(new Date(2026, 7, 25, 8, 14).getTime(), new Date(2026, 7, 25, 12, 0)),
+      speakerLine([{ id: 's1', name: 'Roof Speaker', status: 'offline' }]),
       ...Object.values(TRIGGER_LABEL),
       ...Object.values(PLAN_BLOCK_TITLE),
       ESTIMATED_NOTE,

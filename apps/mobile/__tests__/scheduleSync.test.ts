@@ -5,7 +5,13 @@ import {
   type ScheduleRow,
 } from '../src/services/sync';
 import { localPlanId, remotePlanId } from '../src/services/soundIds';
-import { SCHEDULE_DEFAULTS, type Schedule } from '../src/state/useSchedules';
+import {
+  mayChange,
+  SCHEDULE_DEFAULTS,
+  useSchedules,
+  type Schedule,
+} from '../src/state/useSchedules';
+import { useAccount } from '../src/state/useAccount';
 import { useProtectionPlans } from '../src/state/useProtectionPlans';
 
 /**
@@ -213,5 +219,35 @@ describe('which plan a schedule points at', () => {
     expect(remotePlanId('pln_never')).toBeNull();
     expect(remotePlanId(null)).toBeNull();
     expect(localPlanId(null)).toBeNull();
+  });
+});
+
+describe('a run a business keeps, on a teammate\'s phone', () => {
+  beforeEach(() => {
+    useSchedules.setState({ schedules: [aSchedule({ scope: 'org', enabled: true })] });
+  });
+
+  it('is theirs to read and a manager\'s to change', () => {
+    useAccount.setState({ activeOrgRole: 'staff' });
+    expect(mayChange({ scope: 'org' })).toBe(false);
+    expect(mayChange({ scope: 'user' })).toBe(true);
+
+    useAccount.setState({ activeOrgRole: 'manager' });
+    expect(mayChange({ scope: 'org' })).toBe(true);
+  });
+
+  it('does not flip a switch that would come back on the next look', async () => {
+    useAccount.setState({ activeOrgRole: 'staff' });
+    await useSchedules.getState().toggle('sch_1');
+    expect(useSchedules.getState().schedules[0].enabled).toBe(true);
+
+    await useSchedules.getState().remove('sch_1');
+    expect(useSchedules.getState().schedules).toHaveLength(1);
+  });
+
+  it('lets a manager change it', async () => {
+    useAccount.setState({ activeOrgRole: 'manager' });
+    await useSchedules.getState().toggle('sch_1');
+    expect(useSchedules.getState().schedules[0].enabled).toBe(false);
   });
 });

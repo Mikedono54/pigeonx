@@ -46,6 +46,8 @@ import {
   describeDays,
   describeSchedule,
   formatMinutes,
+  mayChange,
+  SCHEDULE_LOCKED_LINE,
   useSchedules,
   type Executor,
   type Schedule,
@@ -176,6 +178,7 @@ export default function ScheduleScreen() {
                     setOpen(true);
                   }}
                   onDelete={() => void remove(item.schedule.id)}
+                  editable={mayChange(item.schedule)}
                 />
               ))}
             </View>
@@ -205,12 +208,15 @@ function RunCard({
   onToggle,
   onChange,
   onDelete,
+  editable,
 }: {
   item: Occurrence<Schedule>;
   outputLabel: string;
   onToggle: () => void;
   onChange: () => void;
   onDelete: () => void;
+  /** false for a run a business keeps that this person may not change */
+  editable: boolean;
 }) {
   const styles = useThemedStyles(sheet);
   const { c } = useTheme();
@@ -246,6 +252,7 @@ function RunCard({
           <StatusPill label={tag} tone={item.running ? 'running' : s.enabled ? 'scheduled' : 'idle'} />
           <Switch
             value={s.enabled}
+            disabled={!editable}
             onValueChange={onToggle}
             trackColor={{ false: c.border, true: c.accent }}
             thumbColor={c.bg}
@@ -260,6 +267,13 @@ function RunCard({
           {describeDays(s.days)}
         </Text>
         <View style={styles.grow} />
+        {editable ? null : (
+          <Text style={styles.footerDays} numberOfLines={1}>
+            {SCHEDULE_LOCKED_LINE}
+          </Text>
+        )}
+        {editable ? (
+        <>
         <Touchable
           onPress={onChange}
           accessibilityLabel={`Change ${describeSchedule(s)}`}
@@ -274,6 +288,8 @@ function RunCard({
         >
           <Trash2 size={icon.md} color={c.danger} strokeWidth={icon.stroke} />
         </Touchable>
+        </>
+        ) : null}
       </View>
     </Card>
   );
