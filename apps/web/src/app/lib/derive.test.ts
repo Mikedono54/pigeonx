@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   areaStatus,
+  attentionCountFor,
+  attentionList,
+  audibleTag,
   dateLabel,
   bucketByDay,
   clock,
@@ -8,16 +11,42 @@ import {
   duration,
   elapsed,
   executorLabel,
+  feedbackLine,
+  filterPlays,
   formatDays,
+  formatPlanDays,
   formatReport,
   formatWindow,
+  intervalLabel,
   monthlyTotal,
+  nextRun,
+  nextRunLine,
+  peakFreqHz,
+  placeLine,
   placeStatus,
+  planLine,
+  playCountLine,
+  resultLabel,
+  runningNow,
+  scheduleWindow,
   speakerKindLabel,
+  summaryTiles,
+  timeline,
+  triggerLabel,
   weekStart,
+  NO_FILTERS,
 } from './derive';
-import type { LiveArea } from './types';
+import type {
+  LiveArea,
+  Place,
+  Play,
+  ProtectionPlan,
+  ScheduleRow,
+  Sound,
+  Speaker,
+} from './types';
 
+/** A Sunday evening. Every test that needs a clock uses this one. */
 const NOW = new Date('2026-08-23T18:30:00');
 
 function live(over: Partial<LiveArea> = {}): LiveArea {
@@ -28,6 +57,116 @@ function live(over: Partial<LiveArea> = {}): LiveArea {
     current_session_id: null,
     started_at: null,
     profile_name: 'Hawk call',
+    ...over,
+  };
+}
+
+function place(over: Partial<Place> = {}): Place {
+  return {
+    id: 'p1',
+    org_id: 'o1',
+    name: 'Harbour House',
+    address: null,
+    timezone: 'America/Los_Angeles',
+    kind: null,
+    target: null,
+    area_size: null,
+    people_nearby: false,
+    limit_audible: false,
+    birds_active: null,
+    ...over,
+  };
+}
+
+function sound(over: Partial<Sound> = {}): Sound {
+  return {
+    id: 's1',
+    name: 'A sound',
+    kind: 'tone',
+    is_system: true,
+    description: null,
+    params: {},
+    ...over,
+  };
+}
+
+function plan(over: Partial<ProtectionPlan> = {}): ProtectionPlan {
+  return {
+    id: 'pl1',
+    owner_org_id: 'o1',
+    zone_id: 'a1',
+    name: 'Gull Rotation',
+    target: 'gulls',
+    sound_ids: ['s1', 's2'],
+    randomize_order: true,
+    interval_seconds: 900,
+    session_minutes: 15,
+    output: 'pigeonx_emitter',
+    volume: 0.85,
+    quiet_start: '22:00',
+    quiet_end: '06:00',
+    days: [1, 2, 3, 4, 5, 6, 7],
+    starts_on: null,
+    ends_on: null,
+    ...over,
+  };
+}
+
+function schedule(over: Partial<ScheduleRow> = {}): ScheduleRow {
+  return {
+    id: 'sc1',
+    zone_id: 'a1',
+    profile_id: 's1',
+    days: [1, 2, 3, 4, 5],
+    start_time: '11:00:00',
+    end_time: '14:00:00',
+    enabled: true,
+    executor: 'device',
+    trigger: 'time',
+    offset_minutes: 0,
+    plan_id: null,
+    quiet_start: null,
+    quiet_end: null,
+    area_name: 'Patio',
+    place_id: 'p1',
+    place_name: 'Harbour House',
+    sound_name: 'Hawk call',
+    plan_name: null,
+    output: null,
+    ...over,
+  };
+}
+
+function speakerRow(id: string, status: Speaker['status']): Speaker {
+  return {
+    id,
+    zone_id: 'a1',
+    kind: 'pigeonx_emitter',
+    name: id,
+    status,
+    last_seen_at: null,
+  };
+}
+
+function playRow(startedAt: string, over: Partial<Play> = {}): Play {
+  return {
+    id: startedAt,
+    started_at: startedAt,
+    ended_at: startedAt,
+    minutes: 10,
+    output_kind: 'pigeonx_emitter',
+    source: 'manual',
+    result: null,
+    user_id: 'me',
+    profile_id: 's1',
+    profile_name: 'Hawk call',
+    plan_id: null,
+    plan_name: null,
+    zone_id: 'a1',
+    zone_name: 'Patio',
+    location_id: 'p1',
+    location_name: 'Harbour House',
+    place_name: 'Harbour House',
     ...over,
   };
 }
@@ -218,5 +357,405 @@ describe('monthlyTotal', () => {
   it('is places times the price', () => {
     expect(monthlyTotal(0)).toBe('$0');
     expect(monthlyTotal(3)).toBe('$87');
+  });
+});
+
+/* ── the 2026-08-24 spec: tiles, attention, timeline, history ─────────── */
+
+describe('placeLine', () => {
+  it('says what the location is and which birds, in the app words', () => {
+    expect(
+      placeLine(
+        place({
+          kind: 'storefront',
+          target: 'corvids',
+          area_size: 'small',
+          people_nearby: true,
+          limit_audible: true,
+          birds_active: 'early morning',
+        }),
+      ),
+    ).toBe(
+      'Storefront · Crows or jays · Small · People nearby · Keep it quiet · Birds show up early morning',
+    );
+  });
+
+  it('leaves out what nobody has answered', () => {
+    expect(placeLine(place({ target: 'gulls', people_nearby: false }))).toBe('Gulls');
+  });
+
+  it('points at the questions when none of them are answered', () => {
+    expect(placeLine(place({ people_nearby: false }))).toBe(
+      'Nothing set yet. Answer a few questions about this location.',
+    );
+  });
+});
+
+describe('audibleTag', () => {
+  it('marks a recording as audible', () => {
+    expect(audibleTag(sound({ kind: 'sample', params: { asset: 'predator_hawk' } }), 'phone')).toBe(
+      'Audible',
+    );
+  });
+
+  it('wobbles between 15 and 20 kHz', () => {
+    expect(audibleTag(sound({ kind: 'tone', params: { freqHz: 18000 } }), 'phone')).toBe(
+      'May be audible',
+    );
+  });
+
+  it('never promises a phone can play 22 kHz', () => {
+    const max = sound({ kind: 'tone', params: { freqHz: 22000 } });
+    expect(audibleTag(max, 'phone')).toBe('Needs a PigeonX speaker');
+    expect(audibleTag(max, 'pigeonx_emitter')).toBe('Typically inaudible');
+  });
+
+  it('reads a sweep at its top end', () => {
+    expect(peakFreqHz(sound({ kind: 'sweep', params: { fromHz: 15000, toHz: 19000 } }))).toBe(
+      19000,
+    );
+  });
+});
+
+describe('planLine', () => {
+  it('says the plan, the rotation, the length and the speaker', () => {
+    expect(planLine(plan())).toBe(
+      'Gull Rotation · 2 sounds, mixed up · 15 min sessions · PigeonX speaker · Quiet 10:00 pm to 6:00 am',
+    );
+  });
+
+  it('drops quiet hours when there are none, and keeps the order when it is fixed', () => {
+    expect(
+      planLine(plan({ randomize_order: false, quiet_start: null, quiet_end: null })),
+    ).toBe('Gull Rotation · 2 sounds, in order · 15 min sessions · PigeonX speaker');
+  });
+
+  it('is honest when an area has no plan', () => {
+    expect(planLine(null)).toBe('No protection plan yet');
+  });
+
+  it('counts plan days from Monday', () => {
+    expect(formatPlanDays([1, 2, 3, 4, 5, 6, 7])).toBe('Every day');
+    expect(formatPlanDays([1, 2, 3, 4, 5])).toBe('Mon to Fri');
+    expect(formatPlanDays([6, 7])).toBe('Sat and Sun');
+    expect(formatPlanDays([2, 5])).toBe('Tue, Fri');
+  });
+
+  it('reads the gap between sounds in whatever unit is plainest', () => {
+    expect(intervalLabel(0)).toBe('Back to back');
+    expect(intervalLabel(45)).toBe('45 sec between sounds');
+    expect(intervalLabel(900)).toBe('15 min between sounds');
+  });
+});
+
+describe('resultLabel', () => {
+  it('uses the four buttons from the app', () => {
+    expect(resultLabel('left')).toBe('They left');
+    expect(resultLabel('some_left')).toBe('Some left');
+    expect(resultLabel('not_yet')).toBe('Not yet');
+    expect(resultLabel('unknown')).toBe('Could not tell');
+  });
+
+  it('keeps unreported apart from could not tell', () => {
+    expect(resultLabel(null)).toBe('Not reported');
+  });
+});
+
+describe('feedbackLine', () => {
+  it('adds up only what people reported', () => {
+    expect(
+      feedbackLine([
+        {
+          sessions_total: 12,
+          sessions_with_result: 5,
+          left_count: 3,
+          some_left_count: 1,
+          not_yet_count: 1,
+          best_plan_name: 'Gull Rotation',
+        },
+        {
+          sessions_total: 8,
+          sessions_with_result: 3,
+          left_count: 2,
+          some_left_count: 0,
+          not_yet_count: 1,
+          best_plan_name: null,
+        },
+      ]),
+    ).toBe('8 of 20 runs reported. 5 they left, 1 some left, 2 not yet.');
+  });
+
+  it('says so when nobody has answered, and when nothing has run', () => {
+    expect(
+      feedbackLine([
+        {
+          sessions_total: 6,
+          sessions_with_result: 0,
+          left_count: 0,
+          some_left_count: 0,
+          not_yet_count: 0,
+          best_plan_name: null,
+        },
+      ]),
+    ).toBe('Nobody has reported a result on the 6 runs here yet.');
+    expect(feedbackLine([])).toBe('Nothing has run here yet.');
+  });
+});
+
+describe('attentionList', () => {
+  const places = [place({ id: 'p1', name: 'Harbour House' })];
+  const areas = [
+    { id: 'a1', location_id: 'p1', name: 'Patio', active_profile_id: null },
+    { id: 'a2', location_id: 'p1', name: 'Roof deck', active_profile_id: null },
+    { id: 'a3', location_id: 'p1', name: 'Front walk', active_profile_id: null },
+  ];
+  const speakers: Speaker[] = [
+    {
+      id: 'd1',
+      zone_id: 'a1',
+      kind: 'pigeonx_emitter',
+      name: 'Patio east',
+      status: 'online',
+      last_seen_at: null,
+    },
+    {
+      id: 'd2',
+      zone_id: 'a2',
+      kind: 'pigeonx_emitter',
+      name: 'Roof north',
+      status: 'offline',
+      last_seen_at: null,
+    },
+  ];
+  const plans = [plan({ zone_id: 'a1' }), plan({ id: 'pl2', zone_id: 'a2' })];
+
+  it('names the speaker that stopped answering', () => {
+    const rows = attentionList(places, areas, speakers, plans);
+    expect(rows.map((r) => r.zone_name)).toEqual(['Roof deck', 'Front walk']);
+    expect(rows[0].reasons).toEqual(['Roof north is offline']);
+  });
+
+  it('flags an area with no speaker and no plan', () => {
+    const rows = attentionList(places, areas, speakers, plans);
+    expect(rows[1].reasons).toEqual(['No speaker yet', 'No protection plan yet']);
+  });
+
+  it('leaves a covered area off the list entirely', () => {
+    const rows = attentionList(places, areas, speakers, plans);
+    expect(rows.some((r) => r.zone_name === 'Patio')).toBe(false);
+  });
+
+  it('counts per location', () => {
+    const rows = attentionList(places, areas, speakers, plans);
+    expect(attentionCountFor(rows, 'p1')).toBe(2);
+    expect(attentionCountFor(rows, 'p2')).toBe(0);
+  });
+
+  it('groups several offline speakers into one sentence', () => {
+    const two: Speaker[] = [
+      { ...speakers[1], id: 'x1', zone_id: 'a1' },
+      { ...speakers[1], id: 'x2', zone_id: 'a1' },
+    ];
+    const rows = attentionList(places, [areas[0]], two, plans);
+    expect(rows[0].reasons).toEqual(['2 speakers are offline']);
+  });
+});
+
+describe('summaryTiles', () => {
+  const base = {
+    places: [place({ id: 'p1' }), place({ id: 'p2' }), place({ id: 'p3' })],
+    speakers: [
+      { ...speakerRow('d1', 'online') },
+      { ...speakerRow('d2', 'online') },
+      { ...speakerRow('d3', 'offline') },
+    ],
+    schedules: [schedule({ id: 's1' }), schedule({ id: 's2', enabled: false })],
+    plays: [
+      playRow('2026-08-23T09:00:00'),
+      playRow('2026-08-18T09:00:00'),
+      playRow('2026-08-16T09:00:00'),
+    ],
+    attention: [] as ReturnType<typeof attentionList>,
+  };
+
+  it('counts every number from real rows', () => {
+    const tiles = summaryTiles(base, NOW);
+    const by = Object.fromEntries(tiles.map((t) => [t.key, t]));
+    expect(by.locations.value).toBe('3');
+    expect(by.speakers.value).toBe('2');
+    expect(by.speakers.note).toBe('1 offline');
+    expect(by.schedules.value).toBe('1');
+    expect(by.schedules.note).toBe('1 paused');
+    // Monday the 17th onward: the 16th is last week.
+    expect(by.sessions.value).toBe('2');
+    expect(by.attention.value).toBe('0');
+  });
+
+  it('leaves out a tile it cannot count', () => {
+    const tiles = summaryTiles(
+      { places: null, speakers: null, schedules: null, plays: null, attention: null },
+      NOW,
+    );
+    expect(tiles).toEqual([]);
+  });
+
+  it('stays away while there is no fleet to report on', () => {
+    const tiles = summaryTiles({ ...base, speakers: [] }, NOW);
+    expect(tiles.some((t) => t.key === 'speakers')).toBe(false);
+  });
+
+  it('says nothing is wrong rather than hiding the tile', () => {
+    const tiles = summaryTiles(base, NOW);
+    expect(tiles.find((t) => t.key === 'attention')?.note).toBe('everything is covered');
+  });
+});
+
+describe('triggerLabel', () => {
+  it('prints a clock time as a clock time', () => {
+    expect(triggerLabel('time', 0, '11:00:00')).toBe('11:00 am');
+  });
+
+  it('shows the intent for sunrise and sunset', () => {
+    expect(triggerLabel('sunrise', 30, '06:30:00')).toBe('Sunrise + 30 min');
+    expect(triggerLabel('sunrise', -30, '06:30:00')).toBe('Sunrise - 30 min');
+    expect(triggerLabel('sunset', 0, '19:00:00')).toBe('Sunset');
+  });
+
+  it('puts the trigger at the front of the window', () => {
+    expect(
+      scheduleWindow({
+        trigger: 'sunrise',
+        offset_minutes: 30,
+        start_time: '06:30:00',
+        end_time: '09:00:00',
+      }),
+    ).toBe('Sunrise + 30 min to 9:00 am');
+  });
+});
+
+describe('nextRun', () => {
+  // NOW is Sunday 2026-08-23 at 18:30.
+  it('finds the soonest start still ahead today', () => {
+    const soon = schedule({ id: 'later', days: [0], start_time: '20:00:00' });
+    const gone = schedule({ id: 'gone', days: [0], start_time: '09:00:00' });
+    expect(nextRun([gone, soon], NOW)?.row.id).toBe('later');
+  });
+
+  it('rolls on to the next day the schedule runs', () => {
+    const monday = schedule({ id: 'mon', days: [1], start_time: '07:00:00' });
+    const next = nextRun([monday], NOW);
+    expect(next?.at.getDate()).toBe(24);
+    expect(next?.at.getHours()).toBe(7);
+  });
+
+  it('skips paused schedules', () => {
+    expect(nextRun([schedule({ days: [1], enabled: false })], NOW)).toBeNull();
+  });
+
+  it('marks a sunrise row as approximate', () => {
+    const dawn = schedule({ days: [1], trigger: 'sunrise', offset_minutes: 30 });
+    expect(nextRun([dawn], NOW)?.approximate).toBe(true);
+  });
+
+  it('says the whole thing in one line', () => {
+    const dawn = schedule({
+      days: [1],
+      trigger: 'sunrise',
+      offset_minutes: 30,
+      area_name: 'Roof deck',
+      place_name: 'Harbour House',
+    });
+    expect(nextRunLine([dawn], NOW)).toBe(
+      'Roof deck at Harbour House starts tomorrow at Sunrise + 30 min.',
+    );
+  });
+
+  it('says so when everything is paused, and when nothing is due', () => {
+    expect(nextRunLine([schedule({ enabled: false })], NOW)).toBe(
+      'Nothing is scheduled to run. Every schedule is paused.',
+    );
+    expect(nextRunLine([schedule({ days: [] })], NOW)).toBe('Nothing is due in the next week.');
+  });
+});
+
+describe('runningNow', () => {
+  it('is true inside the window on a day it runs', () => {
+    expect(runningNow(schedule({ days: [0], start_time: '18:00:00', end_time: '20:00:00' }), NOW)).toBe(
+      true,
+    );
+  });
+
+  it('is false on a day it does not run, and while it is paused', () => {
+    expect(runningNow(schedule({ days: [1], start_time: '18:00:00' }), NOW)).toBe(false);
+    expect(runningNow(schedule({ days: [0], enabled: false }), NOW)).toBe(false);
+  });
+
+  it('handles a window that wraps past midnight', () => {
+    expect(runningNow(schedule({ days: [0], start_time: '17:00:00', end_time: '02:00:00' }), NOW)).toBe(
+      true,
+    );
+  });
+});
+
+describe('timeline', () => {
+  it('starts today and skips days nothing runs on', () => {
+    const sunday = schedule({ id: 'sun', days: [0] });
+    const tuesday = schedule({ id: 'tue', days: [2] });
+    const days = timeline([sunday, tuesday], 7, NOW);
+    expect(days.map((d) => d.title)).toEqual(['Today', 'Tuesday, Aug 25']);
+  });
+
+  it('sorts each day by when it starts', () => {
+    const late = schedule({ id: 'late', days: [0], start_time: '19:00:00' });
+    const early = schedule({ id: 'early', days: [0], start_time: '07:00:00' });
+    expect(timeline([late, early], 7, NOW)[0].rows.map((r) => r.id)).toEqual(['early', 'late']);
+  });
+
+  it('lists a schedule under every day it runs', () => {
+    const daily = schedule({ id: 'daily', days: [0, 1, 2, 3, 4, 5, 6] });
+    expect(timeline([daily], 3, NOW)).toHaveLength(3);
+  });
+});
+
+describe('filterPlays', () => {
+  const plays = [
+    playRow('2026-08-23T09:00:00', { id: '1', location_id: 'p1', zone_id: 'a1', result: 'left' }),
+    playRow('2026-08-22T09:00:00', { id: '2', location_id: 'p1', zone_id: 'a2', result: null }),
+    playRow('2026-08-21T09:00:00', { id: '3', location_id: 'p2', zone_id: 'a3', result: 'not_yet' }),
+  ];
+
+  it('keeps everything when nothing is set', () => {
+    expect(filterPlays(plays, NO_FILTERS)).toHaveLength(3);
+  });
+
+  it('narrows to one location, then to one area', () => {
+    expect(filterPlays(plays, { ...NO_FILTERS, placeId: 'p1' }).map((p) => p.id)).toEqual(['1', '2']);
+    expect(filterPlays(plays, { ...NO_FILTERS, areaId: 'a2' }).map((p) => p.id)).toEqual(['2']);
+  });
+
+  it('separates a reported result from an unreported run', () => {
+    expect(filterPlays(plays, { ...NO_FILTERS, result: 'left' }).map((p) => p.id)).toEqual(['1']);
+    expect(filterPlays(plays, { ...NO_FILTERS, result: 'none' }).map((p) => p.id)).toEqual(['2']);
+  });
+
+  it('reads the dates as the person own days, both ends inside', () => {
+    expect(
+      filterPlays(plays, { ...NO_FILTERS, from: '2026-08-22', to: '2026-08-23' }).map((p) => p.id),
+    ).toEqual(['1', '2']);
+    expect(filterPlays(plays, { ...NO_FILTERS, from: '2026-08-23' }).map((p) => p.id)).toEqual(['1']);
+    expect(filterPlays(plays, { ...NO_FILTERS, to: '2026-08-21' }).map((p) => p.id)).toEqual(['3']);
+  });
+
+  it('stacks the filters together', () => {
+    expect(
+      filterPlays(plays, { ...NO_FILTERS, placeId: 'p1', result: 'left', from: '2026-08-23' }),
+    ).toHaveLength(1);
+  });
+
+  it('counts what is on screen against what there is', () => {
+    expect(playCountLine(3, 3)).toBe('3 runs');
+    expect(playCountLine(1, 1)).toBe('1 run');
+    expect(playCountLine(2, 9)).toBe('2 of 9 runs');
+    expect(playCountLine(0, 0)).toBe('Nothing has played yet.');
   });
 });

@@ -8,8 +8,10 @@
 
 import { requireSupabase } from './supabase';
 import { ComingOnline, isMissingPiece, unwrap } from './errors';
+import type { OutputKind, ScheduleTrigger } from './labels';
 import type {
   Area,
+  AreaFeedback,
   DeviceKind,
   Executor,
   Invite,
@@ -17,14 +19,38 @@ import type {
   MemberRole,
   Membership,
   Place,
+  PlaceAnswers,
   PlaceReport,
   Play,
+  ProtectionPlan,
   Schedule,
   ScheduleRow,
   Sound,
   Speaker,
   TeamMember,
 } from './types';
+
+/**
+ * Locations carry the personalization answers from the 2026-08-24 spec. If a
+ * copy of the database has not caught up yet, the second list is the one that
+ * has always been there, and the page keeps working without them.
+ */
+const PLACE_COLUMNS =
+  'id, org_id, name, address, timezone, kind, target, area_size, people_nearby, limit_audible, birds_active';
+const PLACE_COLUMNS_BASE = 'id, org_id, name, address, timezone';
+
+/** Fill in what an older row cannot answer, rather than leaving holes. */
+function withAnswers(row: Record<string, unknown>): Place {
+  return {
+    kind: null,
+    target: null,
+    area_size: null,
+    people_nearby: true,
+    limit_audible: false,
+    birds_active: null,
+    ...row,
+  } as Place;
+}
 
 /* ── businesses ────────────────────────────────────────────────────────── */
 
@@ -78,24 +104,43 @@ export async function renameBusiness(orgId: string, name: string): Promise<void>
 
 export async function listPlaces(orgId: string): Promise<Place[]> {
   const db = requireSupabase();
-  return unwrap(
-    await db
-      .from('locations')
-      .select('id, org_id, name, address, timezone')
-      .eq('org_id', orgId)
-      .order('name'),
-  ) as Place[];
+  const rich = await db
+    .from('locations')
+    .select(PLACE_COLUMNS)
+    .eq('org_id', orgId)
+    .order('name');
+  if (!rich.error) return (rich.data ?? []).map((r) => withAnswers(r as never));
+  if (!isMissingPiece(rich.error)) throw rich.error;
+
+  const rows = unwrap(
+    await db.from('locations').select(PLACE_COLUMNS_BASE).eq('org_id', orgId).order('name'),
+  ) as Array<Record<string, unknown>>;
+  return rows.map(withAnswers);
 }
 
 export async function getPlace(id: string): Promise<Place | null> {
   const db = requireSupabase();
+  const rich = await db.from('locations').select(PLACE_COLUMNS).eq('id', id).maybeSingle();
+  if (!rich.error) return rich.data ? withAnswers(rich.data as never) : null;
+  if (!isMissingPiece(rich.error)) throw rich.error;
+
   const { data, error } = await db
     .from('locations')
-    .select('id, org_id, name, address, timezone')
+    .select(PLACE_COLUMNS_BASE)
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;
-  return (data as Place) ?? null;
+  return data ? withAnswers(data as Record<string, unknown>) : null;
+}
+
+/** The personalization sheet: what this location is, and which birds. */
+export async function updatePlaceAnswers(id: string, answers: PlaceAnswers): Promise<void> {
+  const db = requireSupabase();
+  const { error } = await db.from('locations').update(answers).eq('id', id);
+  if (error) {
+    if (isMissingPiece(error)) throw new ComingOnline('These questions');
+    throw error;
+  }
 }
 
 export async function createPlace(
@@ -107,10 +152,10 @@ export async function createPlace(
   const { data, error } = await db
     .from('locations')
     .insert({ org_id: orgId, name, address })
-    .select('id, org_id, name, address, timezone')
+    .select(PLACE_COLUMNS_BASE)
     .single();
   if (error) throw error;
-  return data as Place;
+  return withAnswers(data as Record<string, unknown>);
 }
 
 export async function updatePlace(
@@ -270,7 +315,7 @@ export async function history(from: Date, to: Date): Promise<Play[]> {
     await db
       .from('sessions')
       .select(
-        'id, started_at, ended_at, output_kind, source, user_id, profile_id, zone_id, audio_profiles(name), zones(name, location_id, locations(name))',
+        'id, started_at, ended_at, output_kind, source, result, user_id, profile_id, plan_id, zone_id, audio_profiles(name), protection_plans(name), zones(name, location_id, locations(name))',
       )
       .gte('started_at', from.toISOString())
       .lt('started_at', to.toISOString())
@@ -281,10 +326,13 @@ export async function history(from: Date, to: Date): Promise<Play[]> {
     ended_at: string | null;
     output_kind: string;
     source: string;
+    result: Play['result'];
     user_id: string;
     profile_id: string;
+    plan_id: string | null;
     zone_id: string | null;
     audio_profiles: { name: string } | null;
+    protection_plans: { name: string } | null;
     zones: { name: string; location_id: string; locations: { name: string } | null } | null;
   }>;
   return rows.map((r) => ({
@@ -295,13 +343,17 @@ export async function history(from: Date, to: Date): Promise<Play[]> {
       (new Date(r.ended_at ?? Date.now()).getTime() - new Date(r.started_at).getTime()) / 60000,
     output_kind: r.output_kind,
     source: r.source,
+    result: r.result ?? null,
     user_id: r.user_id,
     profile_id: r.profile_id,
     profile_name: r.audio_profiles?.name ?? null,
+    plan_id: r.plan_id ?? null,
+    plan_name: r.protection_plans?.name ?? null,
     zone_id: r.zone_id,
     zone_name: r.zones?.name ?? null,
     location_id: r.zones?.location_id ?? null,
     location_name: r.zones?.locations?.name ?? null,
+    place_name: r.zones?.locations?.name ?? null,
   }));
 }
 
@@ -322,6 +374,18 @@ export async function placeReport(
   return rows[0] ?? null;
 }
 
+/** What a person reported about the runs in one area. */
+export async function areaFeedback(zoneId: string): Promise<AreaFeedback | null> {
+  const db = requireSupabase();
+  const { data, error } = await db.rpc('zone_feedback', { p_zone_id: zoneId });
+  if (error) {
+    if (isMissingPiece(error)) return null;
+    throw error;
+  }
+  const rows = (data ?? []) as AreaFeedback[];
+  return rows[0] ?? null;
+}
+
 /* ── sounds ────────────────────────────────────────────────────────────── */
 
 export async function listSounds(orgId: string): Promise<Sound[]> {
@@ -329,37 +393,96 @@ export async function listSounds(orgId: string): Promise<Sound[]> {
   return unwrap(
     await db
       .from('audio_profiles')
-      .select('id, name, kind, is_system')
+      .select('id, name, kind, is_system, description, params')
       .or(`is_system.eq.true,owner_org_id.eq.${orgId}`)
       .order('name'),
   ) as Sound[];
 }
 
+/* ── protection plans ──────────────────────────────────────────────────── */
+
+const PLAN_COLUMNS =
+  'id, owner_org_id, zone_id, name, target, sound_ids, randomize_order, interval_seconds, session_minutes, output, volume, quiet_start, quiet_end, days, starts_on, ends_on';
+
+/**
+ * Every plan this business owns, attached to an area or waiting in the
+ * library. A copy of the database without the table yet hands back nothing,
+ * so the rest of the location page still draws.
+ */
+export async function listPlans(orgId: string): Promise<ProtectionPlan[]> {
+  const db = requireSupabase();
+  const { data, error } = await db
+    .from('protection_plans')
+    .select(PLAN_COLUMNS)
+    .eq('owner_org_id', orgId)
+    .order('name');
+  if (error) {
+    if (isMissingPiece(error)) return [];
+    throw error;
+  }
+  return (data ?? []) as ProtectionPlan[];
+}
+
+export type PlanInput = {
+  name: string;
+  target: string;
+  sound_ids: string[];
+  randomize_order: boolean;
+  interval_seconds: number;
+  session_minutes: number;
+  output: OutputKind;
+  quiet_start: string | null;
+  quiet_end: string | null;
+  days: number[];
+  starts_on: string | null;
+  ends_on: string | null;
+  zone_id: string | null;
+};
+
+export async function createPlan(orgId: string, input: PlanInput): Promise<void> {
+  const db = requireSupabase();
+  const { error } = await db
+    .from('protection_plans')
+    .insert({ ...input, owner_org_id: orgId });
+  if (error) {
+    if (isMissingPiece(error)) throw new ComingOnline('Protection plans');
+    throw error;
+  }
+}
+
+export async function updatePlan(id: string, input: Partial<PlanInput>): Promise<void> {
+  const db = requireSupabase();
+  const { error } = await db.from('protection_plans').update(input).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deletePlan(id: string): Promise<void> {
+  const db = requireSupabase();
+  const { error } = await db.from('protection_plans').delete().eq('id', id);
+  if (error) throw error;
+}
+
+/** Point a plan at an area, or take it off the one it is on. */
+export async function attachPlan(planId: string, zoneId: string | null): Promise<void> {
+  const db = requireSupabase();
+  const { error } = await db.from('protection_plans').update({ zone_id: zoneId }).eq('id', planId);
+  if (error) throw error;
+}
+
 /* ── schedules ─────────────────────────────────────────────────────────── */
 
-export async function listSchedules(placeIds: string[]): Promise<ScheduleRow[]> {
-  if (placeIds.length === 0) return [];
-  const db = requireSupabase();
-  const areas = await listAreasForPlaces(placeIds);
-  if (areas.length === 0) return [];
-  const rows = unwrap(
-    await db
-      .from('schedules')
-      .select(
-        'id, zone_id, profile_id, days, start_time, end_time, enabled, executor, zones(name, location_id, locations(name)), audio_profiles(name)',
-      )
-      .in(
-        'zone_id',
-        areas.map((a) => a.id),
-      )
-      .order('start_time'),
-  ) as unknown as Array<
-    Schedule & {
-      zones: { name: string; location_id: string; locations: { name: string } | null } | null;
-      audio_profiles: { name: string } | null;
-    }
-  >;
-  return rows.map((r) => ({
+const SCHEDULE_JOINS = 'zones(name, location_id, locations(name)), audio_profiles(name)';
+const SCHEDULE_COLUMNS = `id, zone_id, profile_id, days, start_time, end_time, enabled, executor, trigger, offset_minutes, plan_id, quiet_start, quiet_end, ${SCHEDULE_JOINS}, protection_plans(name, output)`;
+const SCHEDULE_COLUMNS_BASE = `id, zone_id, profile_id, days, start_time, end_time, enabled, executor, ${SCHEDULE_JOINS}`;
+
+type ScheduleJoined = Schedule & {
+  zones: { name: string; location_id: string; locations: { name: string } | null } | null;
+  audio_profiles: { name: string } | null;
+  protection_plans?: { name: string; output: OutputKind } | null;
+};
+
+function toScheduleRow(r: ScheduleJoined): ScheduleRow {
+  return {
     id: r.id,
     zone_id: r.zone_id,
     profile_id: r.profile_id,
@@ -368,11 +491,44 @@ export async function listSchedules(placeIds: string[]): Promise<ScheduleRow[]> 
     end_time: r.end_time,
     enabled: r.enabled,
     executor: r.executor,
+    trigger: r.trigger ?? 'time',
+    offset_minutes: r.offset_minutes ?? 0,
+    plan_id: r.plan_id ?? null,
+    quiet_start: r.quiet_start ?? null,
+    quiet_end: r.quiet_end ?? null,
     area_name: r.zones?.name ?? 'Area',
     place_id: r.zones?.location_id ?? '',
     place_name: r.zones?.locations?.name ?? 'Place',
     sound_name: r.audio_profiles?.name ?? 'Sound',
-  }));
+    plan_name: r.protection_plans?.name ?? null,
+    output: r.protection_plans?.output ?? null,
+  };
+}
+
+export async function listSchedules(placeIds: string[]): Promise<ScheduleRow[]> {
+  if (placeIds.length === 0) return [];
+  const db = requireSupabase();
+  const areas = await listAreasForPlaces(placeIds);
+  if (areas.length === 0) return [];
+  const areaIds = areas.map((a) => a.id);
+
+  const rich = await db
+    .from('schedules')
+    .select(SCHEDULE_COLUMNS)
+    .in('zone_id', areaIds)
+    .order('start_time');
+  if (!rich.error) return (rich.data as unknown as ScheduleJoined[]).map(toScheduleRow);
+  if (!isMissingPiece(rich.error)) throw rich.error;
+
+  // Triggers and plans have not landed in this copy of the database yet.
+  const rows = unwrap(
+    await db
+      .from('schedules')
+      .select(SCHEDULE_COLUMNS_BASE)
+      .in('zone_id', areaIds)
+      .order('start_time'),
+  ) as unknown as ScheduleJoined[];
+  return rows.map(toScheduleRow);
 }
 
 export type ScheduleInput = {
@@ -383,18 +539,40 @@ export type ScheduleInput = {
   end_time: string;
   executor: Executor;
   enabled: boolean;
+  trigger: ScheduleTrigger;
+  offset_minutes: number;
+  plan_id: string | null;
+  quiet_start: string | null;
+  quiet_end: string | null;
 };
+
+/** The columns a schedule had before triggers, plans and quiet hours. */
+function withoutTriggers(input: Partial<ScheduleInput>): Partial<ScheduleInput> {
+  const { trigger, offset_minutes, plan_id, quiet_start, quiet_end, ...rest } = input;
+  void trigger;
+  void offset_minutes;
+  void plan_id;
+  void quiet_start;
+  void quiet_end;
+  return rest;
+}
 
 export async function createSchedule(input: ScheduleInput): Promise<void> {
   const db = requireSupabase();
   const { error } = await db.from('schedules').insert(input);
-  if (error) throw error;
+  if (!error) return;
+  if (!isMissingPiece(error)) throw error;
+  const retry = await db.from('schedules').insert(withoutTriggers(input));
+  if (retry.error) throw retry.error;
 }
 
 export async function updateSchedule(id: string, patch: Partial<ScheduleInput>): Promise<void> {
   const db = requireSupabase();
   const { error } = await db.from('schedules').update(patch).eq('id', id);
-  if (error) throw error;
+  if (!error) return;
+  if (!isMissingPiece(error)) throw error;
+  const retry = await db.from('schedules').update(withoutTriggers(patch)).eq('id', id);
+  if (retry.error) throw retry.error;
 }
 
 export async function deleteSchedule(id: string): Promise<void> {
