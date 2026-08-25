@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -20,18 +20,38 @@ import {
   useToast,
 } from '../../src/components';
 import {
+  AUDIBLE_BAND_TOP_HZ,
   AUDIBLE_LABEL,
   SYSTEM_PROFILES,
   audibleState,
+  findSystemProfile,
+  peakFreqHz,
   pitchLabel,
   sourceTag,
   type AudibleState,
   type AudioProfile,
   type OutputKind,
 } from '../../src/core/profiles';
+import { recommendPlan } from '../../src/core/protectionPlans';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
+import { usePlacesHome } from '../../src/state/usePlacesHome';
 import { useProfiles } from '../../src/state/useProfiles';
 import { useSession } from '../../src/state/useSession';
+
+/**
+ * The catalogue, in the three groups a person actually sorts it into: is it a
+ * real bird, is it made by the app, and can anything I own even play it.
+ *
+ * A sound is in exactly one group. The 22 kHz tone leads with the fact that it
+ * needs hardware, because that matters more than how it was made.
+ */
+const RECORDINGS = SYSTEM_PROFILES.filter((p) => p.kind === 'sample');
+const SPEAKER_ONLY = SYSTEM_PROFILES.filter(
+  (p) => p.kind !== 'sample' && peakFreqHz(p) > AUDIBLE_BAND_TOP_HZ,
+);
+const GENERATED = SYSTEM_PROFILES.filter(
+  (p) => p.kind !== 'sample' && peakFreqHz(p) <= AUDIBLE_BAND_TOP_HZ,
+);
 import { icon, space, themed, useTheme, useThemedStyles } from '../../src/theme';
 
 export default function SoundsScreen() {
@@ -48,6 +68,21 @@ export default function SoundsScreen() {
   // Whether a sound can be heard depends on what is playing it, so the rows
   // answer for the speaker this person actually picked.
   const output = useSession((s) => s.output);
+  const place = usePlacesHome((s) => s.active());
+
+  /**
+   * What this place would be offered if it were being set up today.
+   *
+   * Not a claim that these work better. It is the same opening offer the
+   * questions make, kept in front of somebody who skipped them or has changed
+   * their mind about who is nearby.
+   */
+  const recommended = useMemo(() => {
+    if (!place) return [];
+    return recommendPlan(place.target, place.limitAudible, output)
+      .soundIds.map((id) => findSystemProfile(id))
+      .filter((p) => p !== undefined);
+  }, [output, place]);
 
   const savedLimit = ent.limit('savedProfiles');
 
@@ -93,19 +128,49 @@ export default function SoundsScreen() {
         // the dock is pinned, so the last sound needs its height under it
         contentContainerStyle={{ paddingBottom: dockClearance(insets.bottom) }}
       >
-        <View style={styles.list}>
-          {SYSTEM_PROFILES.map((p) => (
-            <SoundRow
-              key={p.id}
-              sound={p}
-              output={output}
-              active={p.id === activeId}
-              locked={p.minPlan !== 'free' && !ent.can('profiles.all')}
-              onPress={() => pick(p)}
-              onAudible={setAudible}
-            />
-          ))}
-        </View>
+        {recommended.length > 0 && place ? (
+          <View style={styles.first}>
+            <SectionHeader title={`Recommended for ${place.name}`} />
+            <View style={styles.list}>
+              {recommended.map((p) => (
+                <SoundRow
+                  key={p.id}
+                  sound={p}
+                  output={output}
+                  active={p.id === activeId}
+                  locked={p.minPlan !== 'free' && !ent.can('profiles.all')}
+                  onPress={() => pick(p)}
+                  onAudible={setAudible}
+                />
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        {(
+          [
+            ['Natural recordings', RECORDINGS],
+            ['Generated tones', GENERATED],
+            ['Needs a PigeonX speaker', SPEAKER_ONLY],
+          ] as const
+        ).map(([title, group], i) => (
+          <View key={title} style={i === 0 && recommended.length === 0 ? styles.first : styles.section}>
+            <SectionHeader title={title} />
+            <View style={styles.list}>
+              {group.map((p) => (
+                <SoundRow
+                  key={p.id}
+                  sound={p}
+                  output={output}
+                  active={p.id === activeId}
+                  locked={p.minPlan !== 'free' && !ent.can('profiles.all')}
+                  onPress={() => pick(p)}
+                  onAudible={setAudible}
+                />
+              ))}
+            </View>
+          </View>
+        ))}
 
         {saved.length > 0 ? (
           <View style={styles.section}>
@@ -235,6 +300,7 @@ function SoundRow({
 const sheet = themed((c, t) => ({
   /** the list takes what the screen has left, and scrolls inside it */
   scroll: { flex: 1 },
+  first: { marginTop: 0 },
   section: { marginTop: space.lg },
   credits: { marginTop: space.lg, borderWidth: 1, borderColor: c.border },
   list: { borderWidth: 1, borderColor: c.border },

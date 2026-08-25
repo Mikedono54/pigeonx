@@ -129,6 +129,8 @@ function Painted() {
         />
         <Stack.Screen name="history" />
         <Stack.Screen name="place-setup" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="my-places" />
+        <Stack.Screen name="plans" />
         <Stack.Screen name="for-businesses" />
         <Stack.Screen name="team" />
         <Stack.Screen name="speaker" options={{ animation: 'fade', gestureEnabled: false }} />

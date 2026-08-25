@@ -3,10 +3,13 @@ import { Linking, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import {
   Building2,
+  Ear,
   History,
+  ListMusic,
   LogIn,
   LogOut,
   Mail,
+  MapPin,
   Music4,
   Plus,
   RadioTower,
@@ -32,9 +35,12 @@ import {
 } from '../../src/components';
 import { deleteMyAccount, signOut as signOutOfAccount } from '../../src/services/auth';
 import { PLAN_LABEL, PLAN_ORDER, type Plan } from '../../src/core/entitlements';
+import { createPurchases, PRIVACY_URL, TERMS_URL } from '../../src/services/purchases';
 import { useEntitlement } from '../../src/hooks/useEntitlement';
 import { useAccount } from '../../src/state/useAccount';
 import { useHistory } from '../../src/state/useHistory';
+import { usePlacesHome } from '../../src/state/usePlacesHome';
+import { useProtectionPlans } from '../../src/state/useProtectionPlans';
 import {
   space,
   themed,
@@ -48,9 +54,9 @@ import {
 const CONTACT_EMAIL = 'hello@pigeonx.org';
 
 /**
- * Help, and the three things we always say out loud.
+ * Help, and the facts we always say out loud.
  *
- * The facts used to sit on Settings as a list nobody had asked for. They live
+ * They used to sit on Settings as a list nobody had asked for. They live
  * inside the answers now, where a person meets them while they are looking
  * for them.
  */
@@ -63,7 +69,7 @@ const HELP: { id: HelpTopic; title: string; icon: typeof Target; lines: string[]
       'Position the speaker close to where the birds land.',
       'Run 15 minute sessions at random times.',
       'Switch sounds every few days, so the pattern is harder to predict.',
-      'Distress calls are well studied. They are also audible, so people nearby hear them too.',
+      'Tell the app what happened afterwards. It only counts what you report.',
     ],
   },
   {
@@ -77,9 +83,33 @@ const HELP: { id: HelpTopic; title: string; icon: typeof Target; lines: string[]
       'Phones cannot reach the highest sounds. A PigeonX speaker can.',
     ],
   },
+  {
+    id: 'audible',
+    title: 'Audible sounds and safety',
+    icon: Ear,
+    lines: [
+      'Bird calls and hawk calls sit inside human hearing. Everyone nearby hears them.',
+      'Every sound carries a tag saying who will hear it. Read it before you press Start.',
+      'Start at a low volume and raise it only until it carries to where the birds land.',
+      'Do not run audible sounds close to where people sleep, work quietly, or eat.',
+      'If people are usually nearby, answer yes to the quiet question and the app leaves recordings out.',
+    ],
+  },
+  {
+    id: 'placement',
+    title: 'Where to put the speaker',
+    icon: MapPin,
+    lines: [
+      'Point it at the ledge, rail or beam the birds actually land on.',
+      'High frequencies travel in a straight line. A wall or a parapet in the way stops them.',
+      'Closer beats louder. A speaker two metres away at a low volume carries further than a loud one across a yard.',
+      'Keep it out of the rain and out of direct sun.',
+      'Move it every few days if you can. A sound from one fixed spot is easier to settle around.',
+    ],
+  },
 ];
 
-type HelpTopic = 'results' | 'speaker' | 'credits';
+type HelpTopic = 'results' | 'speaker' | 'audible' | 'placement' | 'credits';
 
 export default function SettingsScreen() {
   const styles = useThemedStyles(sheet);
@@ -89,17 +119,23 @@ export default function SettingsScreen() {
   const [devOpen, setDevOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState<HelpTopic | null>(null);
   const [signInOpen, setSignInOpen] = useState(false);
+  const [speakersOpen, setSpeakersOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [restoring, setRestoring] = useState(false);
 
   const email = useAccount((s) => s.email);
   const guest = useAccount((s) => s.guest);
   const setPlan = useAccount((s) => s.setPlan);
   const setSession = useAccount((s) => s.setSession);
+  const speakers = useAccount((s) => s.devices);
   const addTestSpeaker = useAccount((s) => s.addSimulatedDevice);
+  const removeSpeaker = useAccount((s) => s.removeDevice);
   const resetOnboarding = useAccount((s) => s.resetOnboarding);
 
   const entries = useHistory((s) => s.entries);
+  const places = usePlacesHome((s) => s.places);
+  const plans = useProtectionPlans((s) => s.plans);
 
   const free = ent.plan === 'free';
 
@@ -108,6 +144,17 @@ export default function SettingsScreen() {
     setSession(null);
     toast.show(result.message, result.ok ? 'default' : 'danger');
   }, [setSession, toast]);
+
+  const restore = useCallback(async () => {
+    setRestoring(true);
+    try {
+      const store = createPurchases(setPlan);
+      const result = await store.restore();
+      if (result.message) toast.show(result.message, result.ok ? 'success' : 'danger');
+    } finally {
+      setRestoring(false);
+    }
+  }, [setPlan, toast]);
 
   const removeAccount = useCallback(async () => {
     setDeleting(true);
@@ -123,7 +170,7 @@ export default function SettingsScreen() {
 
   return (
     <Screen title="Settings">
-      <SectionHeader title="Your plan" />
+      <SectionHeader title="Account and plan" />
       <View style={styles.planBlock}>
         <Text style={styles.planName}>PigeonX {PLAN_LABEL[ent.plan]}</Text>
         <Text style={styles.planMeta} numberOfLines={1}>
@@ -138,28 +185,37 @@ export default function SettingsScreen() {
           onPress={() => router.push('/paywall')}
         />
       </View>
-
-      <View style={styles.section}>
-        <SectionHeader title="How it looks" />
-        <Segmented
-          value={preference}
-          onChange={(next: ThemePreference) => setPreference(next)}
-          accessibilityLabel="How it looks"
-          options={THEME_PREFERENCES.map((p) => ({
-            value: p,
-            label: THEME_PREFERENCE_LABEL[p],
-          }))}
+      <View style={styles.rowsSpaced}>
+        <ListRow
+          title="Restore purchases"
+          meta={restoring ? 'Checking with the store' : undefined}
+          chevron={false}
+          onPress={() => void restore()}
         />
-        <Text style={styles.hint}>System follows your phone.</Text>
       </View>
 
       <View style={styles.section}>
+        <SectionHeader title="Places and speakers" />
         <View style={styles.rows}>
           <ListRow
-            icon={History}
-            title="History"
-            meta={entries.length === 0 ? 'Nothing yet' : `${entries.length} plays`}
-            onPress={() => router.push('/history')}
+            icon={MapPin}
+            title="My places"
+            meta={
+              places.length === 1
+                ? places[0].name
+                : `${places.length} places`
+            }
+            onPress={() => router.push('/my-places')}
+          />
+          <ListRow
+            icon={Speaker}
+            title="Connected speakers"
+            meta={
+              speakers.length === 0
+                ? 'None yet. This phone plays it.'
+                : `${speakers.length} speaker${speakers.length === 1 ? '' : 's'}`
+            }
+            onPress={() => setSpeakersOpen(true)}
           />
           <ListRow
             icon={RadioTower}
@@ -182,6 +238,46 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
+        <SectionHeader title="Appearance" />
+        <Segmented
+          value={preference}
+          onChange={(next: ThemePreference) => setPreference(next)}
+          accessibilityLabel="Appearance"
+          options={THEME_PREFERENCES.map((p) => ({
+            value: p,
+            label: THEME_PREFERENCE_LABEL[p],
+          }))}
+        />
+        <Text style={styles.hint}>System follows your phone.</Text>
+      </View>
+
+      <View style={styles.section}>
+        <SectionHeader title="Activity" />
+        <View style={styles.rows}>
+          <ListRow
+            icon={History}
+            title="Protection history"
+            meta={
+              entries.length === 0
+                ? 'Nothing yet'
+                : `${entries.length} session${entries.length === 1 ? '' : 's'}`
+            }
+            onPress={() => router.push('/history')}
+          />
+          <ListRow
+            icon={ListMusic}
+            title="Saved plans"
+            meta={
+              plans.length === 0
+                ? 'None yet'
+                : `${plans.length} plan${plans.length === 1 ? '' : 's'}`
+            }
+            onPress={() => router.push('/plans')}
+          />
+        </View>
+      </View>
+
+      <View style={styles.section}>
         <SectionHeader title="Help" />
         <View style={styles.rows}>
           {HELP.map((topic) => (
@@ -193,23 +289,17 @@ export default function SettingsScreen() {
             />
           ))}
           <ListRow
-            icon={Mail}
-            title="Contact us"
-            meta={CONTACT_EMAIL}
-            chevron={false}
-            onPress={() => void Linking.openURL(`mailto:${CONTACT_EMAIL}`)}
-          />
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <SectionHeader title="About" />
-        <View style={styles.rows}>
-          <ListRow
             icon={Music4}
             title="Sound credits"
             meta="Who recorded the bird calls"
             onPress={() => setHelpOpen('credits')}
+          />
+          <ListRow
+            icon={Mail}
+            title="Contact support"
+            meta={CONTACT_EMAIL}
+            chevron={false}
+            onPress={() => void Linking.openURL(`mailto:${CONTACT_EMAIL}`)}
           />
         </View>
       </View>
@@ -220,7 +310,7 @@ export default function SettingsScreen() {
             <ListRow
               icon={LogIn}
               title="Sign in"
-              meta="Keep your sounds"
+              meta="Keep your places and sounds"
               onPress={() => setSignInOpen(true)}
             />
           ) : (
@@ -291,6 +381,23 @@ export default function SettingsScreen() {
         </View>
       ) : null}
 
+      <View style={styles.legal}>
+        <Button
+          label="Terms"
+          variant="ghost"
+          size="sm"
+          full={false}
+          onPress={() => void Linking.openURL(TERMS_URL)}
+        />
+        <Button
+          label="Privacy"
+          variant="ghost"
+          size="sm"
+          full={false}
+          onPress={() => void Linking.openURL(PRIVACY_URL)}
+        />
+      </View>
+
       {HELP.map((topic) => (
         <Sheet
           key={topic.id}
@@ -309,6 +416,48 @@ export default function SettingsScreen() {
         </Sheet>
       ))}
 
+      <Sheet
+        open={speakersOpen}
+        title="Connected speakers"
+        onClose={() => setSpeakersOpen(false)}
+      >
+        {speakers.length === 0 ? (
+          <Text style={styles.hint}>
+            Nothing paired yet. This phone plays every sound until something is.
+          </Text>
+        ) : (
+          <View style={styles.rows}>
+            {speakers.map((d) => (
+              <ListRow
+                key={d.id}
+                icon={Speaker}
+                title={d.name}
+                meta={`Added ${new Date(d.pairedAt).toLocaleDateString(undefined, {
+                  month: 'short',
+                  day: 'numeric',
+                })}`}
+                chevron={false}
+                right={
+                  <Button
+                    label="Remove"
+                    variant="ghost"
+                    size="sm"
+                    full={false}
+                    onPress={() => {
+                      removeSpeaker(d.id);
+                      toast.show(`${d.name} removed.`);
+                    }}
+                  />
+                }
+              />
+            ))}
+          </View>
+        )}
+        <Text style={styles.hint}>
+          A Bluetooth speaker is paired in your phone settings, then picked on Home.
+        </Text>
+      </Sheet>
+
       <CreditsSheet open={helpOpen === 'credits'} onClose={() => setHelpOpen(null)} />
 
       <SignInSheet
@@ -320,7 +469,7 @@ export default function SettingsScreen() {
       <ConfirmSheet
         open={deleteOpen}
         title="Delete my account"
-        body="This takes away your account, your sounds, your times and what played. You cannot get it back. What is on this phone stays until you delete the app."
+        body="This takes away your account, your places, your sounds, your times and what played. You cannot get it back. What is on this phone stays until you delete the app."
         confirmLabel="Yes, delete it"
         cancelLabel="Keep my account"
         danger
@@ -345,10 +494,17 @@ const sheet = themed((c, t) => ({
   upgrade: { marginTop: space.sm },
   section: { marginTop: space.lg, gap: space.sm },
   rows: { borderWidth: 1, borderColor: c.border },
+  rowsSpaced: { borderWidth: 1, borderColor: c.border, marginTop: space.sm },
   hint: { ...t.caption },
   answer: { gap: space.sm + 2, marginBottom: space.sm },
   fact: { flexDirection: 'row', gap: space.sm + 2, alignItems: 'flex-start' },
   factMark: { width: 10, height: 3, marginTop: 9, backgroundColor: c.accent },
   factText: { ...t.label, flex: 1, fontSize: 15, lineHeight: 21 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  legal: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: space.lg,
+    marginTop: space.lg,
+  },
 }));
