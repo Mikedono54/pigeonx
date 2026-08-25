@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { can, whyNot } from '../core/team';
-import { EVERY_DAY } from './useProtectionPlans';
+import { EVERY_DAY, type ProtectionPlan } from './useProtectionPlans';
 import { recommendPlan } from '../core/protectionPlans';
 import type { BirdTarget } from '../core/personalization';
 import type { OutputKind } from '../core/profiles';
@@ -27,6 +27,18 @@ export type { OrgPlan, OrgPlanDraft } from '../services/orgPlansRemote';
  * two people editing one plan on two phones is the case a stale local copy
  * gets wrong.
  */
+
+/**
+ * The same plan, in the shape a session runs.
+ *
+ * Start does not care whose plan it is: it takes the sounds, the order, the
+ * length and the hours it is allowed to run in, and a business's plan answers
+ * all four exactly like the one on somebody's phone. The id is the account's
+ * own, which is what the run is written down against.
+ */
+export function asProtectionPlan(plan: OrgPlan): ProtectionPlan {
+  return { ...plan, placeId: '', updatedAt: 0, remoteId: plan.id };
+}
 
 export interface OrgPlansResult {
   ok: boolean;

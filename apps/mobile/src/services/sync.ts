@@ -1014,17 +1014,31 @@ export interface HistoryWindow {
 
 /** What played anywhere else, for the History screen. Empty when offline. */
 export async function fetchRemoteHistory(window: HistoryWindow): Promise<SessionEntry[]> {
+  return (await readRemoteHistory(window)).entries;
+}
+
+/**
+ * The same list, with the one thing the list itself cannot say: whether the
+ * account answered at all.
+ *
+ * "Nothing played here" and "nobody could ask" are the same empty list and
+ * two completely different sentences, and a card that says the first when it
+ * means the second is telling somebody their building is quiet when it is not.
+ */
+export async function readRemoteHistory(
+  window: HistoryWindow,
+): Promise<{ ok: boolean; entries: SessionEntry[] }> {
   const sb = getSupabase();
-  if (!sb) return [];
+  if (!sb) return { ok: false, entries: [] };
 
   const { data } = await sb.auth.getUser();
-  if (!data.user) return [];
+  if (!data.user) return { ok: false, entries: [] };
 
   const { data: rows, error } = await callFunction(sb, 'history', {
     from: window.from.toISOString(),
     to: window.to.toISOString(),
   });
-  if (error || !Array.isArray(rows)) return [];
+  if (error || !Array.isArray(rows)) return { ok: false, entries: [] };
 
   const nameFor = (profileId: string | null) => {
     if (!profileId) return 'A sound';
@@ -1032,7 +1046,7 @@ export async function fetchRemoteHistory(window: HistoryWindow): Promise<Session
     return mine?.name ?? 'A sound';
   };
 
-  return (rows as HistoryRow[]).map((row) => historyRowToEntry(row, nameFor));
+  return { ok: true, entries: (rows as HistoryRow[]).map((row) => historyRowToEntry(row, nameFor)) };
 }
 
 /** Kicks off the first move up, then the sync that carries it. */

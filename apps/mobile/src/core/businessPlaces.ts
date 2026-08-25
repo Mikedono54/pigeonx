@@ -158,6 +158,25 @@ export function speakerLine(speakers: AreaSpeaker[]): string {
   return head;
 }
 
+/**
+ * When each building last had a sound in it, out of what played.
+ *
+ * Only runs the account actually holds count. A building nobody has run
+ * anything in is simply missing from the answer, which is what lets the card
+ * say "No sessions yet" instead of inventing a time.
+ */
+export function lastSessionByPlace(
+  entries: { locationId?: string | null; startedAt: number }[],
+): Record<string, number> {
+  const last: Record<string, number> = {};
+  for (const entry of entries) {
+    const id = entry.locationId;
+    if (!id) continue;
+    if (!last[id] || entry.startedAt > last[id]) last[id] = entry.startedAt;
+  }
+  return last;
+}
+
 /** "3 areas", for the line under a place. */
 export function areaLine(areas: AreaState[]): string {
   if (areas.length === 0) return 'No areas yet';

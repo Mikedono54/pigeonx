@@ -5,6 +5,7 @@ import * as remote from '../services/placesRemote';
 import { somethingChanged } from '../services/syncSignal';
 import { persistStorage, STORAGE_KEYS, uid } from './storage';
 import { useAccount } from './useAccount';
+import { useOrgPlans } from './useOrgPlans';
 
 export type { Area, Place, Speaker } from '../core/places';
 
@@ -35,8 +36,13 @@ interface PlacesState {
   loading: boolean;
   problem: string | null;
   live: LiveByArea;
+  /** when each place last had a sound in it, from what played */
+  activity: Record<string, number>;
+  /** false until the account has answered about what played */
+  activityKnown: boolean;
 
   useBusiness: (orgId: string | null) => void;
+  setActivity: (activity: Record<string, number>) => void;
   refresh: () => Promise<void>;
   setLive: (live: LiveByArea) => void;
 
@@ -61,6 +67,8 @@ export const usePlaces = create<PlacesState>()(
       loading: false,
       problem: null,
       live: {},
+      activity: {},
+      activityKnown: false,
 
       useBusiness: (orgId) => {
         set({
@@ -68,9 +76,21 @@ export const usePlaces = create<PlacesState>()(
           orgId,
           problem: null,
           live: {},
+          activity: {},
+          activityKnown: false,
         });
-        if (orgId) void get().refresh();
+        if (orgId) {
+          void get().refresh();
+          // The plans come with the list. An area with no plan and an area
+          // whose plan has not loaded read the same on a card, and only one of
+          // them is worth telling somebody about.
+          void useOrgPlans.getState().refresh();
+        } else {
+          useOrgPlans.getState().reset();
+        }
       },
+
+      setActivity: (activity) => set({ activity, activityKnown: true }),
 
       refresh: async () => {
         const { mode, orgId } = get();

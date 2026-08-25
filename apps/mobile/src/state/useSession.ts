@@ -333,7 +333,10 @@ export const useSession = create<SessionState>()(
 
         if (engine.getState() !== 'running') return;
 
-        const place = usePlacesHome.getState().active();
+        // A run in an area belongs to that area and to the building it is in.
+        // Attaching the person's own place to it as well would say the sound
+        // played on their balcony, which it did not.
+        const place = get().zoneId ? null : usePlacesHome.getState().active();
         const entry = await sessionRecorder.start({
           profile,
           output: get().output,

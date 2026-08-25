@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
   Building2,
+  ChevronRight,
   LayoutGrid,
   Pencil,
   Plus,
@@ -25,11 +26,22 @@ import {
   Touchable,
   useToast,
 } from '../../src/components';
+import {
+  attentionLine,
+  lastSessionLine,
+  rollUp,
+  speakerLine,
+  statusLine,
+  type PlaceState,
+} from '../../src/core/businessPlaces';
 import { liveLabel, liveTone, type Place } from '../../src/core/places';
 import { SPEAKER_STATUS_LABEL } from '../../src/core/speakerStatus';
-import { watchLive } from '../../src/services/live';
+import { can } from '../../src/core/team';
+import { refreshPlaceActivity } from '../../src/services/activity';
 import { useAccount } from '../../src/state/useAccount';
+import { useOrgPlans } from '../../src/state/useOrgPlans';
 import { usePlaces } from '../../src/state/usePlaces';
+import { useSchedules } from '../../src/state/useSchedules';
 import { useSession } from '../../src/state/useSession';
 import { icon, space, themed, useTheme, useThemedStyles } from '../../src/theme';
 
@@ -41,47 +53,212 @@ type Asking =
   | { kind: 'rename-area'; placeId: string; areaId: string; current: string };
 
 export default function PlacesScreen() {
+  const mode = usePlaces((s) => s.mode);
+  return mode === 'business' ? <BusinessPlaces /> : <PhonePlaces />;
+}
+
+/* ── the places a business looks after ────────────────────────────────────── */
+
+/**
+ * One card a building, read the way a person reads the lights in a house.
+ *
+ * The name, the birds it is protecting against and how, when it last ran, and
+ * what the account says about its speakers. Four lines, all of them things the
+ * account actually holds. Everything inside a building is one tap down.
+ */
+function BusinessPlaces() {
+  const styles = useThemedStyles(sheet);
+  const { c } = useTheme();
+  const insets = useSafeAreaInsets();
+  const toast = useToast();
+
+  const places = usePlaces((s) => s.places);
+  const problem = usePlaces((s) => s.problem);
+  const activity = usePlaces((s) => s.activity);
+  const activityKnown = usePlaces((s) => s.activityKnown);
+  const refresh = usePlaces((s) => s.refresh);
+
+  const businessName = useAccount((s) => s.activeOrgName);
+  const role = useAccount((s) => s.activeOrgRole);
+
+  const plans = useOrgPlans((s) => s.plans);
+  const plansKnown = useOrgPlans((s) => s.loaded);
+  const refreshPlans = useOrgPlans((s) => s.refresh);
+  const schedules = useSchedules((s) => s.schedules);
+
+  const [asking, setAsking] = useState(false);
+
+  useEffect(() => {
+    void refresh();
+    void refreshPlans();
+    void refreshPlaceActivity();
+  }, [refresh, refreshPlans]);
+
+  const states: PlaceState[] = useMemo(
+    () =>
+      places.map((place) => ({
+        id: place.id,
+        name: place.name,
+        target: place.target ?? null,
+        areas: place.areas.map((area) => ({
+          id: area.id,
+          name: area.name,
+          planName: plans.find((p) => p.zoneId === area.id)?.name ?? null,
+        })),
+        speakers: place.areas.flatMap((area) =>
+          (area.speakers ?? []).map((s) => ({
+            id: s.id,
+            name: s.name,
+            status: s.status ?? 'unknown',
+          })),
+        ),
+        // A time counts only while it is switched on and pointed at an area
+        // of this building. Anything else would put "Schedule active" on a
+        // place that will do nothing on its own.
+        scheduled: place.areas.some((area) =>
+          schedules.some((s) => s.enabled && s.zoneId === area.id),
+        ),
+        lastSessionAt: activityKnown ? (activity[place.id] ?? null) : null,
+        plansKnown,
+      })),
+    [activity, activityKnown, places, plans, plansKnown, schedules],
+  );
+
+  const attention = attentionLine(rollUp(states));
+  const mayAdd = can(role, 'places');
+
+  const addPlace = useCallback(
+    async (name: string) => {
+      const result = await usePlaces.getState().addPlace(name);
+      setAsking(false);
+      if (result.message) toast.show(result.message, result.ok ? 'success' : 'danger');
+    },
+    [toast],
+  );
+
+  return (
+    <Screen
+      title="Places"
+      subtitle={businessName ?? 'Every building your team looks after.'}
+      scroll={false}
+      header={
+        <View style={styles.head}>
+          {attention ? <Text style={styles.attention}>{attention}</Text> : null}
+          <View style={styles.teamRow}>
+            <Button
+              label="Your team"
+              variant="secondary"
+              size="sm"
+              full={false}
+              onPress={() => router.push('/team')}
+              icon={Users}
+            />
+          </View>
+        </View>
+      }
+      dock={
+        places.length > 0 && mayAdd ? (
+          <Button label="Add a place" size="lg" onPress={() => setAsking(true)} icon={Plus} />
+        ) : undefined
+      }
+    >
+      {problem ? (
+        <View style={styles.problem}>
+          <Banner tone="warning" title="Not everything loaded" body={problem} />
+        </View>
+      ) : null}
+
+      {places.length === 0 ? (
+        <View style={styles.emptyWrap}>
+          <EmptyState
+            title="No places yet"
+            body={
+              mayAdd
+                ? 'Add a building. Then add the areas inside it, like a roof or a patio.'
+                : 'Once a manager adds a building, it shows up here.'
+            }
+            actionLabel={mayAdd ? 'Add a place' : undefined}
+            onAction={mayAdd ? () => setAsking(true) : undefined}
+          />
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.list,
+            { paddingBottom: dockClearance(insets.bottom) },
+          ]}
+        >
+          {states.map((place) => (
+            <Card
+              key={place.id}
+              onPress={() =>
+                router.push({ pathname: '/location', params: { id: place.id } })
+              }
+              accessibilityLabel={place.name}
+            >
+              <View style={styles.cardHead}>
+                <Building2 size={icon.md} color={c.ink} strokeWidth={icon.stroke} />
+                <Text style={styles.placeName} numberOfLines={1}>
+                  {place.name}
+                </Text>
+                <ChevronRight size={icon.md} color={c.muted} strokeWidth={icon.stroke} />
+              </View>
+
+              <Text style={styles.status}>{statusLine(place)}</Text>
+              {activityKnown ? (
+                <Text style={styles.meta}>{lastSessionLine(place.lastSessionAt)}</Text>
+              ) : null}
+              <Text style={styles.meta}>{speakerLine(place.speakers)}</Text>
+            </Card>
+          ))}
+        </ScrollView>
+      )}
+
+      <NameSheet
+        asking={asking ? { kind: 'place' } : null}
+        onClose={() => setAsking(false)}
+        onSubmit={(name) => void addPlace(name)}
+      />
+    </Screen>
+  );
+}
+
+/* ── the places one phone keeps ───────────────────────────────────────────── */
+
+/**
+ * The same three words, on a phone with no business behind it: a place is a
+ * building, an area is one part of it, a speaker sits in an area. Everything
+ * here is kept on this phone, so everything here can be edited on it.
+ */
+function PhonePlaces() {
   const styles = useThemedStyles(sheet);
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const places = usePlaces((s) => s.places);
-  const mode = usePlaces((s) => s.mode);
   const problem = usePlaces((s) => s.problem);
-  const live = usePlaces((s) => s.live);
-  const setLive = usePlaces((s) => s.setLive);
-  const refresh = usePlaces((s) => s.refresh);
   const speakerCount = usePlaces((s) => s.speakerCount);
 
-  const businessName = useAccount((s) => s.activeOrgName);
   const speakers = useAccount((s) => s.devices);
 
   const playingArea = useSession((s) => s.zoneId);
   const engineState = useSession((s) => s.engineState);
+  const startedAt = useSession((s) => s.startedAt);
   const setArea = useSession((s) => s.setArea);
 
   const [asking, setAsking] = useState<Asking | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
-  const placeIds = useMemo(() => places.map((p) => p.id), [places]);
-
-  // Listen for a sound starting anywhere in the business.
-  useEffect(() => {
-    if (mode !== 'business' || placeIds.length === 0) return;
-    return watchLive(placeIds, setLive);
-  }, [mode, placeIds, setLive]);
-
-  // Keep the clock on a playing area moving.
-  const anyPlaying = Object.values(live).some((l) => l.playing);
+  // Nothing else can be playing in a list this phone keeps to itself, so the
+  // clock only runs while this phone is the one playing.
+  const anyPlaying = playingArea !== null && engineState === 'running';
   useEffect(() => {
     if (!anyPlaying) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [anyPlaying]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
 
   const speakerName = useCallback(
     (id: string) => speakers.find((s) => s.id === id)?.name ?? 'Speaker',
@@ -132,7 +309,7 @@ export default function PlacesScreen() {
     // until there is a list, and then the pinned one carries it.
     <Screen
       title="Places"
-      subtitle={businessName ?? 'A place is a building. An area is one part of it.'}
+      subtitle="A place is a building. An area is one part of it."
       scroll={false}
       dock={
         empty ? undefined : (
@@ -145,19 +322,6 @@ export default function PlacesScreen() {
         )
       }
     >
-      {mode === 'business' ? (
-        <View style={styles.teamRow}>
-          <Button
-            label="Your team"
-            variant="secondary"
-            size="sm"
-            full={false}
-            onPress={() => router.push('/team')}
-            icon={Users}
-          />
-        </View>
-      ) : null}
-
       {problem ? (
         <View style={styles.problem}>
           <Banner tone="warning" title="Not everything loaded" body={problem} />
@@ -221,8 +385,8 @@ export default function PlacesScreen() {
               </View>
 
               {place.areas.map((area) => {
-                const info = live[area.id];
                 const mine = playingArea === area.id && engineState === 'running';
+                const info = { playing: mine, startedAt };
                 return (
                   <View key={area.id} style={styles.area}>
                     <View style={styles.areaHead}>
@@ -253,24 +417,6 @@ export default function PlacesScreen() {
                         <Trash2 size={icon.sm} color={c.danger} strokeWidth={icon.stroke} />
                       </Touchable>
                     </View>
-
-                    {(area.speakers ?? []).map((s) => (
-                      <View key={s.id} style={styles.speakerRow}>
-                        <Speaker size={icon.sm} color={c.ink} strokeWidth={icon.stroke} />
-                        <Text style={styles.speakerName} numberOfLines={1}>
-                          {s.name}
-                        </Text>
-                        <Touchable
-                          onPress={() =>
-                            void usePlaces.getState().removeSpeaker(place.id, area.id, s.id)
-                          }
-                          accessibilityLabel={`Remove ${s.name}`}
-                          style={styles.iconButton}
-                        >
-                          <Trash2 size={icon.sm} color={c.danger} strokeWidth={icon.stroke} />
-                        </Touchable>
-                      </View>
-                    ))}
 
                     {area.speakerIds.map((id) => {
                       // The phone either still has a record of this speaker or
@@ -448,10 +594,14 @@ const sheet = themed((c, t) => ({
   list: { gap: space.sm },
   emptyWrap: { flex: 1, justifyContent: 'center' },
   grow: { flex: 1, gap: 2 },
+  head: { gap: space.sm },
+  attention: { ...t.bodySmall, color: c.ink },
   teamRow: { flexDirection: 'row', marginBottom: space.sm },
   problem: { marginBottom: space.sm },
+  cardHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm + 4 },
   placeHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm + 4 },
-  placeName: { ...t.heading },
+  placeName: { ...t.heading, flex: 1 },
+  status: { ...t.label, fontSize: 15, color: c.text, marginTop: space.sm },
   meta: { ...t.bodySmall },
   area: {
     marginTop: space.sm + 4,
