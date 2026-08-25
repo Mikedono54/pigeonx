@@ -424,7 +424,396 @@ async function main() {
 
   await teamChecks(A, B);
   await syncChecks(A, B, org1);
+  await aliveChecks(A, B, org1, org2);
   await accountDeletionChecks();
+}
+
+// ── places, protection plans, reported results (alive-product spec) ──────────
+async function aliveChecks(A, B, org1, org2) {
+  const one = (r) => (Array.isArray(r.data) ? r.data[0] : r.data);
+
+  // ── user_places: own rows only ─────────────────────────────────────────────
+  const aPlace = await A.client
+    .from('user_places')
+    .insert({
+      user_id: A.id,
+      name: 'A back balcony',
+      kind: 'balcony',
+      target: 'pigeons',
+      area_size: 'small',
+      people_nearby: true,
+      limit_audible: true,
+      birds_active: 'early morning',
+    })
+    .select('id, target, limit_audible')
+    .single();
+  check(
+    'A can name its own place and answer the onboarding questions',
+    !aPlace.error && aPlace.data?.target === 'pigeons' && aPlace.data?.limit_audible === true,
+    aPlace.error?.message,
+  );
+
+  const bPlace = await B.client
+    .from('user_places')
+    .insert({ user_id: B.id, name: 'B dock', kind: 'dock', target: 'gulls' })
+    .select('id')
+    .single();
+  check('B can name its own place', !bPlace.error, bPlace.error?.message);
+
+  const aSeesBPlace = await B.client.from('user_places').select('id').eq('user_id', A.id);
+  check(
+    "B cannot read A's places",
+    !aSeesBPlace.error && aSeesBPlace.data.length === 0,
+    aSeesBPlace.error?.message,
+  );
+
+  const bSeesAPlaceById = await B.client
+    .from('user_places')
+    .select('id, name')
+    .eq('id', aPlace.data?.id ?? '00000000-0000-0000-0000-000000000000');
+  check(
+    "B cannot read A's place even knowing its id",
+    !bSeesAPlaceById.error && bSeesAPlaceById.data.length === 0,
+    JSON.stringify(bSeesAPlaceById.data ?? null),
+  );
+
+  const bRenamesAPlace = await B.client
+    .from('user_places')
+    .update({ name: 'hijacked' })
+    .eq('id', aPlace.data?.id)
+    .select('id');
+  check(
+    "B cannot rename A's place",
+    blocked(bRenamesAPlace),
+    JSON.stringify(bRenamesAPlace.data ?? null),
+  );
+
+  const spoofPlace = await B.client
+    .from('user_places')
+    .insert({ user_id: A.id, name: 'planted' })
+    .select('id');
+  check(
+    "B cannot create a place under A's account",
+    blocked(spoofPlace),
+    JSON.stringify(spoofPlace.data ?? null),
+  );
+
+  const aInvalidSize = await A.client
+    .from('user_places')
+    .insert({ user_id: A.id, name: 'bad size', area_size: 'enormous' })
+    .select('id');
+  check(
+    'user_places refuses an area size outside small/medium/large',
+    Boolean(aInvalidSize.error),
+    JSON.stringify(aInvalidSize.data ?? null),
+  );
+
+  // ── protection_plans: own rows ─────────────────────────────────────────────
+  const aPlan = await A.client
+    .from('protection_plans')
+    .insert({
+      owner_user_id: A.id,
+      user_place_id: aPlace.data?.id,
+      name: 'Quiet Pigeon Plan',
+      target: 'pigeons',
+      sound_ids: [SYSTEM_PROFILE_18K, SYSTEM_PROFILE_PULSE],
+      session_minutes: 15,
+      output: 'phone',
+    })
+    .select('id, name, randomize_order, days, volume')
+    .single();
+  check(
+    'A can save its own protection plan, with the spec defaults',
+    !aPlan.error &&
+      aPlan.data?.randomize_order === true &&
+      Number(aPlan.data?.volume) === 0.85 &&
+      JSON.stringify(aPlan.data?.days) === '[1,2,3,4,5,6,7]',
+    aPlan.error?.message ?? JSON.stringify(aPlan.data),
+  );
+
+  const bSeesAPlan = await B.client
+    .from('protection_plans')
+    .select('id')
+    .eq('id', aPlan.data?.id ?? '00000000-0000-0000-0000-000000000000');
+  check(
+    "B cannot read A's protection plan",
+    !bSeesAPlan.error && bSeesAPlan.data.length === 0,
+    JSON.stringify(bSeesAPlan.data ?? null),
+  );
+
+  const bEditsAPlan = await B.client
+    .from('protection_plans')
+    .update({ name: 'hijacked' })
+    .eq('id', aPlan.data?.id)
+    .select('id');
+  check(
+    "B cannot edit A's protection plan",
+    blocked(bEditsAPlan),
+    JSON.stringify(bEditsAPlan.data ?? null),
+  );
+
+  const ownerless = await A.client
+    .from('protection_plans')
+    .insert({ name: 'ownerless' })
+    .select('id');
+  check(
+    'a plan with no owner is refused',
+    Boolean(ownerless.error),
+    JSON.stringify(ownerless.data ?? null),
+  );
+
+  // ── protection_plans: org rows, staff read / manager write ─────────────────
+  const orgPlan = await admin
+    .from('protection_plans')
+    .insert({
+      owner_org_id: org2.id,
+      zone_id: org2.zoneId,
+      name: 'Org2 Gull Rotation',
+      target: 'gulls',
+      sound_ids: [SYSTEM_PROFILE_18K],
+    })
+    .select('id, name')
+    .single();
+  if (orgPlan.error) {
+    check('seed an org protection plan', false, orgPlan.error.message);
+    return;
+  }
+
+  const bReadsOrgPlan = await B.client
+    .from('protection_plans')
+    .select('id, name')
+    .eq('id', orgPlan.data.id);
+  check(
+    'B (staff) can read its org’s protection plan',
+    !bReadsOrgPlan.error && bReadsOrgPlan.data?.length === 1,
+    bReadsOrgPlan.error?.message ?? JSON.stringify(bReadsOrgPlan.data),
+  );
+
+  const bWritesOrgPlan = await B.client
+    .from('protection_plans')
+    .update({ name: 'staff rewrite' })
+    .eq('id', orgPlan.data.id)
+    .select('id');
+  check(
+    'B (staff) cannot rewrite its org’s protection plan',
+    blocked(bWritesOrgPlan),
+    JSON.stringify(bWritesOrgPlan.data ?? null),
+  );
+
+  const bCreatesOrgPlan = await B.client
+    .from('protection_plans')
+    .insert({ owner_org_id: org2.id, name: 'staff plan' })
+    .select('id');
+  check(
+    'B (staff) cannot create an org protection plan',
+    blocked(bCreatesOrgPlan),
+    JSON.stringify(bCreatesOrgPlan.data ?? null),
+  );
+
+  const bDeletesOrgPlan = await B.client
+    .from('protection_plans')
+    .delete()
+    .eq('id', orgPlan.data.id)
+    .select('id');
+  check(
+    'B (staff) cannot delete its org’s protection plan',
+    blocked(bDeletesOrgPlan),
+    JSON.stringify(bDeletesOrgPlan.data ?? null),
+  );
+
+  const aReadsOrg2Plan = await A.client
+    .from('protection_plans')
+    .select('id')
+    .eq('id', orgPlan.data.id);
+  check(
+    'A (outside org2) cannot read an org2 protection plan',
+    !aReadsOrg2Plan.error && aReadsOrg2Plan.data.length === 0,
+    JSON.stringify(aReadsOrg2Plan.data ?? null),
+  );
+
+  const aOrgPlan = await A.client
+    .from('protection_plans')
+    .insert({ owner_org_id: org1.id, name: 'Org1 Pigeon Rotation', target: 'pigeons' })
+    .select('id');
+  check(
+    'A (owner) can create a protection plan for its own org',
+    !aOrgPlan.error && aOrgPlan.data?.length === 1,
+    aOrgPlan.error?.message,
+  );
+
+  // ── report_session_result ──────────────────────────────────────────────────
+  const aRun = await A.client.rpc('start_session', {
+    p_zone_id: null,
+    p_profile_id: SYSTEM_PROFILE_18K,
+    p_device_id: null,
+    p_output: 'phone',
+    p_source: 'manual',
+    p_plan_id: aPlan.data?.id,
+    p_user_place_id: aPlace.data?.id,
+  });
+  check(
+    'A can start a session against its own place and plan',
+    !aRun.error && Boolean(aRun.data),
+    aRun.error?.message,
+  );
+  await A.client.rpc('end_session', { p_session_id: aRun.data });
+
+  const bReports = await B.client.rpc('report_session_result', {
+    p_session_id: aRun.data,
+    p_result: 'left',
+  });
+  check(
+    "report_session_result() refuses another user's session",
+    Boolean(bReports.error),
+    JSON.stringify(bReports.data ?? null),
+  );
+
+  const aReportsNotYet = await A.client.rpc('report_session_result', {
+    p_session_id: aRun.data,
+    p_result: 'not_yet',
+  });
+  check('A can report its own result', !aReportsNotYet.error, aReportsNotYet.error?.message);
+
+  const aOverwrites = await A.client.rpc('report_session_result', {
+    p_session_id: aRun.data,
+    p_result: 'left',
+  });
+  check('a mistapped result can be corrected', !aOverwrites.error, aOverwrites.error?.message);
+
+  const stored = await admin.from('sessions').select('result').eq('id', aRun.data).single();
+  check(
+    'the corrected result is what the row holds',
+    stored.data?.result === 'left',
+    `got ${stored.data?.result}`,
+  );
+
+  // ── place_feedback ─────────────────────────────────────────────────────────
+  const aFeedback = one(await A.client.rpc('place_feedback', { p_user_place_id: aPlace.data.id }));
+  check(
+    'place_feedback() counts only what the user reported, and names the best plan',
+    aFeedback?.sessions_total === 1 &&
+      aFeedback?.sessions_with_result === 1 &&
+      aFeedback?.left_count === 1 &&
+      aFeedback?.some_left_count === 0 &&
+      aFeedback?.not_yet_count === 0 &&
+      aFeedback?.best_plan_name === 'Quiet Pigeon Plan',
+    JSON.stringify(aFeedback),
+  );
+
+  const bFeedback = one(await B.client.rpc('place_feedback', { p_user_place_id: aPlace.data.id }));
+  check(
+    "place_feedback() tells B nothing about A's place",
+    bFeedback?.sessions_total === 0 &&
+      bFeedback?.sessions_with_result === 0 &&
+      bFeedback?.left_count === 0 &&
+      bFeedback?.best_plan_name === null,
+    JSON.stringify(bFeedback),
+  );
+
+  const emptyFeedback = one(
+    await B.client.rpc('place_feedback', { p_user_place_id: bPlace.data.id }),
+  );
+  check(
+    'a place with no reported results names no best plan',
+    emptyFeedback?.sessions_total === 0 && emptyFeedback?.best_plan_name === null,
+    JSON.stringify(emptyFeedback),
+  );
+
+  // ── zone_feedback ──────────────────────────────────────────────────────────
+  const bRun = await B.client.rpc('start_session', {
+    p_zone_id: org2.zoneId,
+    p_profile_id: SYSTEM_PROFILE_18K,
+    p_device_id: null,
+    p_output: 'phone',
+    p_source: 'manual',
+    p_plan_id: orgPlan.data.id,
+    p_user_place_id: null,
+  });
+  await B.client.rpc('end_session', { p_session_id: bRun.data });
+  const bReportsOwn = await B.client.rpc('report_session_result', {
+    p_session_id: bRun.data,
+    p_result: 'some_left',
+  });
+  check(
+    'B can report the result of its own zone run',
+    !bReportsOwn.error,
+    bReportsOwn.error?.message,
+  );
+
+  const bZone = one(await B.client.rpc('zone_feedback', { p_zone_id: org2.zoneId }));
+  check(
+    'zone_feedback() reports the org zone’s one reported result',
+    bZone?.sessions_with_result === 1 &&
+      bZone?.some_left_count === 1 &&
+      bZone?.left_count === 0 &&
+      bZone?.best_plan_name === 'Org2 Gull Rotation',
+    JSON.stringify(bZone),
+  );
+
+  const aZone = one(await A.client.rpc('zone_feedback', { p_zone_id: org2.zoneId }));
+  check(
+    "zone_feedback() leaks nothing about another org's zone",
+    aZone?.sessions_total === 0 &&
+      aZone?.sessions_with_result === 0 &&
+      aZone?.best_plan_name === null,
+    JSON.stringify(aZone),
+  );
+
+  // ── history carries the result, the plan and the place ─────────────────────
+  const hist = await A.client.rpc('history', {
+    p_from: new Date(Date.now() - 86400000).toISOString(),
+    p_to: new Date(Date.now() + 86400000).toISOString(),
+  });
+  const row = hist.data?.find((h) => h.id === aRun.data);
+  check(
+    'history() returns the result, the plan name and the place name',
+    !hist.error &&
+      row?.result === 'left' &&
+      row?.plan_name === 'Quiet Pigeon Plan' &&
+      row?.place_name === 'A back balcony',
+    hist.error?.message ?? JSON.stringify(row),
+  );
+
+  // ── schedule triggers ──────────────────────────────────────────────────────
+  const sunrise = await A.client
+    .from('user_schedules')
+    .insert({
+      user_id: A.id,
+      profile_id: SYSTEM_PROFILE_18K,
+      days: [1, 2, 3, 4, 5],
+      start_time: '06:00',
+      end_time: '07:00',
+      trigger: 'sunrise',
+      offset_minutes: -30,
+      plan_id: aPlan.data?.id,
+      quiet_start: '22:00',
+      quiet_end: '07:00',
+    })
+    .select('id, trigger, offset_minutes')
+    .single();
+  check(
+    'A can schedule a run for half an hour before sunrise',
+    !sunrise.error && sunrise.data?.trigger === 'sunrise' && sunrise.data?.offset_minutes === -30,
+    sunrise.error?.message,
+  );
+
+  const absurdOffset = await A.client
+    .from('user_schedules')
+    .insert({
+      user_id: A.id,
+      profile_id: SYSTEM_PROFILE_18K,
+      days: [1],
+      start_time: '06:00',
+      end_time: '07:00',
+      trigger: 'sunset',
+      offset_minutes: 5000,
+    })
+    .select('id');
+  check(
+    'an offset beyond ±12 h is refused',
+    Boolean(absurdOffset.error),
+    JSON.stringify(absurdOffset.data ?? null),
+  );
 }
 
 // ── teams: create_org, invite, accept, remove ────────────────────────────────
