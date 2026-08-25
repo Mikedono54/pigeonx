@@ -1,5 +1,6 @@
 import { planRank } from '../core/entitlements';
-import { useAccount, type TeamRole } from '../state/useAccount';
+import { ROLE_HINT, ROLE_LABEL, type TeamRole } from '../core/team';
+import { useAccount } from '../state/useAccount';
 import { usePlaces } from '../state/usePlaces';
 import { callFunction, getSupabase, isMissingOnServer, plainMessage } from './supabase';
 
@@ -87,17 +88,9 @@ export function teammateFromRow(input: unknown, myUserId: string | null): Teamma
   };
 }
 
-export const ROLE_LABEL: Record<TeamRole, string> = {
-  owner: 'Owner',
-  manager: 'Manager',
-  staff: 'Teammate',
-};
-
-export const ROLE_HINT: Record<TeamRole, string> = {
-  owner: 'Can do everything, including billing.',
-  manager: 'Can add places, areas, speakers and times.',
-  staff: 'Can play a sound and see what played.',
-};
+// The words and the rules live together in `core/team`. Every screen that
+// already asks this file for them keeps working.
+export { ROLE_HINT, ROLE_LABEL };
 
 /** The link you send someone so they can join your business. */
 export function joinLink(token: string): string {

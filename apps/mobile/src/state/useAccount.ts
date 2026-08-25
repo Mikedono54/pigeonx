@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Plan } from '../core/entitlements';
+import type { TeamRole } from '../core/team';
 import { somethingChanged } from '../services/syncSignal';
 import { persistStorage, STORAGE_KEYS, uid } from './storage';
 
@@ -17,8 +18,8 @@ export interface SimulatedDevice {
   remoteId: string | null;
 }
 
-/** What a teammate is allowed to do. */
-export type TeamRole = 'owner' | 'manager' | 'staff';
+/** What a teammate is allowed to do. Lives in `core/team`, with the rules. */
+export type { TeamRole };
 
 interface AccountState {
   /** Test plan for now. Real plans arrive with RevenueCat or Stripe. */

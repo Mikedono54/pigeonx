@@ -17,7 +17,7 @@ import {
   findSystemProfile,
 } from '../src/core/profiles';
 import { FEATURE_LABEL, PLAN_LABEL, PRICES } from '../src/core/entitlements';
-import { ROLE_HINT, ROLE_LABEL } from '../src/services/business';
+import { ROLE_HINT, ROLE_LABEL, ROLE_POWERS, WHO_CAN_DO_WHAT } from '../src/core/team';
 import { liveLabel } from '../src/core/places';
 import { plainMessage } from '../src/services/supabase';
 import { describeLinkProblem } from '../src/services/auth';
@@ -254,6 +254,7 @@ describe('labels people read', () => {
       ...Object.values(PLAN_LABEL),
       ...Object.values(ROLE_LABEL),
       ...Object.values(ROLE_HINT),
+      ...Object.values(ROLE_POWERS),
       ...Object.values(AUDIBLE_LABEL),
       REACH_QUESTION,
     ]) {
@@ -328,9 +329,18 @@ describe('what an area row says', () => {
     expect(liveLabel({ playing: true, startedAt: 0 }, 12 * 60_000 + 40_000)).toBe('Playing 12:40');
   });
 
-  it('names each teammate in plain words', () => {
-    expect(ROLE_LABEL.staff).toBe('Teammate');
+  it('names each role the way the whole product names it', () => {
     expect(ROLE_LABEL.owner).toBe('Owner');
+    expect(ROLE_LABEL.manager).toBe('Manager');
+    expect(ROLE_LABEL.staff).toBe('Staff');
+  });
+
+  it('says who can do what in one sheet, in three plain sentences', () => {
+    expect(WHO_CAN_DO_WHAT).toBe('Who can do what');
+    for (const line of Object.values(ROLE_POWERS)) checkString(line);
+    expect(Object.values(ROLE_POWERS).join(' ')).toBe(
+      'Staff can start and stop sounds. Managers can change plans and schedules. Owners manage the team and billing.',
+    );
   });
 });
 

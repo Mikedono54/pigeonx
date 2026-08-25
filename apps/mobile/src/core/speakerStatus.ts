@@ -46,6 +46,30 @@ export function speakerStatus({
   return knownIds.length > 0 ? 'connected' : 'offline';
 }
 
+/* ── a speaker a business keeps ───────────────────────────────────────────── */
+
+/**
+ * What the account says about one speaker in a building.
+ *
+ * A business speaker is not the phone's own output. It is a row the account
+ * holds, and that row says one of three things: it was last heard from and it
+ * answered, it was last heard from and it did not, or nobody has heard from it
+ * at all. The third is the honest answer for hardware that has never reported
+ * in, and it is the one a new speaker starts on. None of the three is a guess.
+ */
+export type FleetStatus = 'online' | 'offline' | 'unknown';
+
+export const FLEET_STATUS_LABEL: Record<FleetStatus, string> = {
+  online: 'Online',
+  offline: 'Offline',
+  unknown: 'Not known yet',
+};
+
+/** Reads the account's word for it, and refuses to invent one. */
+export function fleetStatus(value: unknown): FleetStatus {
+  return value === 'online' || value === 'offline' ? value : 'unknown';
+}
+
 /** True when Home should drop into Needs attention over this speaker. */
 export function speakerMissing(inputs: SpeakerStatusInputs): boolean {
   return speakerStatus(inputs) === 'offline';
