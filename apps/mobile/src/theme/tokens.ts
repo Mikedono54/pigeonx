@@ -72,6 +72,8 @@ export const motion = {
   state: 220,
   /** the bird leaving or landing */
   flight: 500,
+  /** the one confirmation flash after a session ends */
+  flash: 250,
   /** the breath on a playing block */
   breath: 1600,
   spring: { damping: 18, stiffness: 180, mass: 0.9 },
